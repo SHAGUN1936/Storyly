@@ -1,0 +1,17 @@
+{
+  "name": "personalized-video-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack app for creating personalized videos from templates",
+  "scripts": {
+    "client": "npm --prefix client run dev",
+    "server": "npm --prefix server run dev",
+    "dev": "concurrently -n \"srv,web\" -c \"cyan,magenta\" \"npm run server\" \"npm run client\"",
+    "start": "npm run dev",
+    "install:all": "npm install && npm --prefix client install && npm --prefix server install",
+    "seed:admin": "npm --prefix server run seed:admin"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
