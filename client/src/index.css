@@ -1,44 +1,620 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root {
+  color-scheme: light;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background-color: #fff7f9;
+  color: #0f172a;
 }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Outfit', system-ui, sans-serif;
-  background: linear-gradient(135deg, #0f0f12 0%, #18181c 50%, #1a1625 100%);
   min-height: 100vh;
-  color: #e4e4e7;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background:
+    radial-gradient(60rem 40rem at 0% -10%, rgba(251,113,133,0.18), transparent 60%),
+    radial-gradient(50rem 35rem at 100% 0%, rgba(217,70,239,0.18), transparent 60%),
+    radial-gradient(45rem 30rem at 50% 110%, rgba(124,58,237,0.16), transparent 60%),
+    linear-gradient(180deg,#fff7f9 0%,#fbf3ff 60%,#f3eeff 100%);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #222228;
-}
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
+::selection { background: rgba(217,70,239,0.30); color: #0f172a; }
 
-/* Gradient text */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(217,70,239,0.28); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(217,70,239,0.45); }
+
+/* ── Typography helpers ────────────────────────────────────────────── */
+.font-display { font-family: 'Space Grotesk','Outfit',sans-serif; letter-spacing: -0.01em; }
+
 .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-pink-500;
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(120deg,#f97316,#f43f5e 40%,#d946ef 75%,#7c3aed);
 }
 
-/* Glass card */
+.gradient-text-soft {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(120deg,#0f172a,#a21caf);
+}
+
+/* ── Surfaces ───────────────────────────────────────────────────────── */
 .glass {
-  @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  @apply rounded-[2rem] bg-white/85 backdrop-blur-xl border border-white/60 shadow-[0_30px_90px_-40px_rgba(124,58,237,0.25)];
+}
+.card-glass {
+  @apply rounded-[1.75rem] bg-white/90 border border-white/70 shadow-[0_24px_70px_-35px_rgba(217,70,239,0.20)];
+}
+.panel-surface {
+  @apply rounded-[1.75rem] bg-white/80 border border-white/70 shadow-[0_20px_60px_-30px_rgba(124,58,237,0.15)];
+}
+.soft-border { @apply border border-white/70; }
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.btn-glow {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white
+         shadow-[0_18px_60px_-20px_rgba(217,70,239,0.55)] transition duration-300
+         active:scale-95;
+  background-image: linear-gradient(120deg,#f97316,#f43f5e 35%,#d946ef 70%,#7c3aed);
+  background-size: 180% 180%;
+  background-position: 0% 50%;
+}
+.btn-glow:hover { background-position: 100% 50%; transform: translateY(-1px); }
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold
+         border border-slate-200 bg-white/70 text-slate-800 hover:bg-white transition active:scale-95;
+}
+
+.btn-pill-dark {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold
+         bg-slate-950 text-white hover:bg-slate-800 transition active:scale-95;
+}
+
+.btn-pill-soft {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold
+         bg-brand-100 text-brand-700 hover:bg-brand-200 transition active:scale-95;
+}
+
+.focus-ring { outline: 2px solid rgba(217,70,239,0.32); outline-offset: 2px; }
+
+/* ── Chips & badges ────────────────────────────────────────────────── */
+.badge-pill {
+  @apply inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-700 border border-white/60 backdrop-blur;
+}
+.chip {
+  @apply inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition active:scale-95;
+}
+.chip-default { @apply chip bg-white/85 text-slate-700 border border-white/70 hover:bg-white; }
+.chip-active  { @apply chip text-white shadow-[0_14px_40px_-18px_rgba(217,70,239,0.55)]; background-image: linear-gradient(120deg,#f97316,#f43f5e 40%,#d946ef 75%,#7c3aed); }
+
+/* ── Instagram-style story ring ────────────────────────────────────── */
+.story-ring {
+  position: relative;
+  padding: 3px;
+  border-radius: 9999px;
+  background: conic-gradient(from 210deg,#fb7185,#f97316,#f43f5e,#d946ef,#7c3aed,#fb7185);
+}
+.story-ring > * { background: #fff; border-radius: 9999px; }
+
+/* ── Section headings ─────────────────────────────────────────────── */
+.section-title {
+  @apply text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight font-display;
+}
+.eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.22em] text-brand-700 border border-white/70 backdrop-blur;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────── */
+.hero-panel {
+  @apply rounded-[2.25rem] border border-white/60 bg-white/85 p-8 shadow-[0_40px_120px_-50px_rgba(124,58,237,0.35)];
+}
+
+/* ── Utilities ────────────────────────────────────────────────────── */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { scrollbar-width: none; }
+
+.text-shadow-soft { text-shadow: 0 12px 45px rgba(15,23,42,0.10); }
+.floating-ring { background: radial-gradient(circle, rgba(217,70,239,0.22), transparent 45%); filter: blur(28px); }
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+}
+
+/* ── Mobile bottom nav safe-area padding ──────────────────────────── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
+}
+
+/* ── Canvas selection chrome (Canva-style rotate + resize) ──────── */
+.tpl-sel-frame {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid #d946ef;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.4), 0 0 0 4px rgba(217,70,239,0.12), 0 6px 22px -4px rgba(217,70,239,0.45);
+  border-radius: 4px;
+  z-index: 30;
+  animation: tplSelPulse 2s ease-in-out infinite;
+}
+@keyframes tplSelPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.4), 0 0 0 4px rgba(217,70,239,0.12), 0 6px 22px -4px rgba(217,70,239,0.45); }
+  50%      { box-shadow: 0 0 0 1px rgba(255,255,255,0.4), 0 0 0 6px rgba(217,70,239,0.20), 0 6px 26px -4px rgba(217,70,239,0.55); }
+}
+.tpl-sel-handle {
+  position: absolute;
+  width: 22px; height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f97316, #d946ef 50%, #7c3aed);
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+  box-shadow: 0 6px 18px -4px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.4);
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+.tpl-sel-handle.tpl-sel-rotate {
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: grab;
+}
+.tpl-sel-handle.tpl-sel-rotate:active { cursor: grabbing; }
+.tpl-sel-handle.tpl-sel-resize {
+  bottom: -11px;
+  right: -11px;
+  cursor: nwse-resize;
+}
+.tpl-sel-handle.tpl-sel-resize-w {
+  top: 50%;
+  right: -11px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+.tpl-sel-handle.tpl-sel-resize-h {
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+.tpl-sel-handle.tpl-sel-delete {
+  top: -36px;
+  right: -11px;
+  background: linear-gradient(135deg, #ef4444, #f43f5e);
+  cursor: pointer;
+}
+.tpl-sel-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15,23,42,0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px -4px rgba(0,0,0,0.5);
+}
+
+/* ── Dark mode ─ Linear/Vercel-inspired: matte, calm, clear hierarchy ─ */
+html.dark { color-scheme: dark; }
+html.dark body {
+  /* One subtle ambient highlight + matte near-black base. No competing gradients. */
+  background:
+    radial-gradient(100rem 60rem at 100% -20%, rgba(217,70,239,0.08), transparent 55%),
+    #0a0a10;
+  color: #e7e9f0;
+}
+
+/* ── Surface hierarchy: body (darkest) → panel → card → glass (most elevated) ── */
+html.dark .glass {
+  background: rgba(22,22,30,0.92);
+  border-color: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 24px 60px -28px rgba(0,0,0,0.7);
+  color: #e7e9f0;
+}
+html.dark .card-glass {
+  background: rgba(20,20,28,0.94);
+  border-color: rgba(255,255,255,0.07);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.03) inset,
+    0 12px 36px -18px rgba(0,0,0,0.65);
+  color: #e7e9f0;
+}
+html.dark .panel-surface {
+  background: rgba(16,16,22,0.92);
+  border-color: rgba(255,255,255,0.06);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset;
+  color: #e7e9f0;
+}
+html.dark .hero-panel {
+  background: rgba(20,20,28,0.94);
+  border-color: rgba(255,255,255,0.07);
+}
+
+/* ── Chips / pills / badges ───────────────────────────────────────── */
+html.dark .chip-default {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+  color: #c4c9d6;
+}
+html.dark .chip-default:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+  color: #e7e9f0;
+}
+html.dark .chip-active {
+  box-shadow: 0 6px 18px -6px rgba(217,70,239,0.45);
+}
+html.dark .feature-chip {
+  background: rgba(255,255,255,0.03);
+  border-color: rgba(255,255,255,0.08);
+  color: #c4c9d6;
+}
+html.dark .feature-chip:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.14);
+}
+html.dark .badge-pill {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.10);
+  color: #e7e9f0;
+}
+html.dark .eyebrow {
+  background: rgba(217,70,239,0.10);
+  border-color: rgba(217,70,239,0.20);
+  color: #f0abfc;
+}
+
+/* ── Buttons (ghost) ──────────────────────────────────────────────── */
+html.dark .btn-ghost {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.10);
+  color: #d8dce6;
+}
+html.dark .btn-ghost:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.16);
+  color: #ffffff;
+}
+
+/* ── Section heading ──────────────────────────────────────────────── */
+html.dark .section-title { color: #f3f4f8; }
+
+/* ── Scrollbar (muted neutral, not vibrant brand) ─────────────────── */
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.10);
+  border-radius: 8px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+/* ── Text contrast tokens ─────────────────────────────────────────── */
+html.dark .text-slate-900 { color: #f3f4f8; }
+html.dark .text-slate-800 { color: #e7e9f0; }
+html.dark .text-slate-700 { color: #d2d6e0; }
+html.dark .text-slate-600 { color: #b8bcc8; }
+html.dark .text-slate-500 { color: #8a8fa0; }
+html.dark .text-slate-400 { color: #6f7585; }
+html.dark .text-zinc-700  { color: #d2d6e0; }
+html.dark .text-zinc-600  { color: #b8bcc8; }
+html.dark .text-zinc-500  { color: #8a8fa0; }
+html.dark .text-zinc-400  { color: #6f7585; }
+html.dark .placeholder\:text-slate-400::placeholder,
+html.dark .placeholder\:text-slate-500::placeholder { color: rgba(174,180,196,0.45); }
+
+/* ── Light Tailwind utilities flipped to dark equivalents ─────────── */
+html.dark .bg-white     { background-color: rgba(255,255,255,0.03); }
+html.dark .bg-white\/70 { background-color: rgba(255,255,255,0.04); }
+html.dark .bg-white\/80 { background-color: rgba(255,255,255,0.05); }
+html.dark .bg-white\/85 { background-color: rgba(255,255,255,0.06); }
+html.dark .bg-white\/90 { background-color: rgba(20,20,28,0.92); }
+html.dark .bg-white\/95 { background-color: rgba(20,20,28,0.95); }
+html.dark .border-white\/50,
+html.dark .border-white\/60,
+html.dark .border-white\/70 { border-color: rgba(255,255,255,0.08); }
+html.dark .border-slate-200 { border-color: rgba(255,255,255,0.08); }
+html.dark .border-slate-100 { border-color: rgba(255,255,255,0.05); }
+html.dark .border-slate-300 { border-color: rgba(255,255,255,0.12); }
+html.dark .bg-slate-100 { background-color: rgba(255,255,255,0.04); }
+html.dark .bg-slate-50  { background-color: rgba(255,255,255,0.025); }
+
+/* ── Inputs / form controls on "light" surfaces ───────────────────── */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark input[type="url"],
+html.dark input[type="number"],
+html.dark input[type="datetime-local"],
+html.dark input[type="search"],
+html.dark textarea,
+html.dark select {
+  color-scheme: dark;
+}
+html.dark input.bg-white,
+html.dark textarea.bg-white,
+html.dark select.bg-white,
+html.dark .bg-white input:not([type="color"]):not([type="checkbox"]):not([type="radio"]),
+html.dark .bg-white textarea,
+html.dark .bg-white select,
+html.dark .card-glass input:not([type="color"]):not([type="checkbox"]):not([type="radio"]),
+html.dark .card-glass textarea,
+html.dark .card-glass select,
+html.dark .glass input:not([type="color"]):not([type="checkbox"]):not([type="radio"]),
+html.dark .glass textarea,
+html.dark .glass select,
+html.dark .panel-surface input:not([type="color"]):not([type="checkbox"]):not([type="radio"]),
+html.dark .panel-surface textarea,
+html.dark .panel-surface select {
+  background-color: rgba(255,255,255,0.04);
+  color: #e7e9f0;
+  border-color: rgba(255,255,255,0.10);
+}
+html.dark input:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+  border-color: rgba(217,70,239,0.45);
+  box-shadow: 0 0 0 3px rgba(217,70,239,0.18);
+}
+
+/* ── Selection chrome stays crisp on dark backgrounds ─────────────── */
+html.dark .tpl-sel-frame {
+  border-color: #f0abfc;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.4),
+    0 0 0 4px rgba(240,171,252,0.14),
+    0 6px 22px -4px rgba(217,70,239,0.55);
+}
+html.dark .tpl-sel-tooltip {
+  background: rgba(8,8,14,0.95);
+}
+
+/* ── ::selection (text highlight) ─────────────────────────────────── */
+html.dark ::selection { background: rgba(217,70,239,0.40); color: #ffffff; }
+
+/* ── Light-mode override for the editor shell (Admin + user builder) ─
+   The editor is hand-built with dark slate-* classes for the "Canva /
+   Photoshop" feel. This block flips those surfaces to a light palette
+   when the app is in light mode, without forcing JSX changes everywhere.
+   Scoped strictly to `.tpl-editor-shell` so it can't leak elsewhere. */
+html:not(.dark) .tpl-editor-shell {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a;
+}
+html:not(.dark) .tpl-editor-shell .bg-slate-950        { background-color: #ffffff !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-950\/95    { background-color: rgba(255,255,255,0.95) !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-900        { background-color: #f1f5f9 !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-900\/95    { background-color: rgba(241,245,249,0.95) !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-900\/60    { background-color: rgba(241,245,249,0.6) !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-800        { background-color: #e2e8f0 !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-800\/40    { background-color: rgba(226,232,240,0.55) !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-800\/50    { background-color: rgba(226,232,240,0.65) !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-800\/70    { background-color: rgba(226,232,240,0.8) !important; }
+html:not(.dark) .tpl-editor-shell .bg-slate-800\/80,
+html:not(.dark) .tpl-editor-shell .bg-slate-800\/95    { background-color: #e2e8f0 !important; }
+html:not(.dark) .tpl-editor-shell .border-white\/10    { border-color: rgba(15,23,42,0.10) !important; }
+html:not(.dark) .tpl-editor-shell .border-white\/5     { border-color: rgba(15,23,42,0.06) !important; }
+html:not(.dark) .tpl-editor-shell .border-white\/15    { border-color: rgba(15,23,42,0.15) !important; }
+html:not(.dark) .tpl-editor-shell .bg-white\/5         { background-color: rgba(15,23,42,0.04) !important; }
+html:not(.dark) .tpl-editor-shell .bg-white\/10        { background-color: rgba(15,23,42,0.06) !important; }
+html:not(.dark) .tpl-editor-shell .bg-white\/15        { background-color: rgba(15,23,42,0.10) !important; }
+html:not(.dark) .tpl-editor-shell .hover\:bg-white\/10:hover { background-color: rgba(15,23,42,0.06) !important; }
+html:not(.dark) .tpl-editor-shell .hover\:bg-white\/15:hover { background-color: rgba(15,23,42,0.10) !important; }
+html:not(.dark) .tpl-editor-shell .text-white          { color: #0f172a !important; }
+html:not(.dark) .tpl-editor-shell .text-slate-200      { color: #334155 !important; }
+html:not(.dark) .tpl-editor-shell .text-slate-300      { color: #475569 !important; }
+html:not(.dark) .tpl-editor-shell .text-slate-400      { color: #64748b !important; }
+html:not(.dark) .tpl-editor-shell .text-slate-500      { color: #94a3b8 !important; }
+html:not(.dark) .tpl-editor-shell .text-rose-300       { color: #be123c !important; }
+html:not(.dark) .tpl-editor-shell .text-brand-200,
+html:not(.dark) .tpl-editor-shell .text-brand-300      { color: #a21caf !important; }
+html:not(.dark) .tpl-editor-shell input,
+html:not(.dark) .tpl-editor-shell select,
+html:not(.dark) .tpl-editor-shell textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+html:not(.dark) .tpl-editor-shell input::placeholder,
+html:not(.dark) .tpl-editor-shell textarea::placeholder {
+  color: #94a3b8 !important;
+}
+/* The phone-frame canvas itself stays dark — that's the user's content surface, not editor chrome */
+html:not(.dark) .tpl-editor-shell .html-deck-root,
+html:not(.dark) .tpl-editor-shell .bg-black,
+html:not(.dark) .tpl-editor-shell .bg-black\/50 {
+  background-color: #000000 !important;
+}
+
+/* ── Modal surfaces: explicit colors, defeat any cascade conflict ─
+   The new-website / starter / similar popup CARDS use these so they
+   render correctly regardless of theme. Plain `bg-white dark:bg-…` can
+   lose specificity battles to the global dark-mode utility overrides. */
+.tpl-modal-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a;
+}
+html.dark .tpl-modal-card {
+  background-color: #0f0f15 !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  color: #e7e9f0;
+}
+.tpl-modal-footer {
+  background-color: rgba(255,255,255,0.95) !important;
+}
+html.dark .tpl-modal-footer {
+  background-color: rgba(15,15,21,0.95) !important;
+}
+.tpl-modal-tile-footer {
+  background-color: #ffffff !important;
+}
+html.dark .tpl-modal-tile-footer {
+  background-color: rgba(255,255,255,0.03) !important;
+}
+
+/* Modal title/description — explicit colors so they always read */
+.tpl-modal-title {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  background: none !important;
+}
+html.dark .tpl-modal-title {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.tpl-modal-desc {
+  color: #475569 !important;
+}
+html.dark .tpl-modal-desc {
+  color: #b8bcc8 !important;
+}
+.tpl-modal-label {
+  color: #475569 !important;
+}
+html.dark .tpl-modal-label {
+  color: #94a3b8 !important;
+}
+
+/* Category-style chips inside modals — readable inactive state */
+.tpl-modal-chip {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border: 1px solid #e2e8f0;
+}
+.tpl-modal-chip:hover {
+  background-color: #e2e8f0 !important;
+}
+.tpl-modal-chip.is-active {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a;
+  box-shadow: 0 10px 24px -8px rgba(15,23,42,0.4);
+}
+html.dark .tpl-modal-chip {
+  background-color: rgba(255,255,255,0.06) !important;
+  color: #e7e9f0 !important;
+  border-color: rgba(255,255,255,0.10);
+}
+html.dark .tpl-modal-chip:hover {
+  background-color: rgba(255,255,255,0.12) !important;
+}
+html.dark .tpl-modal-chip.is-active {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #ffffff;
+}
+
+/* Inputs inside modals — explicit colors so typed text always reads */
+.tpl-modal-input {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  caret-color: #d946ef;
+}
+.tpl-modal-input::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 1;
+}
+.tpl-modal-input:focus {
+  border-color: #d946ef !important;
+  box-shadow: 0 0 0 3px rgba(217,70,239,0.18) !important;
+}
+html.dark .tpl-modal-input {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #e7e9f0 !important;
+  -webkit-text-fill-color: #e7e9f0 !important;
+  border-color: rgba(255,255,255,0.10) !important;
+}
+html.dark .tpl-modal-input::placeholder {
+  color: rgba(174,180,196,0.55) !important;
+  -webkit-text-fill-color: rgba(174,180,196,0.55) !important;
+}
+
+/* Cancel-style outline button inside modals */
+.tpl-modal-cancel {
+  background-color: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.tpl-modal-cancel:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+html.dark .tpl-modal-cancel {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(255,255,255,0.15) !important;
+}
+html.dark .tpl-modal-cancel:hover {
+  background-color: rgba(255,255,255,0.10) !important;
+  color: #ffffff !important;
+}
+
+/* ── Storyly wordmark: explicit color, defeats any cascade conflict ─ */
+.storyly-wordmark {
+  color: #0f172a !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+html.dark .storyly-wordmark {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.storyly-tagline { color: #64748b; }
+html.dark .storyly-tagline { color: #8a8fa0; }
+
+/* ── Tone down decorative blurred orbs (Layout / auth heroes) ────── */
+html.dark .floating-ring { opacity: 0.35; filter: saturate(0.8); }
+html.dark [class*="pointer-events-none"][class*="blur-3xl"],
+html.dark [class*="blur-3xl"][class*="pointer-events-none"] { opacity: 0.4; }
+
+/* ── Top nav + mobile dock blur background looks clean on matte ──── */
+html.dark nav.fixed { background: rgba(12,12,18,0.78); }
+
+/* ── Gradient text stays vibrant; soft variant flips to light end ── */
+html.dark .gradient-text-soft {
+  background-image: linear-gradient(120deg,#ffffff,#f0abfc);
+}
+
+/* ── Animations ───────────────────────────────────────────────────── */
+@keyframes float {
+  0%,100% { transform: translateY(0) translateX(0); }
+  50%     { transform: translateY(-10px) translateX(4px); }
+}
+@keyframes glowPulse {
+  0%,100% { opacity: 0.8; transform: scale(1); }
+  50%     { opacity: 1;   transform: scale(1.05); }
+}
+.glow-pulse { animation: glowPulse 2.6s ease-in-out infinite; }
+
+@layer utilities {
+  .feature-chip {
+    @apply rounded-2xl bg-white/80 border border-white/70 px-4 py-2 text-sm text-slate-700;
+  }
 }

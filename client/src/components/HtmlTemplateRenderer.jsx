@@ -14,6 +14,11 @@ export default function HtmlTemplateRenderer({
   onBlockMoveCommit,
   activeIndex,
   onActiveIndexChange,
+  selectedSlot,
+  onSelectionChange,
+  onResizeCommit,
+  onRotateCommit,
+  canSelect,
 }) {
   const slideCount = useMemo(() => countSlidesInHtml(html), [html]);
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
@@ -56,6 +61,11 @@ export default function HtmlTemplateRenderer({
         onBlockMoveCommit={onBlockMoveCommit}
         activeIndex={activeIndex}
         onActiveIndexChange={onActiveIndexChange}
+        selectedSlot={selectedSlot}
+        onSelectionChange={onSelectionChange}
+        onResizeCommit={onResizeCommit}
+        onRotateCommit={onRotateCommit}
+        canSelect={canSelect}
       />
     );
   }

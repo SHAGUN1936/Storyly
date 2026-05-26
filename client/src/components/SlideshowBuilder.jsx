@@ -22,6 +22,11 @@ export default function SlideshowBuilder({
   onBlockMoveCommit,
   activeIndex,
   onActiveIndexChange,
+  selectedSlot,
+  onSelectionChange,
+  onResizeCommit,
+  onRotateCommit,
+  canSelect,
 }) {
   const html = useMemo(
     () => resolveSlideshowHtml(structure, themeOverrides),
@@ -48,6 +53,11 @@ export default function SlideshowBuilder({
             onBlockMoveCommit={onBlockMoveCommit}
             activeIndex={activeIndex}
             onActiveIndexChange={onActiveIndexChange}
+            selectedSlot={selectedSlot}
+            onSelectionChange={onSelectionChange}
+            onResizeCommit={onResizeCommit}
+            onRotateCommit={onRotateCommit}
+            canSelect={canSelect}
           />
         )}
         {revealGate.hideStory && (

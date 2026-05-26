@@ -1,10 +1,17 @@
-import { useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { applySlotFillsToHtml, countSlidesInHtml } from '../lib/htmlTemplate';
 import { useDodgeButtons } from '../hooks/useDodgeButtons';
 
 /**
  * Carousel: .slide / [data-page] — optional timer.
  * Page app: multiple .page — navigation via [data-nav-page="N"] (1-based) + overlay.
+ *
+ * Selection chrome (editable mode):
+ *  - selectedSlot     : controlled `p{X}_b{Y}` of the highlighted block
+ *  - onSelectionChange: fires on canvas click; receives slot or null
+ *  - onResizeCommit   : (slot, width, height) on resize end
+ *  - onRotateCommit   : (slot, deg) on rotate end
+ *  - canSelect(slot)  : optional predicate; return false to ignore selection for that block
  */
 export default function HtmlSlideDeck({
   html,
@@ -17,6 +24,11 @@ export default function HtmlSlideDeck({
   onBlockMoveCommit,
   activeIndex: controlledActiveIndex,
   onActiveIndexChange,
+  selectedSlot,
+  onSelectionChange,
+  onResizeCommit,
+  onRotateCommit,
+  canSelect,
 }) {
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
   const containerRef = useRef(null);
@@ -256,6 +268,183 @@ export default function HtmlSlideDeck({
     };
   }, [editable, dragMode, markup, onBlockMoveCommit]);
 
+  /** Countdown blocks: tick every second, update [data-cd-d|h|m|s] spans. */
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+    const els = root.querySelectorAll('[data-countdown-target]');
+    if (!els.length) return;
+    const tick = () => {
+      const now = Date.now();
+      els.forEach((el) => {
+        const target = el.getAttribute('data-countdown-target');
+        if (!target) return;
+        const t = Date.parse(target);
+        if (!Number.isFinite(t)) return;
+        const ms = Math.max(0, t - now);
+        const totalSec = Math.floor(ms / 1000);
+        const d = Math.floor(totalSec / 86400);
+        const h = Math.floor((totalSec % 86400) / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        const pad = (n) => String(n).padStart(2, '0');
+        const setText = (sel, val) => {
+          const n = el.querySelector(sel);
+          if (n) n.textContent = val;
+        };
+        setText('[data-cd-d]', String(d));
+        setText('[data-cd-h]', pad(h));
+        setText('[data-cd-m]', pad(m));
+        setText('[data-cd-s]', pad(s));
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [markup]);
+
+  /** ── Canvas selection chrome (editable) ──────────────────── */
+  const [selBox, setSelBox] = useState(null); // { x, y, w, h, el, slot }
+  const [transient, setTransient] = useState(null); // 'rotate' | 'resize-se' | 'resize-w' | 'resize-h'
+  const [transientLabel, setTransientLabel] = useState('');
+
+  const computeSelBox = useCallback(() => {
+    if (!editable || !selectedSlot) { setSelBox(null); return; }
+    const root = containerRef.current;
+    if (!root) return;
+    let el = null;
+    try { el = root.querySelector(`[data-block-slot="${(window.CSS && CSS.escape) ? CSS.escape(selectedSlot) : selectedSlot}"]`); }
+    catch { el = null; }
+    if (!el) { setSelBox(null); return; }
+    const rr = root.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    setSelBox({
+      x: r.left - rr.left + root.scrollLeft,
+      y: r.top - rr.top + root.scrollTop,
+      w: r.width,
+      h: r.height,
+      el,
+      slot: selectedSlot,
+    });
+  }, [editable, selectedSlot]);
+
+  useLayoutEffect(() => { computeSelBox(); }, [computeSelBox, markup, activeIndex]);
+
+  /** Recompute on container resize (e.g. drawer open / window resize). */
+  useEffect(() => {
+    if (!editable || !selectedSlot) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const ro = new ResizeObserver(() => computeSelBox());
+    ro.observe(root);
+    if (selBox?.el) ro.observe(selBox.el);
+    return () => ro.disconnect();
+  }, [editable, selectedSlot, computeSelBox, selBox?.el]);
+
+  /** Click selection: clicking a block selects; clicking empty space deselects. */
+  useEffect(() => {
+    if (!editable || !onSelectionChange) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const onClick = (e) => {
+      // Clicks on our React-rendered handles should not propagate to here, but be defensive
+      if (e.target.closest('.tpl-sel-handle')) return;
+      const el = e.target.closest('[data-block-slot]');
+      if (!el) {
+        if (selectedSlot) onSelectionChange(null);
+        return;
+      }
+      const slot = el.getAttribute('data-block-slot');
+      if (canSelect && !canSelect(slot)) return;
+      if (slot && slot !== selectedSlot) onSelectionChange(slot);
+    };
+    root.addEventListener('click', onClick);
+    return () => root.removeEventListener('click', onClick);
+  }, [editable, onSelectionChange, selectedSlot, markup, canSelect]);
+
+  /** Resize logic (bottom-right corner, side, bottom handles). */
+  const startResize = useCallback((corner) => (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const cur = selBox;
+    if (!cur?.el || !selectedSlot) return;
+    const r = cur.el.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = r.width;
+    const startH = r.height;
+    setTransient(corner);
+    const move = (ev) => {
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      let nextW = startW;
+      let nextH = startH;
+      if (corner === 'resize-se') { nextW = Math.max(20, startW + dx); nextH = Math.max(20, startH + dy); }
+      if (corner === 'resize-w')  { nextW = Math.max(20, startW + dx); }
+      if (corner === 'resize-h')  { nextH = Math.max(20, startH + dy); }
+      // Live update on the live DOM element so it feels instant
+      try {
+        cur.el.style.width = `${Math.round(nextW)}px`;
+        if (corner !== 'resize-w') cur.el.style.height = `${Math.round(nextH)}px`;
+      } catch {}
+      setSelBox((prev) => prev ? { ...prev, w: nextW, h: nextH } : prev);
+      setTransientLabel(`${Math.round(nextW)} × ${Math.round(nextH)}`);
+    };
+    const up = (ev) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setTransient(null);
+      setTransientLabel('');
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      const nextW = corner === 'resize-h' ? startW : Math.max(20, Math.round(startW + dx));
+      const nextH = corner === 'resize-w' ? startH : Math.max(20, Math.round(startH + dy));
+      if (onResizeCommit) onResizeCommit(selectedSlot, nextW, nextH);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }, [selBox, selectedSlot, onResizeCommit]);
+
+  /** Rotate logic. Pulls initial rotation from inline transform if present. */
+  const startRotate = useCallback((e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const cur = selBox;
+    if (!cur?.el || !selectedSlot) return;
+    const r = cur.el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const m = /rotate\(([-\d.]+)deg\)/.exec(cur.el.style.transform || '');
+    const initialDeg = m ? Number(m[1]) : 0;
+    const startAngle = (Math.atan2(e.clientY - cy, e.clientX - cx) * 180) / Math.PI;
+    setTransient('rotate');
+    const move = (ev) => {
+      const angle = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI;
+      let deg = Math.round(initialDeg + (angle - startAngle));
+      if (ev.shiftKey) deg = Math.round(deg / 15) * 15;
+      deg = Math.max(-180, Math.min(180, deg));
+      try {
+        const existing = (cur.el.style.transform || '').replace(/rotate\([^)]*\)/, '').trim();
+        cur.el.style.transform = `${existing} rotate(${deg}deg)`.trim();
+        cur.el.style.transformOrigin = 'center';
+      } catch {}
+      setTransientLabel(`${deg > 0 ? '+' : ''}${deg}°`);
+    };
+    const up = (ev) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setTransient(null);
+      setTransientLabel('');
+      const angle = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI;
+      let deg = Math.round(initialDeg + (angle - startAngle));
+      if (ev.shiftKey) deg = Math.round(deg / 15) * 15;
+      deg = Math.max(-180, Math.min(180, deg));
+      if (onRotateCommit) onRotateCommit(selectedSlot, deg);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }, [selBox, selectedSlot, onRotateCommit]);
+
   if (!html || !String(html).trim()) {
     return (
       <div className={`rounded-xl bg-white/5 p-6 text-center text-zinc-500 text-sm ${className}`}>
@@ -265,10 +454,10 @@ export default function HtmlSlideDeck({
   }
 
   return (
-    <div className={`html-slide-deck ${className}`}>
+    <div className={`html-slide-deck relative ${className}`}>
       <div
         ref={containerRef}
-        className="template-html-sandbox html-deck-root relative max-w-none w-full min-h-[360px] h-[min(72vh,680px)] overflow-x-hidden overflow-y-auto rounded-2xl border border-white/10 bg-black/50 text-left"
+        className={`template-html-sandbox html-deck-root relative max-w-none w-full min-h-[360px] h-[min(72vh,680px)] overflow-x-hidden overflow-y-auto rounded-2xl border border-white/10 bg-black/50 text-left${editable && dragMode ? ' tpl-drag-mode' : ''}`}
         style={{
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -277,6 +466,44 @@ export default function HtmlSlideDeck({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: markup }}
       />
+      {editable && selBox && (
+        <div
+          className="tpl-sel-frame"
+          style={{ left: selBox.x - 2, top: selBox.y - 2, width: selBox.w + 4, height: selBox.h + 4 }}
+        >
+          {transient && transientLabel && (
+            <div className="tpl-sel-tooltip">{transientLabel}</div>
+          )}
+          <button
+            type="button"
+            className="tpl-sel-handle tpl-sel-rotate"
+            title="Rotate (hold Shift to snap 15°)"
+            aria-label="Rotate"
+            onPointerDown={startRotate}
+          >↻</button>
+          <button
+            type="button"
+            className="tpl-sel-handle tpl-sel-resize"
+            title="Resize"
+            aria-label="Resize"
+            onPointerDown={startResize('resize-se')}
+          >⤡</button>
+          <button
+            type="button"
+            className="tpl-sel-handle tpl-sel-resize-w"
+            title="Resize width"
+            aria-label="Resize width"
+            onPointerDown={startResize('resize-w')}
+          >↔</button>
+          <button
+            type="button"
+            className="tpl-sel-handle tpl-sel-resize-h"
+            title="Resize height"
+            aria-label="Resize height"
+            onPointerDown={startResize('resize-h')}
+          >↕</button>
+        </div>
+      )}
       {slideCount > 1 && !editable && (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
           <button
