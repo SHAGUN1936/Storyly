@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { templatesAPI } from '../api/api';
 import TemplateCard from '../components/TemplateCard';
+import GlassCard from '../ui/GlassCard';
+import GradientText from '../ui/GradientText';
+import NeonOrb from '../ui/NeonOrb';
+import MarqueeRow from '../ui/MarqueeRow';
+import FloatingDecor from '../ui/FloatingDecor';
+import { BalloonSticker, ConfettiSticker, StarSticker } from '../ui/CartoonStickers';
+import { fadeUp, blurUp, stagger } from '../motion/variants';
 
 const CATEGORIES = [
   { name: 'All',        emoji: '✨' },
@@ -11,7 +18,11 @@ const CATEGORIES = [
   { name: 'Birthday',   emoji: '🎂' },
   { name: 'Memories',   emoji: '📸' },
   { name: 'Wedding',    emoji: '💍' },
+  { name: 'Event',      emoji: '🎉' },
+  { name: 'Invitation', emoji: '💌' },
 ];
+
+const TRENDING_LABELS = ['Wedding ✨', 'Birthday 🎂', 'Invitation 💌', 'Save the date 📅', 'RSVP 🎟️', 'Couple 💞', 'Anniversary 💖'];
 
 export default function Dashboard() {
   const [templates, setTemplates] = useState([]);
@@ -47,101 +58,154 @@ export default function Dashboard() {
   }, [templates, query]);
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Hero */}
+    <div className="mx-auto max-w-7xl">
+      {/* ─── Hero (compact) ─── */}
       <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="hero-panel mb-8 sm:mb-10 relative overflow-hidden"
+        variants={stagger()}
+        initial="hidden"
+        animate="visible"
+        className="relative mb-8"
       >
-        <div className="absolute -right-12 -top-12 w-56 h-56 rounded-full bg-peach-400/30 blur-3xl" />
-        <div className="absolute left-8 bottom-0 w-40 h-40 rounded-full bg-brand-400/30 floating-ring" />
+        <GlassCard tone="strong" className="!rounded-[1.75rem] p-6 sm:p-8 relative overflow-hidden">
+          <NeonOrb color="#A855F7" size="18rem" style={{ top: '-5rem', right: '-5rem' }} />
+          <NeonOrb color="#06B6D4" size="15rem" style={{ bottom: '-3rem', left: '-3rem' }} opacity={0.4} />
+          <FloatingDecor density="subtle" opacity={0.14} size={30} />
+          <div className="absolute inset-0 bg-grid-soft opacity-30 pointer-events-none" />
 
-        <div className="relative grid gap-8 lg:grid-cols-[1.5fr_1fr] items-center">
-          <div>
-            <span className="eyebrow mb-4">✨ Trending now</span>
-            <h1 className="section-title max-w-3xl mt-4">
-              Pick a vibe.{' '}
-              <span className="gradient-text">Drop your pics.</span>{' '}
-              Share the moment.
-            </h1>
-            <p className="mt-5 text-slate-600 max-w-2xl leading-8 text-base sm:text-lg">
-              Birthdays, glow-ups, friend stories, wedding wishes — pick a template, swap photos, hit publish. Get a link and QR for everyone to scan.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <a href="#templates" className="btn-glow">
-                Browse templates
-              </a>
-              <Link to="/my-videos" className="btn-ghost">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
-                My pages
-              </Link>
+          <div className="relative grid gap-8 lg:grid-cols-[1.6fr_1fr] items-center">
+            <div>
+              <motion.span variants={fadeUp} className="eyebrow"><span>Trending this week</span></motion.span>
+              <motion.h1
+                variants={blurUp}
+                className="mt-4 font-display font-extrabold leading-[1.0] tracking-tight"
+                style={{ fontSize: 'clamp(1.75rem, 4vw, 3rem)' }}
+              >
+                Pick a vibe.{' '}
+                <GradientText variant="cosmic">Drop your pics.</GradientText>{' '}
+                Share the moment.
+              </motion.h1>
+              <motion.p variants={fadeUp} className="mt-4 text-slate-300 max-w-xl leading-7 text-sm sm:text-base">
+                Weddings, birthdays, invitations, glow-ups — pick a cinematic template, swap photos, hit publish. One link, one QR, all the vibes.
+              </motion.p>
+              <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2.5">
+                <a href="#templates" className="btn-glow !py-2.5 !px-5 !text-xs">
+                  Browse templates →
+                </a>
+                <Link to="/my-videos" className="btn-ghost !py-2.5 !px-4 !text-xs">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+                  My pages
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* Floating story stack — smaller, with cartoon sticker accents */}
+            <div className="hidden lg:block relative h-52">
+              {/* Foreground cartoon accents */}
+              <motion.div
+                className="absolute -top-4 right-6 z-10"
+                animate={{ y: [0, -8, 0], rotate: [-6, 6, -6] }}
+                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <BalloonSticker size={48} color="#22D3EE" />
+              </motion.div>
+              <motion.div
+                className="absolute top-1/3 -right-2 z-10"
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}
+              >
+                <ConfettiSticker size={38} />
+              </motion.div>
+              <motion.div
+                className="absolute bottom-0 right-8 z-10"
+                animate={{ scale: [1, 1.2, 1], rotate: [0, 15, 0] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <StarSticker size={32} />
+              </motion.div>
+              {[
+                { emoji: '💖', bg: 'linear-gradient(135deg,#F472B6 0%,#E11D48 60%,#9F1239 100%)' },
+                { emoji: '🎂', bg: 'linear-gradient(135deg,#FBBF24 0%,#F472B6 55%,#A855F7 100%)' },
+                { emoji: '🫶', bg: 'linear-gradient(135deg,#FB923C 0%,#F97316 45%,#C2410C 100%)' },
+                { emoji: '📸', bg: 'linear-gradient(135deg,#A78BFA 0%,#7C3AED 50%,#4C1D95 100%)' },
+              ].map((s, i) => (
+                <motion.div
+                  key={s.emoji}
+                  initial={{ opacity: 0, y: 24, rotate: 0 }}
+                  animate={{
+                    opacity: 1,
+                    y: [0, -6, 0, 4, 0],
+                    rotate: (i - 1.5) * 6 + [0, 1.5, -1, 0][i % 4],
+                  }}
+                  transition={{
+                    opacity: { delay: 0.12 * i, duration: 0.4 },
+                    y:       { duration: 7 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 },
+                    rotate:  { duration: 8 + i, repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 },
+                  }}
+                  className="keep-dark absolute top-0 rounded-2xl p-1 border border-white/20"
+                  style={{
+                    left: `${i * 56}px`,
+                    zIndex: i,
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))',
+                    boxShadow: '0 18px 40px -14px rgba(0,0,0,0.55), 0 6px 20px -6px rgba(168,85,247,0.45)',
+                  }}
+                >
+                  <div
+                    className="w-20 h-36 rounded-[1.1rem] flex items-center justify-center text-4xl relative overflow-hidden"
+                    style={{ background: s.bg }}
+                  >
+                    <div className="absolute inset-x-2 top-2 flex gap-1">
+                      <span className="h-0.5 flex-1 rounded-full bg-white/90" />
+                      <span className="h-0.5 flex-1 rounded-full bg-white/40" />
+                      <span className="h-0.5 flex-1 rounded-full bg-white/40" />
+                    </div>
+                    <span className="drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)]">{s.emoji}</span>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </div>
+        </GlassCard>
 
-          {/* Floating "stories" preview stack */}
-          <div className="hidden lg:block relative h-64">
-            {[
-              { emoji: '💖', bg: 'linear-gradient(135deg,#fb7185 0%,#e11d48 60%,#9f1239 100%)' },
-              { emoji: '🎂', bg: 'linear-gradient(135deg,#fbbf24 0%,#fb7185 55%,#c026d3 100%)' },
-              { emoji: '🫶', bg: 'linear-gradient(135deg,#fb923c 0%,#f97316 45%,#c2410c 100%)' },
-              { emoji: '📸', bg: 'linear-gradient(135deg,#a78bfa 0%,#7c3aed 50%,#4c1d95 100%)' },
-            ].map((s, i) => (
-              <motion.div
-                key={s.emoji}
-                initial={{ opacity: 0, y: 30, rotate: 0 }}
-                animate={{ opacity: 1, y: 0, rotate: (i - 1.5) * 6 }}
-                transition={{ delay: 0.15 * i, type: 'spring', stiffness: 120 }}
-                className="absolute top-0 rounded-[1.75rem] bg-white p-1.5 border-2 border-white"
-                style={{
-                  left: `${i * 70}px`,
-                  zIndex: i,
-                  boxShadow: '0 24px 50px -16px rgba(15,23,42,0.35), 0 8px 18px -8px rgba(217,70,239,0.25)',
-                }}
+        {/* Tag marquee under hero */}
+        <div className="mt-6">
+          <MarqueeRow direction="left" speed="slow">
+            {[...TRENDING_LABELS, ...TRENDING_LABELS].map((t, i) => (
+              <span
+                key={`tl-${i}`}
+                className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-slate-300"
               >
-                <div
-                  className="w-24 h-40 rounded-[1.4rem] flex items-center justify-center text-5xl relative overflow-hidden"
-                  style={{ background: s.bg }}
-                >
-                  {/* Instagram-style story progress bars at top */}
-                  <div className="absolute inset-x-2 top-2 flex gap-1">
-                    <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-                    <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                    <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                  </div>
-                  <span className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]">{s.emoji}</span>
-                </div>
-              </motion.div>
+                {t}
+              </span>
             ))}
-          </div>
+          </MarqueeRow>
         </div>
       </motion.section>
 
-      {/* Search */}
+      {/* ─── Search ─── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-5 flex items-center gap-3 rounded-full bg-white/80 border border-white/70 px-4 py-2.5 shadow-sm max-w-xl"
+        className="mb-5 flex items-center gap-3 rounded-full bg-white/[0.04] border border-white/10 px-5 py-3 backdrop-blur max-w-xl"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500">
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
         </svg>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search templates: birthday, wedding, glow up…"
-          className="flex-1 bg-transparent outline-none text-sm text-slate-800 placeholder:text-slate-400"
+          className="flex-1 bg-transparent outline-none text-sm text-slate-100 placeholder:text-slate-500"
         />
         {query && (
-          <button onClick={() => setQuery('')} className="text-slate-400 hover:text-slate-700">✕</button>
+          <button onClick={() => setQuery('')} className="text-slate-500 hover:text-white">✕</button>
         )}
       </motion.div>
 
-      {/* Category chips (story-ring style for active) */}
+      {/* ─── Category chips ─── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex gap-2 sm:gap-3 mb-7 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pb-1"
+        className="flex gap-2 sm:gap-3 mb-8 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pb-1"
       >
         {CATEGORIES.map((c) => {
           const active = category === c.name;
@@ -149,7 +213,7 @@ export default function Dashboard() {
             <button
               key={c.name}
               onClick={() => setCategory(c.name)}
-              className={`${active ? 'chip-active' : 'chip-default'} whitespace-nowrap`}
+              className={`${active ? 'chip chip-active' : 'chip chip-default'} whitespace-nowrap`}
             >
               <span className="text-base">{c.emoji}</span>
               <span>{c.name}</span>
@@ -158,12 +222,12 @@ export default function Dashboard() {
         })}
       </motion.div>
 
-      {/* Grid */}
+      {/* ─── Grid (denser, smaller cards) ─── */}
       <div id="templates">
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="aspect-[4/5] rounded-[1.75rem] bg-white/70 border border-white/70 overflow-hidden relative">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="aspect-[4/5] rounded-2xl bg-white/[0.04] border border-white/10 overflow-hidden relative">
                 <div className="absolute inset-0 shimmer animate-shimmer" />
               </div>
             ))}
@@ -175,13 +239,13 @@ export default function Dashboard() {
                 key="empty"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="card-glass p-10 text-center"
+                className="text-center"
               >
-                <div className="text-5xl mb-3">🫥</div>
-                <p className="font-bold text-lg text-slate-900">No templates match</p>
-                <p className="text-sm text-slate-500 mt-1">
-                  Try a different category or clear your search.
-                </p>
+                <GlassCard className="p-10">
+                  <div className="text-5xl mb-3">🫥</div>
+                  <p className="font-display font-bold text-base text-white">No templates match</p>
+                  <p className="text-sm text-slate-400 mt-1">Try a different category or clear your search.</p>
+                </GlassCard>
               </motion.div>
             ) : (
               <motion.div
@@ -189,14 +253,14 @@ export default function Dashboard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
               >
                 {visible.map((t, i) => (
                   <motion.div
                     key={t._id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: Math.min(i * 0.035, 0.4) }}
+                    transition={{ delay: Math.min(i * 0.03, 0.4), ease: [0.22, 1, 0.36, 1] }}
                   >
                     <Link to={`/template/${t._id}`}>
                       <TemplateCard template={t} />

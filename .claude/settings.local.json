@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(npm --prefix client run build 2>&1)"
+      "PowerShell(npm --prefix client run build 2>&1)",
+      "Bash(powershell -Command \"\\(Get-ChildItem -Recurse -File pages,components | Measure-Object -Property Length -Sum\\).Sum / 1KB\")",
+      "Bash(npm install *)",
+      "Bash(npx vite *)",
+      "PowerShell($f='c:\\\\Users\\\\agraw\\\\OneDrive\\\\Desktop\\\\Personal\\\\client\\\\src\\\\pages\\\\TemplateDetail.jsx'; \\(Get-Content $f | Measure-Object -Line\\).Lines)"
     ]
   }
 }

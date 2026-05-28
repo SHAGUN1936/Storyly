@@ -1,5 +1,8 @@
 const API_BASE = '/api';
 
+const NETWORK_MSG =
+  "Can't reach the server. Please check your internet connection and try again.";
+
 async function request(endpoint, options = {}) {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
   const config = {
@@ -10,9 +13,25 @@ async function request(endpoint, options = {}) {
     },
     credentials: 'include',
   };
-  const res = await fetch(url, config);
+  // Pre-flight: offline browsers immediately
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new Error(NETWORK_MSG);
+  }
+  let res;
+  try {
+    res = await fetch(url, config);
+  } catch {
+    // TypeError: Failed to fetch / DNS / CORS preflight — treat as network outage
+    throw new Error(NETWORK_MSG);
+  }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || res.statusText);
+  if (!res.ok) {
+    // 502 / 503 / 504 → backend is up but a dependency (DB, etc.) is down
+    if (res.status >= 502 && res.status <= 504) {
+      throw new Error(data.message || NETWORK_MSG);
+    }
+    throw new Error(data.message || res.statusText);
+  }
   return data;
 }
 

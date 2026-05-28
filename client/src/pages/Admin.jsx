@@ -21,6 +21,8 @@ import { APP_INPUT_CLASS, APP_SELECT_CLASS, DARK_INPUT_CLASS, DARK_SELECT_CLASS 
 import ConfirmDialog from '../components/ConfirmDialog';
 import SlideshowBuilder from '../components/SlideshowBuilder';
 import { STARTER_TEMPLATES } from '../lib/starterTemplates';
+import { StarSticker, DiscoSticker, GiftSticker } from '../ui/CartoonStickers';
+import FloatingDecor from '../ui/FloatingDecor';
 
 function ShapePreview({ kind }) {
   const size = 28;
@@ -645,40 +647,68 @@ export default function Admin() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass rounded-[2rem] border border-slate-200/70 bg-white/95 p-8 shadow-sm mb-8"
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="glass-strong rounded-[2rem] p-8 mb-8 relative overflow-hidden"
       >
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="absolute inset-0 bg-grid-soft opacity-30 pointer-events-none" />
+        <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.40) 0%, transparent 60%)', filter: 'blur(50px)' }} />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 w-72 h-72 rounded-full" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.35) 0%, transparent 60%)', filter: 'blur(50px)' }} />
+
+        {/* Cartoon accents in the studio header */}
+        <motion.div
+          className="hidden md:block absolute top-4 right-1/3 z-10"
+          animate={{ y: [0, -10, 0], rotate: [-5, 5, -5] }}
+          transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <GiftSticker size={56} />
+        </motion.div>
+        <motion.div
+          className="hidden lg:block absolute top-8 right-12 z-10"
+          animate={{ rotate: [0, 360] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'linear' }}
+        >
+          <DiscoSticker size={64} />
+        </motion.div>
+        <motion.div
+          className="hidden md:block absolute bottom-6 right-1/4 z-10"
+          animate={{ scale: [1, 1.25, 1], rotate: [0, 18, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <StarSticker size={40} />
+        </motion.div>
+
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
-            <span className="eyebrow">🛠 Admin studio</span>
-            <h1 className="mt-4 font-display text-4xl sm:text-5xl font-extrabold tracking-tight">
-              <span className="text-slate-900">Build the </span>
-              <span className="gradient-text">story</span>
+            <span className="eyebrow"><span>Admin studio</span></span>
+            <h1 className="mt-5 font-display text-4xl sm:text-5xl font-extrabold tracking-tight leading-[1.05]">
+              <span className="text-white">Build the </span>
+              <span className="gradient-text animate-gradient">story.</span>
             </h1>
-            <p className="mt-4 text-slate-600 leading-7">
-              Manage templates, publish campaigns, and design story-driven pages from one place.
+            <p className="mt-4 text-slate-300 leading-7 max-w-xl">
+              Manage templates, publish campaigns, and design story-driven pages from one beautiful studio.
             </p>
           </div>
           <motion.button
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.97 }}
             onClick={openCreateBlank}
-            className="btn-glow !py-3 !px-6"
+            className="btn-glow !py-3.5 !px-6"
           >
             ✨ New website
           </motion.button>
         </div>
       </motion.div>
 
-      <div className={`grid gap-6 ${formOpen && (editing || createStep === 2) ? 'lg:grid-cols-1' : 'lg:grid-cols-[0.95fr_1.1fr]'}`}>
-        <section className={`glass rounded-[2rem] border border-slate-200/70 bg-white/95 p-6 shadow-sm ${formOpen && (editing || createStep === 2) ? 'hidden' : ''}`}>
+      <div className={`grid gap-6 items-start ${formOpen && (editing || createStep === 2) ? 'lg:grid-cols-1' : 'lg:grid-cols-[0.95fr_1.1fr]'}`}>
+        <section className={`glass-strong rounded-[2rem] p-6 ${formOpen && (editing || createStep === 2) ? 'hidden' : ''}`}>
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Template library</h2>
-              <p className="text-sm text-slate-600">Your published and draft websites in one place.</p>
+              <h2 className="text-xl font-display font-bold text-white">Template library</h2>
+              <p className="text-sm text-slate-400">Your published and draft websites in one place.</p>
             </div>
-            <div className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">
+            <div className="badge-pill badge-brand">
               {templates.length} templates
             </div>
           </div>
@@ -694,7 +724,7 @@ export default function Admin() {
               No templates yet. Click “New website” to get started.
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 auto-rows-min gap-4">
               {templates.map((t) => (
                 <motion.div
                   key={t._id}
@@ -728,14 +758,19 @@ export default function Admin() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => openEdit(t)}
-                        className="flex-1 rounded-full bg-slate-950 text-white px-3 py-2 text-xs font-bold hover:bg-slate-800 active:scale-95 transition"
+                        className="btn-glow flex-1 !py-2 !px-3 !text-xs"
                       >
                         ✏️ Edit
                       </button>
                       {!t.published && (
                         <button
                           onClick={() => handlePublish(t._id)}
-                          className="rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 text-xs font-bold hover:bg-emerald-200 active:scale-95 transition"
+                          className="inline-flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95"
+                          style={{
+                            background: 'linear-gradient(120deg, rgba(16,185,129,0.18), rgba(16,185,129,0.10))',
+                            color: '#10B981',
+                            border: '1px solid rgba(16,185,129,0.45)',
+                          }}
                         >
                           🚀 Publish
                         </button>
@@ -745,7 +780,12 @@ export default function Admin() {
                         onClick={() => setDeleteConfirmId(t._id)}
                         aria-label={`Delete ${t.name}`}
                         title="Delete template"
-                        className="rounded-full bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 active:scale-95 transition"
+                        className="inline-flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95"
+                        style={{
+                          background: 'linear-gradient(120deg, rgba(244,63,94,0.16), rgba(244,63,94,0.08))',
+                          color: '#F43F5E',
+                          border: '1px solid rgba(244,63,94,0.40)',
+                        }}
                       >
                         🗑
                       </button>
@@ -757,26 +797,28 @@ export default function Admin() {
           )}
         </section>
 
-        <section className="glass rounded-[2rem] border border-slate-200/70 bg-white/95 p-6 shadow-sm min-h-[660px]">
+        <section className="glass-strong rounded-[2rem] p-6 min-h-[660px]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Editor panel</h2>
-              <p className="text-sm text-slate-600">Build or edit the selected website in the story-driven editor.</p>
+              <h2 className="text-xl font-display font-bold text-white">Editor panel</h2>
+              <p className="text-sm text-slate-400">Build or edit the selected website in the story-driven editor.</p>
             </div>
             <button
               type="button"
               onClick={openCreateBlank}
-              className="rounded-2xl bg-brand-500/10 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100 transition"
+              className="btn-pill-soft"
             >
-              Start new website
+              ✨ Start new website
             </button>
           </div>
 
           {!formOpen ? (
-            <div className="flex h-full min-h-[420px] flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-slate-300 dark:border-white/10 bg-gradient-to-br from-brand-50/40 to-peach-100/30 dark:from-fuchsia-500/8 dark:to-purple-500/8 p-8 text-center">
-              <div className="text-5xl mb-3">🎨</div>
-              <p className="font-display text-2xl font-extrabold text-slate-900">Ready to build something?</p>
-              <p className="mt-2 text-sm text-slate-700 max-w-md leading-6">
+            <div className="relative flex h-full min-h-[420px] flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/15 p-8 text-center overflow-hidden"
+              style={{ background: 'radial-gradient(circle at 30% 20%, rgba(168,85,247,0.15), transparent 60%), radial-gradient(circle at 80% 80%, rgba(6,182,212,0.12), transparent 60%), rgba(11,15,25,0.45)' }}
+            >
+              <div className="text-6xl mb-4 drop-shadow-[0_8px_20px_rgba(168,85,247,0.6)]">🎨</div>
+              <p className="font-display text-2xl font-extrabold text-white">Ready to build something?</p>
+              <p className="mt-2 text-sm text-slate-300 max-w-md leading-7">
                 Pick a template from the left or start a fresh website. You can also load one of our ready-made starters.
               </p>
               <div className="mt-6 flex flex-wrap gap-3 justify-center">
@@ -878,7 +920,10 @@ export default function Admin() {
               )}
 
               {(editing || createStep === 2) && (
-                <div className="tpl-editor-shell flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+                <div className="tpl-editor-shell relative isolate flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+                  <div className="pointer-events-none absolute inset-0" style={{ zIndex: -1 }}>
+                    <FloatingDecor density="subtle" opacity={0.08} size={36} />
+                  </div>
                   {/* Top Toolbar */}
                   <div className="flex items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 py-3 gap-3 flex-wrap">
                     <div className="flex items-center gap-3 min-w-0">

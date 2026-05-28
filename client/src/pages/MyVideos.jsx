@@ -4,12 +4,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { videosAPI } from '../api/api';
 import { isVideoShare } from '../lib/sharePage';
 import ConfirmDialog from '../components/ConfirmDialog';
+import GlassCard from '../ui/GlassCard';
+import GradientText from '../ui/GradientText';
+import NeonOrb from '../ui/NeonOrb';
+import AnimatedCount from '../ui/AnimatedCount';
+import FloatingDecor from '../ui/FloatingDecor';
+import { GiftSticker, HeartSticker, MusicSticker } from '../ui/CartoonStickers';
+import { fadeUp, stagger } from '../motion/variants';
+import useLikedTemplates from '../hooks/useLikedTemplates';
 
 const STATUS_STYLE = {
-  completed: 'bg-mint-500/15 text-emerald-700 border-emerald-200',
-  processing: 'bg-amber-100 text-amber-700 border-amber-200',
-  failed: 'bg-rose-100 text-rose-700 border-rose-200',
-  draft: 'bg-slate-100 text-slate-700 border-slate-200',
+  completed:  { tint: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.45)', color: '#6EE7B7' },
+  processing: { tint: 'rgba(251,191,36,0.18)', border: 'rgba(251,191,36,0.45)', color: '#FCD34D' },
+  failed:     { tint: 'rgba(244,63,94,0.18)',  border: 'rgba(244,63,94,0.45)',  color: '#FCA5A5' },
+  draft:      { tint: 'rgba(148,163,184,0.16)', border: 'rgba(148,163,184,0.40)', color: '#CBD5E1' },
 };
 
 const STATUS_EMOJI = {
@@ -75,11 +83,13 @@ export default function MyVideos() {
     }
   };
 
+  const { count: likedCount } = useLikedTemplates();
   const stats = useMemo(() => ({
-    total: videos.length,
-    live: videos.filter((v) => v.status === 'completed').length,
+    total:      videos.length,
+    live:       videos.filter((v) => v.status === 'completed').length,
     processing: videos.filter((v) => v.status === 'processing').length,
-  }), [videos]);
+    liked:      likedCount,
+  }), [videos, likedCount]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return videos;
@@ -90,52 +100,89 @@ export default function MyVideos() {
   }, [videos, filter]);
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Hero stat bar (profile-ish) */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="hero-panel mb-8 relative overflow-hidden"
-      >
-        <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-brand-400/25 blur-3xl" />
-        <div className="absolute -left-12 bottom-0 w-40 h-40 rounded-full bg-peach-400/20 floating-ring" />
+    <div className="mx-auto max-w-6xl">
+      {/* ─── Hero ─── */}
+      <motion.div variants={stagger()} initial="hidden" animate="visible" className="mb-10">
+        <GlassCard tone="strong" className="!rounded-[2rem] p-7 sm:p-10 relative overflow-hidden">
+          <NeonOrb color="#7C3AED" size="20rem" style={{ top: '-5rem', right: '-5rem' }} />
+          <NeonOrb color="#F472B6" size="18rem" style={{ bottom: '-4rem', left: '-3rem' }} opacity={0.4} />
+          <FloatingDecor density="subtle" opacity={0.14} size={32} items={['📦', '🎂', '💍', '✨', '🪩', '🎉']} />
+          <div className="absolute inset-0 bg-grid-soft opacity-30 pointer-events-none" />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <span className="eyebrow">📚 Your studio</span>
-            <h1 className="section-title mt-4">My pages</h1>
-            <p className="mt-3 max-w-2xl text-slate-600 leading-7">
-              Every page you've made — share links, QR codes, edit anytime. Your aesthetic, your audience.
-            </p>
+          {/* Cartoon sticker accents in the corners */}
+          <motion.div
+            className="hidden md:block absolute top-3 right-4 z-10"
+            animate={{ y: [0, -8, 0], rotate: [-5, 5, -5] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <GiftSticker size={56} />
+          </motion.div>
+          <motion.div
+            className="hidden md:block absolute bottom-3 right-20 z-10"
+            animate={{ scale: [1, 1.18, 1] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <HeartSticker size={36} color="#F472B6" />
+          </motion.div>
+          <motion.div
+            className="hidden md:block absolute top-12 right-32 z-10"
+            animate={{ y: [0, -6, 0], rotate: [-4, 6, -4] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+          >
+            <MusicSticker size={40} color="#22D3EE" />
+          </motion.div>
+
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <motion.span variants={fadeUp} className="eyebrow"><span>Your studio</span></motion.span>
+              <motion.h1 variants={fadeUp} className="section-title mt-5">My pages</motion.h1>
+              <motion.p variants={fadeUp} className="mt-3 max-w-2xl text-slate-300 leading-7">
+                Every page you've made — share links, QR codes, edit anytime. Your aesthetic, your audience.
+              </motion.p>
+            </div>
+            <motion.div variants={fadeUp} className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 min-w-[280px] lg:min-w-[460px]">
+              {[
+                { label: 'Total',    value: stats.total,      emoji: '📦' },
+                { label: 'Live',     value: stats.live,       emoji: '🟢' },
+                { label: 'Building', value: stats.processing, emoji: '⏳' },
+                { label: 'Liked',    value: stats.liked,      emoji: '💖', to: '/liked' },
+              ].map((s) => {
+                const inner = (
+                  <>
+                    <div className="text-xl">{s.emoji}</div>
+                    <p className="mt-1 text-3xl font-extrabold font-display">
+                      <GradientText variant="cosmic"><AnimatedCount to={s.value} /></GradientText>
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.22em] mt-0.5">{s.label}</p>
+                  </>
+                );
+                return s.to ? (
+                  <Link key={s.label} to={s.to} className="card-glass p-4 sm:p-5 text-center hover:border-white/25 transition">
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={s.label} className="card-glass p-4 sm:p-5 text-center">
+                    {inner}
+                  </div>
+                );
+              })}
+            </motion.div>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {[
-              { label: 'Total', value: stats.total, emoji: '📦' },
-              { label: 'Live', value: stats.live, emoji: '🟢' },
-              { label: 'Building', value: stats.processing, emoji: '⏳' },
-            ].map((s) => (
-              <div key={s.label} className="card-glass p-4 sm:p-5 text-center">
-                <div className="text-lg sm:text-xl">{s.emoji}</div>
-                <p className="mt-1 text-2xl sm:text-3xl font-extrabold gradient-text font-display">{s.value}</p>
-                <p className="text-[11px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+        </GlassCard>
       </motion.div>
 
-      {/* Filter chips */}
+      {/* ─── Filter chips ─── */}
       <div className="flex gap-2 mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
         {[
-          { id: 'all', label: 'All', emoji: '✨' },
-          { id: 'live', label: 'Live', emoji: '🟢' },
+          { id: 'all',        label: 'All',      emoji: '✨' },
+          { id: 'live',       label: 'Live',     emoji: '🟢' },
           { id: 'processing', label: 'Building', emoji: '⏳' },
-          { id: 'failed', label: 'Failed', emoji: '⚠️' },
+          { id: 'failed',     label: 'Failed',   emoji: '⚠️' },
         ].map((f) => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id)}
-            className={`${filter === f.id ? 'chip-active' : 'chip-default'} whitespace-nowrap`}
+            className={`${filter === f.id ? 'chip chip-active' : 'chip chip-default'} whitespace-nowrap`}
           >
             <span>{f.emoji}</span><span>{f.label}</span>
           </button>
@@ -143,107 +190,109 @@ export default function MyVideos() {
       </div>
 
       {deleteError && (
-        <p className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{deleteError}</p>
+        <p className="mb-4 rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{deleteError}</p>
       )}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="aspect-[4/5] rounded-[1.75rem] bg-white/70 border border-white/70 overflow-hidden relative">
+            <div key={i} className="aspect-[4/5] rounded-[1.5rem] bg-white/[0.04] border border-white/10 overflow-hidden relative">
               <div className="absolute inset-0 shimmer animate-shimmer" />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card-glass p-12 text-center"
-        >
-          <div className="text-6xl mb-4">🪩</div>
-          <h2 className="text-2xl font-extrabold font-display gradient-text">No pages yet</h2>
-          <p className="mt-2 text-slate-600 max-w-md mx-auto">
-            Pick a template from the feed and your first story page will land here in minutes.
-          </p>
-          <Link to="/" className="btn-glow mt-6">
-            ✨ Browse templates
-          </Link>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <GlassCard className="p-12 text-center">
+            <div className="text-6xl mb-5">🪩</div>
+            <h2 className="text-2xl font-display font-extrabold"><GradientText variant="cosmic">No pages yet</GradientText></h2>
+            <p className="mt-3 text-slate-400 max-w-md mx-auto">
+              Pick a template from the feed and your first story page will land here in minutes.
+            </p>
+            <Link to="/studio" className="btn-glow mt-7 inline-flex">
+              ✨ Browse templates
+            </Link>
+          </GlassCard>
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((video, i) => {
             const templateRef = video.templateId && typeof video.templateId === 'object' ? video.templateId._id : video.templateId;
-            const statusStyle = STATUS_STYLE[video.status] || STATUS_STYLE.draft;
+            const status = STATUS_STYLE[video.status] || STATUS_STYLE.draft;
             return (
               <motion.div
                 key={video._id}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.04, 0.3) }}
-                className="card-glass overflow-hidden group"
+                transition={{ delay: Math.min(i * 0.04, 0.3), ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="aspect-[4/5] relative overflow-hidden bg-gradient-to-br from-brand-400 via-peach-400 to-sunset-400">
-                  {video.thumbnailUrl || video.videoUrl ? (
-                    <img src={video.thumbnailUrl || video.videoUrl} alt="" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-7xl">
-                      {STATUS_EMOJI[video.status] || '🎬'}
-                    </div>
-                  )}
-                  <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider border ${statusStyle}`}>
-                      <span>{STATUS_EMOJI[video.status] || '•'}</span> {video.status}
-                    </span>
-                    {video.status === 'completed' && (
-                      <span className="badge-pill">
-                        {isVideoShare(video) ? '🎞 Video' : '🌐 Page'}
-                      </span>
+                <GlassCard withSpotlight className="overflow-hidden group">
+                  <div className="aspect-[4/5] relative overflow-hidden bg-gradient-to-br from-brand-500 via-fuchsia-500 to-cyan-500">
+                    {video.thumbnailUrl || video.videoUrl ? (
+                      <img src={video.thumbnailUrl || video.videoUrl} alt="" className="w-full h-full object-cover transition duration-700 group-hover:scale-110" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-7xl drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)]">
+                        {STATUS_EMOJI[video.status] || '🎬'}
+                      </div>
                     )}
-                  </div>
-                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 to-transparent pointer-events-none" />
-                  <h3 className="absolute inset-x-3 bottom-3 font-display font-extrabold text-white text-lg drop-shadow line-clamp-2">
-                    {video.templateId?.name || 'Untitled page'}
-                  </h3>
-                </div>
-
-                <div className="p-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    {video.templateId?.category || 'Event'}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {video.status === 'completed' && (
-                      <>
-                        <a
-                          href={`/watch/${video.shareSlug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-pill-dark"
-                        >
-                          {isVideoShare(video) ? '▶ Open video' : '🌐 Open page'}
-                        </a>
-                        <button onClick={() => showQR(video)} className="btn-pill-soft">
-                          🔗 QR
-                        </button>
-                      </>
-                    )}
-                    {templateRef && (video.status === 'completed' || video.status === 'failed') && (
-                      <Link
-                        to={`/template/${templateRef}?edit=${video._id}`}
-                        className="btn-ghost !py-2 !text-xs"
+                    <div className="absolute inset-x-3 top-3 flex items-center justify-between gap-2">
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] border backdrop-blur"
+                        style={{ background: status.tint, borderColor: status.border, color: status.color }}
                       >
-                        ✏️ Edit
-                      </Link>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setPendingDelete(video)}
-                      disabled={deletingId === video._id}
-                      className="inline-flex items-center justify-center gap-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 px-3 py-2 text-xs font-semibold hover:bg-rose-100 transition active:scale-95 disabled:opacity-50"
-                    >
-                      {deletingId === video._id ? 'Deleting…' : '🗑 Delete'}
-                    </button>
+                        <span>{STATUS_EMOJI[video.status] || '•'}</span> {video.status}
+                      </span>
+                      {video.status === 'completed' && (
+                        <span className="badge-pill">
+                          {isVideoShare(video) ? '🎞 Video' : '🌐 Page'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+                    <h3 className="absolute inset-x-3 bottom-3 font-display font-extrabold text-white text-lg drop-shadow line-clamp-2">
+                      {video.templateId?.name || 'Untitled page'}
+                    </h3>
                   </div>
-                </div>
+
+                  <div className="p-4 space-y-3">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.22em]">
+                      {video.templateId?.category || 'Event'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {video.status === 'completed' && (
+                        <>
+                          <a
+                            href={`/watch/${video.shareSlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-pill-dark !py-2 !px-3 !text-xs"
+                          >
+                            {isVideoShare(video) ? '▶ Open video' : '🌐 Open page'}
+                          </a>
+                          <button onClick={() => showQR(video)} className="btn-pill-soft !py-2 !px-3 !text-xs">
+                            🔗 QR
+                          </button>
+                        </>
+                      )}
+                      {templateRef && (video.status === 'completed' || video.status === 'failed') && (
+                        <Link
+                          to={`/template/${templateRef}?edit=${video._id}`}
+                          className="btn-ghost !py-2 !px-3 !text-xs"
+                        >
+                          ✏️ Edit
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setPendingDelete(video)}
+                        disabled={deletingId === video._id}
+                        className="inline-flex items-center justify-center gap-1 rounded-full bg-rose-500/10 border border-rose-400/30 text-rose-300 px-3 py-2 text-xs font-bold hover:bg-rose-500/20 transition active:scale-95 disabled:opacity-50"
+                      >
+                        {deletingId === video._id ? 'Deleting…' : '🗑 Delete'}
+                      </button>
+                    </div>
+                  </div>
+                </GlassCard>
               </motion.div>
             );
           })}
@@ -271,27 +320,29 @@ export default function MyVideos() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
             onClick={() => setQrVideo(null)}
           >
             <motion.div
-              initial={{ scale: 0.92, y: 12 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95 }}
+              initial={{ scale: 0.92, y: 16, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="tpl-modal-card rounded-[2rem] border p-8 max-w-sm w-full text-center shadow-2xl"
+              className="tpl-modal-card rounded-[2rem] p-8 max-w-sm w-full text-center relative overflow-hidden"
             >
+              <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
               <div className="story-ring p-[3px] w-fit mx-auto mb-4">
-                <div className="bg-white dark:bg-slate-900 px-4 py-2 text-xs font-extrabold uppercase tracking-widest gradient-text">Share</div>
+                <div className="px-4 py-2 text-xs font-extrabold uppercase tracking-[0.22em] gradient-text">Share</div>
               </div>
-              <h3 className="text-xl font-extrabold font-display !text-slate-900 dark:!text-white mb-1">Spread the vibe</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-5">Scan the QR or copy the share link below.</p>
+              <h3 className="tpl-modal-title text-xl font-extrabold font-display mb-1.5">Spread the vibe</h3>
+              <p className="tpl-modal-desc text-sm mb-6">Scan the QR or copy the share link below.</p>
               {qrData.qrCode && (
                 <div className="story-ring p-[3px] w-fit mx-auto mb-5">
                   <img src={qrData.qrCode} alt="QR Code" className="w-48 h-48 rounded-3xl bg-white p-2" />
                 </div>
               )}
-              <p className="text-xs text-slate-500 dark:text-slate-400 break-all mb-4 rounded-2xl bg-slate-50 dark:bg-white/5 px-3 py-2 border border-slate-200 dark:border-white/10">
+              <p className="text-xs break-all mb-4 rounded-2xl px-3 py-2 border tpl-modal-input">
                 {qrData.shareUrl}
               </p>
               <button onClick={copyLink} className="btn-glow w-full">
@@ -299,7 +350,7 @@ export default function MyVideos() {
               </button>
               <button
                 onClick={() => setQrVideo(null)}
-                className="w-full mt-2 rounded-full border border-slate-200 dark:border-white/15 bg-white dark:bg-white/5 px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/10 transition"
+                className="tpl-modal-cancel w-full mt-2 px-5 py-2.5 rounded-full text-sm font-bold transition"
               >
                 Close
               </button>

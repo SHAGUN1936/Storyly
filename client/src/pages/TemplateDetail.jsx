@@ -16,6 +16,7 @@ import {
 } from '../lib/visualTemplateBuilder';
 import { StorylyMark } from '../components/StorylyLogo';
 import { DARK_INPUT_CLASS, DARK_SELECT_CLASS } from '../lib/uiClasses';
+import FloatingDecor from '../ui/FloatingDecor';
 
 const CATEGORY_EMOJI = {
   Love: '💖', Friendship: '🫶', Birthday: '🎂', Memories: '📸', Wedding: '💍',
@@ -580,8 +581,12 @@ export default function TemplateDetail() {
   if (loading || !template) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="animate-pulse">
-          <StorylyMark size={64} idSuffix="loadingt" />
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full blur-3xl bg-brand-500/40 animate-pulse" />
+          <div className="relative animate-pulse">
+            <StorylyMark size={64} idSuffix="loadingt" />
+          </div>
+          <p className="mt-5 text-center text-xs uppercase tracking-[0.32em] font-bold text-slate-400">Loading studio</p>
         </div>
       </div>
     );
@@ -616,12 +621,18 @@ export default function TemplateDetail() {
       <input ref={overlayPhotoInputRef} type="file" accept="image/*" className="hidden" onChange={handleOverlayPhoto} />
       <input ref={overlayGifInputRef} type="file" accept="image/gif,image/webp,image/png" className="hidden" onChange={handleOverlayGif} />
 
-      {/* Admin-style dark editor shell */}
-      <div className="tpl-editor-shell rounded-2xl border border-white/10 bg-slate-950 overflow-hidden">
+      {/* Admin-style dark editor shell — has its own ambient drifting
+          decor since the opaque slate-950 background covers the
+          Layout-level floating decor. `isolate` creates a stacking
+          context so the negative-z decor stays inside the shell. */}
+      <div className="tpl-editor-shell rounded-2xl border border-white/10 bg-slate-950 overflow-hidden relative isolate">
+        <div className="pointer-events-none absolute inset-0" style={{ zIndex: -1 }}>
+          <FloatingDecor density="subtle" opacity={0.08} size={36} />
+        </div>
         {/* ── Top toolbar ─────────────────────────────────── */}
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-white/10 flex-wrap">
           <div className="flex items-center gap-2 min-w-0">
-            <Link to="/" className="rounded-lg bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/15 active:scale-95 transition">← Feed</Link>
+            <Link to="/studio" className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/15 hover:border-white/25 active:scale-95 transition">← Feed</Link>
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate max-w-[22ch]">{template.name}</p>
               <p className="text-[10px] text-slate-400 uppercase tracking-widest">{catEmoji} {cat} · Page {activePage + 1} / {pageCount}</p>
@@ -665,10 +676,16 @@ export default function TemplateDetail() {
               <span>Drag mode</span>
             </label>
             <motion.button
+              whileHover={{ y: -1 }}
               whileTap={{ scale: 0.96 }}
               onClick={handleGenerate}
               disabled={generating || uploading}
-              className="rounded-lg bg-gradient-to-r from-brand-500 to-pink-500 px-3.5 py-2 text-xs font-bold text-white shadow-lg hover:opacity-95 active:scale-95 disabled:opacity-60"
+              className="rounded-xl px-4 py-2 text-xs font-bold text-white border border-white/15 disabled:opacity-60 transition"
+              style={{
+                backgroundImage: 'linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%)',
+                backgroundSize: '200% 200%',
+                boxShadow: '0 18px 50px -16px rgba(168,85,247,0.65), inset 0 1px 0 rgba(255,255,255,0.25)',
+              }}
               title={editId ? 'Save changes' : 'Publish your page'}
             >
               {generating ? '⏳ Saving…' : editId ? '💾 Save' : '🚀 Publish'}
@@ -1627,7 +1644,7 @@ function LegacyVideoEditor({
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-4">
-        <Link to="/" className="btn-ghost !py-2 !text-sm">← Feed</Link>
+        <Link to="/studio" className="btn-ghost !py-2 !text-sm">← Feed</Link>
       </div>
       <div className="glass p-6 sm:p-8 space-y-6">
         <div>

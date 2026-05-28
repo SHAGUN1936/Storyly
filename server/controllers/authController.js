@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 import { getJwtSecret } from '../utils/jwtSecret.js';
+import { friendlyError } from '../utils/friendlyError.js';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
 
@@ -38,7 +39,8 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: 'Email already registered' });
     }
     console.error('[signup]', err);
-    res.status(500).json({ message: err.message || 'Signup failed' });
+    const fe = friendlyError(err, 'Signup failed. Please try again.');
+    res.status(fe.status).json({ message: fe.message });
   }
 };
 
@@ -56,7 +58,9 @@ export const login = async (req, res) => {
       token
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[login]', err);
+    const fe = friendlyError(err, 'Login failed. Please try again.');
+    res.status(fe.status).json({ message: fe.message });
   }
 };
 
@@ -88,7 +92,9 @@ export const googleAuth = async (req, res) => {
       token
     });
   } catch (err) {
-    res.status(500).json({ message: err.message || 'Google auth failed' });
+    console.error('[googleAuth]', err);
+    const fe = friendlyError(err, 'Google sign-in failed. Please try again.');
+    res.status(fe.status).json({ message: fe.message });
   }
 };
 
