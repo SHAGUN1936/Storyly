@@ -5,7 +5,9 @@
       "Bash(powershell -Command \"\\(Get-ChildItem -Recurse -File pages,components | Measure-Object -Property Length -Sum\\).Sum / 1KB\")",
       "Bash(npm install *)",
       "Bash(npx vite *)",
-      "PowerShell($f='c:\\\\Users\\\\agraw\\\\OneDrive\\\\Desktop\\\\Personal\\\\client\\\\src\\\\pages\\\\TemplateDetail.jsx'; \\(Get-Content $f | Measure-Object -Line\\).Lines)"
+      "PowerShell($f='c:\\\\Users\\\\agraw\\\\OneDrive\\\\Desktop\\\\Personal\\\\client\\\\src\\\\pages\\\\TemplateDetail.jsx'; \\(Get-Content $f | Measure-Object -Line\\).Lines)",
+      "Bash(git -C \"c:\\\\Users\\\\agraw\\\\OneDrive\\\\Desktop\\\\Personal\" ls-files client/node_modules/)",
+      "Bash(git rm *)"
     ]
   }
 }

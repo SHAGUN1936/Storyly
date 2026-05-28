@@ -1,0 +1,39 @@
+# Dependencies — NEVER commit these, hosts re-install on deploy and the
+# Windows-committed copies break exec bits on Linux build agents.
+node_modules/
+
+# Build artifacts
+dist/
+build/
+.next/
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Env files (each host gets their own)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Test + coverage
+coverage/
+
+# Uploaded user content (kept locally only)
+server/uploads/
+
+# Misc
+tmp_*
+replace-*.js
