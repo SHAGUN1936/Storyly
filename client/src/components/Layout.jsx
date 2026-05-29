@@ -55,8 +55,15 @@ export default function Layout() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    // Wait for the server to invalidate the session, then hard-navigate.
+    // window.location.replace causes a full page reload, which:
+    //   1. avoids the React Router + AnimatePresence transition that was
+    //      showing a blank screen mid-animation,
+    //   2. guarantees Login.jsx mounts fresh with no user state (no
+    //      auto-redirect back into the studio),
+    //   3. clears any cached page state / motion contexts cleanly.
+    try { await logout(); } catch (_) { /* best-effort server cleanup */ }
+    window.location.replace('/login');
   };
 
   const navItems = [

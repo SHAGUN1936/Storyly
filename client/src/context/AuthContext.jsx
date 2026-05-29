@@ -16,8 +16,12 @@ export function AuthProvider({ children }) {
 
   const login = (userData) => setUser(userData);
   const logout = async () => {
-    try { await authAPI.logout(); } catch (_) {}
+    // Clear the user SYNCHRONOUSLY first so the same React batch that
+    // navigates to /login also sees user=null. Otherwise Login's
+    // `if (user) return <Navigate to="/studio" />` bounces us right back
+    // to the protected route and only resolves after a manual refresh.
     setUser(null);
+    try { await authAPI.logout(); } catch (_) { /* server-side cleanup best-effort */ }
   };
 
   const isAdmin = user?.role === 'admin';

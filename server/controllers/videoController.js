@@ -237,13 +237,35 @@ export const getVideoBySlug = async (req, res) => {
   }
 };
 
+/**
+ * Resolve the public base URL that share links / QR codes should point to.
+ * Order of precedence:
+ *   1. `CLIENT_URL` env var — explicit production override.
+ *   2. `Origin` header — set by the browser on cross-origin fetches.
+ *   3. `Referer` header — set on same-origin requests when Origin isn't.
+ *   4. `http://localhost:5173` — local dev fallback.
+ */
+function resolveShareBaseUrl(req) {
+  if (process.env.CLIENT_URL) return process.env.CLIENT_URL.replace(/\/+$/, '');
+  const origin = req.headers.origin;
+  if (origin) return origin.replace(/\/+$/, '');
+  const referer = req.headers.referer || req.headers.referrer;
+  if (referer) {
+    try {
+      const u = new URL(referer);
+      return `${u.protocol}//${u.host}`;
+    } catch { /* malformed referer — fall through */ }
+  }
+  return 'http://localhost:5173';
+}
+
 export const getQRCode = async (req, res) => {
   try {
     const video = await GeneratedVideo.findById(req.params.id);
     if (!video || video.userId.toString() !== req.user._id.toString()) {
       return res.status(404).json({ message: 'Video not found' });
     }
-    const baseUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const baseUrl = resolveShareBaseUrl(req);
     const shareUrl = `${baseUrl}/watch/${video.shareSlug}`;
     const qrDataUrl = await QRCode.toDataURL(shareUrl, { width: 300, margin: 2 });
     res.json({ shareUrl, qrCode: qrDataUrl });
