@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 import InfoPage from '../components/InfoPage';
 import GradientText from '../ui/GradientText';
 import FeedbackModal, { FeedbackForm } from '../components/FeedbackModal';
@@ -182,7 +183,7 @@ export default function Stories() {
           backgroundImage: 'linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%)',
         }}
       >
-        <span className="text-base">✨</span>
+        <Sparkles size={16} strokeWidth={2.2} />
         <span>Share your story</span>
       </motion.button>
 

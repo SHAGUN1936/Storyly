@@ -51,9 +51,10 @@ export default function FloatingDecor({
         sizeRoll < 0.5 ? 0.55 + r(2, 0.25)
         : sizeRoll < 0.8 ? 0.95 + r(2, 0.3)
         : 1.5 + r(2, 0.6);
-      // Cartoon stickers look best at S/M sizes — at huge sizes they
-      // dominate the screen. Bias them to smaller items.
-      const useSticker = mixStickers && r(3) > 0.72 && sizeRoll < 0.7;
+      // Use cartoon stickers by default — they read as "logo" art rather
+      // than text glyphs. `mixStickers={false}` still falls back to
+      // emoji-only (used by the giant background layer in Layout/Landing).
+      const useSticker = mixStickers;
       const animStyle = Math.floor(r(4, 4)); // 0..3
       arr.push({
         idx: i,

@@ -305,21 +305,24 @@ export default function Earn() {
                 <ul className="mt-7 space-y-3">
                   {m.bullets.map((b) => (
                     <li key={b} className="flex items-center gap-3 text-slate-200">
-                      <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[10px] font-extrabold text-white">✓</span>
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-white"><Check size={12} strokeWidth={3} /></span>
                       {b}
                     </li>
                   ))}
                 </ul>
                 <div className="mt-8">
                   <MagneticButton as="a" href={ctaTo} variant="glow" className="!px-6 !py-3 !text-sm">
-                    {m.cta} →
+                    <span>{m.cta}</span>
+                    <ArrowRight size={14} strokeWidth={2.4} />
                   </MagneticButton>
                 </div>
               </motion.div>
 
               <motion.div variants={fadeUp} className={i % 2 === 1 ? 'lg:[direction:ltr]' : ''}>
                 <GlassCard tone="strong" withBorder withSpotlight className="!rounded-[2rem] p-10 text-center relative overflow-hidden">
-                  <div className="text-7xl mb-6 drop-shadow-[0_10px_30px_rgba(168,85,247,0.4)]">{m.icon}</div>
+                  <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/20 to-cyan-500/10 border border-white/10 drop-shadow-[0_10px_30px_rgba(168,85,247,0.4)]">
+                    <m.Icon size={42} strokeWidth={1.6} className="text-brand-200" />
+                  </div>
                   <p className="font-display text-2xl font-extrabold text-white">{m.title}</p>
                   <p className="mt-2 text-sm text-slate-400">Tap the button on the left to enroll.</p>
                   <motion.div className="absolute top-4 right-4" animate={{ rotate: [0, 360] }} transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}>
@@ -379,7 +382,7 @@ export default function Earn() {
                   <ul className="mt-6 space-y-2.5">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-slate-200">
-                        <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[9px] font-extrabold text-white">✓</span>
+                        <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-white"><Check size={9} strokeWidth={3} /></span>
                         {f}
                       </li>
                     ))}

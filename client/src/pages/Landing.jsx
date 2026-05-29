@@ -79,8 +79,10 @@ export default function Landing() {
   const { user } = useAuth();
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroY    = useTransform(scrollYProgress, [0, 1], ['0%', '40%']);
-  const heroOpac = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
+  // Keep a subtle parallax on the hero (content drifts down slightly),
+  // but drop the opacity-fade — it was making the headline + CTAs go
+  // translucent the moment you started scrolling.
+  const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
 
   // Hero stack — micro animation on mount via GSAP
   useEffect(() => {
@@ -140,12 +142,12 @@ export default function Landing() {
       </header>
 
       {/* ─── HERO ─── */}
+      {/* No blurred AuroraBackground / NeonOrbs here — we want a clean,
+          sharp first impression. The page's body bg + floating decor
+          already provide enough atmosphere. */}
       <section ref={heroRef} className="relative pt-32 pb-24 sm:pt-44 sm:pb-32">
-        <AuroraBackground variant="cosmic" intensity={0.85} />
-        <ParticleField count={64} color="#A855F7" />
-
         <motion.div
-          style={{ y: heroY, opacity: heroOpac }}
+          style={{ y: heroY }}
           className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
         >
           <motion.div
@@ -220,8 +222,7 @@ export default function Landing() {
 
             {/* Right-side floating story stack */}
             <div className="relative h-[460px] sm:h-[560px] hidden md:block">
-              <NeonOrb color="#A855F7" size="22rem" style={{ top: '-3rem', right: '-3rem' }} />
-              <NeonOrb color="#06B6D4" size="20rem" style={{ bottom: '-2rem', left: '-2rem' }} opacity={0.4} />
+              {/* Removed NeonOrbs — keeping hero sharp, no blur. */}
 
               {/* Cartoon stickers floating beside the phone stack */}
               <motion.div
@@ -314,7 +315,7 @@ export default function Landing() {
         </div>
 
         <div className="space-y-6">
-          <MarqueeRow direction="left" speed="normal">
+          <MarqueeRow direction="left" speed="normal" mask={false}>
             {[...HERO_TEMPLATES, ...HERO_TEMPLATES].map((t, i) => (
               <div
                 key={`row1-${i}`}
@@ -331,7 +332,7 @@ export default function Landing() {
             ))}
           </MarqueeRow>
 
-          <MarqueeRow direction="right" speed="slow">
+          <MarqueeRow direction="right" speed="slow" mask={false}>
             {[...HERO_TEMPLATES].reverse().concat(HERO_TEMPLATES).map((t, i) => (
               <div
                 key={`row2-${i}`}
@@ -350,7 +351,7 @@ export default function Landing() {
         </div>
 
         <div className="mt-12 flex justify-center">
-          <Link to={user ? '/' : '/signup'} className="btn-glow">Explore all templates →</Link>
+          <Link to="/marketplace" className="btn-glow">Explore all templates →</Link>
         </div>
       </section>
 
@@ -372,15 +373,31 @@ export default function Landing() {
             variants={stagger(0.1, 0.06)} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }}
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4"
           >
-            {CATEGORIES.map((c) => (
-              <motion.div key={c.name} variants={fadeUpSmall}>
-                <GlassCard withSpotlight hover="lift" className="p-5 flex flex-col items-center text-center cursor-pointer">
-                  <div className="text-4xl mb-3 drop-shadow-[0_4px_12px_rgba(168,85,247,0.6)]">{c.icon}</div>
-                  <p className="font-display font-bold text-white text-sm">{c.name}</p>
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400 mt-1">{c.count}</p>
-                </GlassCard>
-              </motion.div>
-            ))}
+            {CATEGORIES.map((c) => {
+              // Deep-link into the Marketplace (the public templates section).
+              // Categories that don't have a dedicated marketplace sub-route
+              // fall through to the all-templates view.
+              const MARKETPLACE_ROUTES = {
+                Wedding:    '/marketplace/wedding',
+                Birthday:   '/marketplace/birthday',
+                Invitation: '/marketplace/invitation',
+                Event:      '/marketplace/celebration',
+                Couple:     '/marketplace/celebration',
+                Greeting:   '/marketplace',
+              };
+              const to = MARKETPLACE_ROUTES[c.name] || '/marketplace';
+              return (
+                <motion.div key={c.name} variants={fadeUpSmall}>
+                  <Link to={to} className="block">
+                    <GlassCard withSpotlight hover="lift" className="p-5 flex flex-col items-center text-center cursor-pointer">
+                      <div className="text-4xl mb-3 drop-shadow-[0_4px_12px_rgba(168,85,247,0.6)]">{c.icon}</div>
+                      <p className="font-display font-bold text-white text-sm">{c.name}</p>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400 mt-1">{c.count}</p>
+                    </GlassCard>
+                  </Link>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </div>
       </section>
@@ -538,7 +555,9 @@ export default function Landing() {
                 <NeonOrb color="#06B6D4" size="20rem" style={{ top: '-3rem', left: '-3rem' }} />
                 <GlassCard tone="strong" className="!rounded-[2rem] p-8 relative">
                   <div className="story-ring p-[3px] w-fit mx-auto">
-                    <div className="bg-ink-900 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em] gradient-text">Scan to view</div>
+                    <div className="bg-ink-900 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em]">
+                      <span className="gradient-text">Scan to view</span>
+                    </div>
                   </div>
                   <div className="story-ring p-[3px] w-fit mx-auto mt-5">
                     <div className="bg-white p-3 rounded-2xl">

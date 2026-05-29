@@ -41,6 +41,9 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 html, body, #root { min-height: 100%; }
+/* Stop the document from accidentally side-scrolling — fixes the
+   horizontal-scroll fluctuations users were seeing on some pages. */
+html, body { overflow-x: hidden; }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
@@ -1040,6 +1043,21 @@ html.light .storyly-tagline { color: #64748B; }
   color: #F5F7FB;
   box-shadow: 0 50px 120px -40px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.06);
   backdrop-filter: blur(28px) saturate(160%);
+  /* The card itself never grows past the viewport. Page-level scroll is
+     locked separately by useLockBodyScroll, so background content stays
+     still while a dialog is open. */
+  max-height: 90vh;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+/* Opt-in: card scrolls its own content. Use this for simple flat modals
+   like ConfirmDialog, FeedbackModal, QR popup. Modals that need a
+   sticky header/footer pattern (Admin's new-website modal) leave this
+   off and manage their own internal scroll region. */
+.tpl-modal-card.tpl-modal-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 html.light .tpl-modal-card {
   background: rgba(255,255,255,0.96);
@@ -1213,6 +1231,29 @@ html.light .tpl-editor-shell textarea::placeholder { color: #94A3B8 !important; 
 html.light .tpl-editor-shell .html-deck-root,
 html.light .tpl-editor-shell .bg-black,
 html.light .tpl-editor-shell .bg-black\/50 { background-color: #000000 !important; }
+
+/* ── Mobile builder drawer stays DARK in BOTH themes ───────
+   The .tpl-editor-shell rules above flip slate/white surfaces inside the
+   shell to white in light mode. The mobile drawer is intentionally dark
+   glass to match the phone-frame canvas — these overrides keep its
+   content readable when the user is in light mode. */
+html.light .tpl-builder-drawer,
+html.light .tpl-builder-drawer * { color: #F5F7FB !important; }
+html.light .tpl-builder-drawer .bg-slate-100,
+html.light .tpl-builder-drawer .bg-slate-50,
+html.light .tpl-builder-drawer .bg-white,
+html.light .tpl-builder-drawer .bg-white\/5,
+html.light .tpl-builder-drawer .bg-white\/10 {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+html.light .tpl-builder-drawer .text-slate-900,
+html.light .tpl-builder-drawer .text-slate-800,
+html.light .tpl-builder-drawer .text-slate-700 { color: #F5F7FB !important; }
+html.light .tpl-builder-drawer .text-slate-500,
+html.light .tpl-builder-drawer .text-slate-600 { color: rgba(255,255,255,0.70) !important; }
+html.light .tpl-builder-drawer .border-slate-100,
+html.light .tpl-builder-drawer .border-slate-200,
+html.light .tpl-builder-drawer .border-white\/70 { border-color: rgba(255,255,255,0.12) !important; }
 
 /* ─────────────────────────────────────────────────────────────
    Animations

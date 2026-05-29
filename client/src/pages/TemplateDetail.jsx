@@ -625,17 +625,25 @@ export default function TemplateDetail() {
           decor since the opaque slate-950 background covers the
           Layout-level floating decor. `isolate` creates a stacking
           context so the negative-z decor stays inside the shell. */}
-      <div className="tpl-editor-shell rounded-2xl border border-white/10 bg-slate-950 overflow-hidden relative isolate">
+      <div data-lenis-prevent className="tpl-editor-shell rounded-2xl border border-white/10 bg-slate-950 overflow-hidden relative isolate">
         <div className="pointer-events-none absolute inset-0" style={{ zIndex: -1 }}>
           <FloatingDecor density="subtle" opacity={0.08} size={36} />
         </div>
         {/* ── Top toolbar ─────────────────────────────────── */}
-        <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-white/10 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0">
-            <Link to="/studio" className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-white/15 hover:border-white/25 active:scale-95 transition">← Feed</Link>
+        <div className="flex items-center justify-between gap-2 px-2 py-2 sm:px-3 sm:py-2.5 border-b border-white/10">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Link
+              to="/studio"
+              className="shrink-0 inline-flex items-center justify-center rounded-xl bg-white/5 border border-white/10 px-2.5 py-2 text-xs font-bold text-slate-200 hover:bg-white/15 hover:border-white/25 active:scale-95 transition"
+              title="Back to feed"
+              aria-label="Back to feed"
+            >
+              <span className="sm:hidden text-base leading-none">←</span>
+              <span className="hidden sm:inline">← Feed</span>
+            </Link>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white truncate max-w-[22ch]">{template.name}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest">{catEmoji} {cat} · Page {activePage + 1} / {pageCount}</p>
+              <p className="text-sm font-bold text-white truncate max-w-[14ch] sm:max-w-[22ch]">{template.name}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest truncate">{catEmoji} {cat} · {activePage + 1}/{pageCount}</p>
             </div>
             <div className="hidden md:flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
               <button
@@ -670,7 +678,7 @@ export default function TemplateDetail() {
               >🎵 {themeOverrides.audioUrl ? 'Music ✓' : 'Music'}</button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <label className="hidden md:flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-slate-300 hover:bg-white/10 cursor-pointer">
               <input type="checkbox" checked={dragMode} onChange={(e) => setDragMode(e.target.checked)} />
               <span>Drag mode</span>
@@ -680,7 +688,7 @@ export default function TemplateDetail() {
               whileTap={{ scale: 0.96 }}
               onClick={handleGenerate}
               disabled={generating || uploading}
-              className="rounded-xl px-4 py-2 text-xs font-bold text-white border border-white/15 disabled:opacity-60 transition"
+              className="rounded-xl px-3 py-2 sm:px-4 text-xs font-bold text-white border border-white/15 disabled:opacity-60 transition whitespace-nowrap"
               style={{
                 backgroundImage: 'linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%)',
                 backgroundSize: '200% 200%',
@@ -688,7 +696,10 @@ export default function TemplateDetail() {
               }}
               title={editId ? 'Save changes' : 'Publish your page'}
             >
-              {generating ? '⏳ Saving…' : editId ? '💾 Save' : '🚀 Publish'}
+              {generating ? '⏳' : editId ? '💾' : '🚀'}
+              <span className="hidden sm:inline ml-1">
+                {generating ? 'Saving…' : editId ? 'Save' : 'Publish'}
+              </span>
             </motion.button>
           </div>
         </div>
@@ -1007,20 +1018,35 @@ export default function TemplateDetail() {
           {mobileDrawer && (
             <motion.div
               key="mobile-drawer"
-              initial={{ y: 240, opacity: 0 }}
+              initial={{ y: 320, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 240, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-              className="fixed inset-x-0 bottom-16 z-30 mx-3 mb-3 rounded-[1.75rem] bg-white border border-white/70 shadow-pop max-h-[55vh] overflow-y-auto"
+              exit={{ y: 320, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+              className="fixed inset-x-0 bottom-[68px] z-30 mx-2 mb-2 rounded-[1.5rem] border border-white/12 max-h-[58vh] overflow-y-auto shadow-[0_40px_100px_-30px_rgba(0,0,0,0.75)] tpl-builder-drawer"
+              style={{
+                background: 'linear-gradient(180deg, rgba(17,24,39,0.96), rgba(11,15,25,0.96))',
+                backdropFilter: 'blur(24px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+              }}
             >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 sticky top-0 bg-white">
-                <p className="font-bold font-display text-slate-900">
+              {/* Grab handle */}
+              <div className="flex justify-center pt-2 pb-1">
+                <div className="w-10 h-1 rounded-full bg-white/20" />
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 sticky top-0 z-10"
+                style={{ background: 'rgba(11,15,25,0.92)', backdropFilter: 'blur(20px)' }}
+              >
+                <p className="font-bold font-display text-white text-sm">
                   {MOBILE_PALETTE.find((p) => p.id === mobileDrawer)?.emoji} {' '}
                   {MOBILE_PALETTE.find((p) => p.id === mobileDrawer)?.label}
                 </p>
-                <button onClick={() => setMobileDrawer(null)} className="text-slate-500 hover:text-slate-900 text-lg">✕</button>
+                <button
+                  onClick={() => setMobileDrawer(null)}
+                  className="rounded-full w-7 h-7 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition active:scale-90"
+                  aria-label="Close panel"
+                >✕</button>
               </div>
-              <div className="p-4">
+              <div className="p-3">
                 <MobilePanel
                   drawer={mobileDrawer}
                   overlayPhotoInputRef={overlayPhotoInputRef}
@@ -1047,31 +1073,53 @@ export default function TemplateDetail() {
           )}
         </AnimatePresence>
 
-        <div className="fixed inset-x-0 bottom-0 z-20 bg-white/95 backdrop-blur-xl border-t border-white/70 pb-safe">
+        {/* Dark-glass bottom dock matching the editor shell */}
+        <div
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 pb-safe"
+          style={{
+            background: 'rgba(11,15,25,0.92)',
+            backdropFilter: 'blur(20px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+          }}
+        >
           <div className="grid grid-cols-8 px-1">
-            {MOBILE_PALETTE.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => {
-                  if (t.id === 'photo') { overlayPhotoInputRef.current?.click(); return; }
-                  if (t.id === 'gif') { overlayGifInputRef.current?.click(); return; }
-                  if (t.id === 'count') { handleAddCountdown(); return; }
-                  setMobileDrawer(mobileDrawer === t.id ? null : t.id);
-                }}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-bold transition ${
-                  mobileDrawer === t.id ? 'text-brand-700' : 'text-slate-600'
-                }`}
-                title={t.label}
-              >
-                <span className="text-xl">{t.emoji}</span>
-                <span>{t.label}</span>
-              </button>
-            ))}
+            {MOBILE_PALETTE.map((t) => {
+              const isActive = mobileDrawer === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    if (t.id === 'photo') { overlayPhotoInputRef.current?.click(); return; }
+                    if (t.id === 'gif') { overlayGifInputRef.current?.click(); return; }
+                    if (t.id === 'count') { handleAddCountdown(); return; }
+                    setMobileDrawer(mobileDrawer === t.id ? null : t.id);
+                  }}
+                  className={`relative flex flex-col items-center justify-center gap-0.5 py-2 text-[9px] font-bold uppercase tracking-[0.06em] transition active:scale-90 ${
+                    isActive ? 'text-white' : 'text-slate-300 hover:text-white'
+                  }`}
+                  title={t.label}
+                  aria-label={t.label}
+                  aria-pressed={isActive}
+                >
+                  {isActive && (
+                    <span
+                      className="absolute inset-1 rounded-xl"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(34,211,238,0.20), rgba(168,85,247,0.30) 50%, rgba(244,114,182,0.20))',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
+                      }}
+                    />
+                  )}
+                  <span className="relative text-lg leading-none">{t.emoji}</span>
+                  <span className="relative">{t.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
         {/* Spacer so the dock doesn't cover the canvas */}
-        <div className="h-24" />
+        <div className="h-20" />
       </div>
     </div>
   );

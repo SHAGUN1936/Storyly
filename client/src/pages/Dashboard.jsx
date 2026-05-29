@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { templatesAPI } from '../api/api';
 import TemplateCard from '../components/TemplateCard';
@@ -25,9 +25,18 @@ const CATEGORIES = [
 const TRENDING_LABELS = ['Wedding ✨', 'Birthday 🎂', 'Invitation 💌', 'Save the date 📅', 'RSVP 🎟️', 'Couple 💞', 'Anniversary 💖'];
 
 export default function Dashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Pre-select the category from the URL if the user landed here from a
+  // Landing-page category card (e.g. /studio?category=Wedding). Falls back
+  // to "All" when nothing is set or the name doesn't match a known chip.
+  const initialCategory = (() => {
+    const fromUrl = searchParams.get('category');
+    if (fromUrl && CATEGORIES.some((c) => c.name === fromUrl)) return fromUrl;
+    return 'All';
+  })();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState('All');
+  const [category, setCategory] = useState(initialCategory);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -212,7 +221,15 @@ export default function Dashboard() {
           return (
             <button
               key={c.name}
-              onClick={() => setCategory(c.name)}
+              onClick={() => {
+                setCategory(c.name);
+                // Keep the URL in sync — refreshing or sharing the link
+                // preserves the selected category filter.
+                const next = new URLSearchParams(searchParams);
+                if (c.name === 'All') next.delete('category');
+                else next.set('category', c.name);
+                setSearchParams(next, { replace: true });
+              }}
               className={`${active ? 'chip chip-active' : 'chip chip-default'} whitespace-nowrap`}
             >
               <span className="text-base">{c.emoji}</span>

@@ -1,4 +1,6 @@
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 /**
  * Premium glassmorphism confirmation modal. Replaces window.confirm().
@@ -16,7 +18,9 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }) {
-  return (
+  useLockBodyScroll(open);
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -24,6 +28,7 @@ export default function ConfirmDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+          data-lenis-prevent
           role="dialog"
           aria-modal="true"
           aria-labelledby="confirm-dialog-title"
@@ -35,7 +40,7 @@ export default function ConfirmDialog({
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
             onClick={(e) => e.stopPropagation()}
-            className="tpl-modal-card rounded-3xl p-7 w-full max-w-md relative overflow-hidden"
+            className="tpl-modal-card tpl-modal-scroll rounded-3xl p-7 w-full max-w-md relative"
           >
             {/* Glow rim */}
             <div className={`absolute -top-px left-1/2 -translate-x-1/2 w-40 h-px ${danger ? 'bg-gradient-to-r from-transparent via-rose-400 to-transparent' : 'bg-gradient-to-r from-transparent via-brand-400 to-transparent'}`} />
@@ -98,6 +103,7 @@ export default function ConfirmDialog({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

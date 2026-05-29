@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion';
 import useMouseGlow from '../motion/useMouseGlow';
 import useLikedTemplates from '../hooks/useLikedTemplates';
+import {
+  HeartSticker, ChatSticker, CakeSticker, StarSticker,
+  RingSticker, ConfettiSticker, GiftSticker, BalloonSticker, MusicSticker,
+} from '../ui/CartoonStickers';
 
 const CATEGORY_GRADIENT = {
   Love:       'from-rose-400 via-fuchsia-500 to-violet-600',
@@ -14,9 +18,17 @@ const CATEGORY_GRADIENT = {
   Greeting:   'from-amber-300 via-rose-400 to-fuchsia-500',
 };
 
-const CATEGORY_EMOJI = {
-  Love: '💖', Friendship: '🫶', Birthday: '🎂', Memories: '📸',
-  Wedding: '💍', Event: '✨', Invitation: '💌', Couple: '💞', Greeting: '🎈',
+/** Each category renders as a cartoon SVG sticker instead of an emoji. */
+const CATEGORY_STICKER = {
+  Love:       HeartSticker,
+  Friendship: ChatSticker,
+  Birthday:   CakeSticker,
+  Memories:   StarSticker,
+  Wedding:    RingSticker,
+  Event:      ConfettiSticker,
+  Invitation: GiftSticker,
+  Couple:     HeartSticker,
+  Greeting:   BalloonSticker,
 };
 
 export default function TemplateCard({ template }) {
@@ -24,7 +36,7 @@ export default function TemplateCard({ template }) {
   const liked = isLiked(template._id);
   const cat = template.category || 'Event';
   const grad = CATEGORY_GRADIENT[cat] || CATEGORY_GRADIENT.Event;
-  const emoji = CATEGORY_EMOJI[cat] || '✨';
+  const CategorySticker = CATEGORY_STICKER[cat] || ConfettiSticker;
   const ref = useMouseGlow();
 
   return (
@@ -65,8 +77,37 @@ export default function TemplateCard({ template }) {
             )}
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl drop-shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
-            {emoji}
+          // No thumbnail → show the category cartoon sticker as the artwork
+          // Layout: soft radial glow backdrop, centered sticker biased
+          // slightly above center so the title at the bottom has breathing
+          // room, with the category label tucked just below the sticker.
+          <div className="w-full h-full relative flex flex-col items-center justify-center px-3 pt-8 pb-14">
+            {/* Soft white halo behind the sticker for depth */}
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              aria-hidden
+            >
+              <div
+                className="w-44 h-44 sm:w-52 sm:h-52 rounded-full"
+                style={{
+                  background:
+                    'radial-gradient(circle, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.08) 35%, transparent 70%)',
+                  filter: 'blur(2px)',
+                }}
+              />
+            </div>
+            {/* Sticker centered, with gentle infinite bob */}
+            <motion.div
+              className="relative"
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <CategorySticker size={130} />
+            </motion.div>
+            {/* Category label under the sticker */}
+            <p className="relative mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/85 drop-shadow">
+              {cat}
+            </p>
           </div>
         )}
 
@@ -77,10 +118,12 @@ export default function TemplateCard({ template }) {
           <span className="h-0.5 flex-1 rounded-full bg-white/40" />
         </div>
 
-        {/* Top overlays: category pill + like */}
+        {/* Top overlays: category pill (with cartoon sticker logo) + like */}
         <div className="absolute inset-x-2 top-5 flex items-center justify-between gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/40 backdrop-blur border border-white/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white">
-            <span className="text-[10px]">{emoji}</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-black/45 backdrop-blur border border-white/15 pl-1 pr-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white">
+            <span className="inline-flex items-center justify-center w-4 h-4">
+              <CategorySticker size={16} />
+            </span>
             <span>{cat}</span>
           </span>
           <button
@@ -117,3 +160,6 @@ export default function TemplateCard({ template }) {
     </motion.article>
   );
 }
+
+// Silence unused-import linter for future categories we may add (Music, etc.)
+export const __CATEGORY_STICKERS_AVAILABLE = { MusicSticker };

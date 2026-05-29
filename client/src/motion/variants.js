@@ -39,15 +39,20 @@ export const stagger = (delayChildren = 0.1, staggerChildren = 0.08) => ({
   visible: { transition: { delayChildren, staggerChildren } },
 });
 
+// Note: kept `blurUp` name for backwards compatibility, but the
+// CSS `filter: blur(...)` was removed — it caused a permanent
+// containing block (even at blur(0px)) and produced a subtle
+// visual blur on the Landing hero during transitions. Now it's
+// just a soft fade-and-rise like `fadeUp` with a longer duration.
 export const blurUp = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
-  visible: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.9, ease: EASE } },
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
 };
 
 export const pageTransition = {
-  initial: { opacity: 0, y: 14, filter: 'blur(6px)' },
-  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.55, ease: EASE } },
-  exit:    { opacity: 0, y: -10, filter: 'blur(4px)', transition: { duration: 0.35, ease: EASE } },
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
+  exit:    { opacity: 0, y: -10, transition: { duration: 0.35, ease: EASE } },
 };
 
 export { EASE };

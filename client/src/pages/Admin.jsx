@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { adminAPI, videosAPI } from '../api/api';
 import { htmlToStructure } from '../lib/htmlTemplate';
@@ -23,6 +24,7 @@ import SlideshowBuilder from '../components/SlideshowBuilder';
 import { STARTER_TEMPLATES } from '../lib/starterTemplates';
 import { StarSticker, DiscoSticker, GiftSticker } from '../ui/CartoonStickers';
 import FloatingDecor from '../ui/FloatingDecor';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 function ShapePreview({ kind }) {
   const size = 28;
@@ -494,6 +496,12 @@ export default function Admin() {
   /** When creating a NEW website, this holds the user's currently-picked starter (null = blank canvas). */
   const [pickedStarterId, setPickedStarterId] = useState(null);
 
+  // Lock background scroll whenever ANY of Admin's modals is open. The
+  // create-step-1 new-website picker and the starter-picker both pop over
+  // the templates list and shouldn't scroll the page underneath. The
+  // delete-confirm dialog handles its own lock via ConfirmDialog.
+  useLockBodyScroll(starterPickerOpen || (formOpen && !editing && createStep === 1));
+
   const loadStarterTemplate = (id) => {
     const tpl = STARTER_TEMPLATES.find((t) => t.id === id);
     if (!tpl) return;
@@ -920,7 +928,7 @@ export default function Admin() {
               )}
 
               {(editing || createStep === 2) && (
-                <div className="tpl-editor-shell relative isolate flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+                <div data-lenis-prevent className="tpl-editor-shell relative isolate flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
                   <div className="pointer-events-none absolute inset-0" style={{ zIndex: -1 }}>
                     <FloatingDecor density="subtle" opacity={0.08} size={36} />
                   </div>
@@ -1822,6 +1830,7 @@ export default function Admin() {
       />
 
       {/* Starter templates picker */}
+      {typeof document !== 'undefined' && createPortal(
       <AnimatePresence>
         {starterPickerOpen && (
           <motion.div
@@ -1829,6 +1838,7 @@ export default function Admin() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm"
+            data-lenis-prevent
             onClick={() => setStarterPickerOpen(false)}
           >
             <motion.div
@@ -1836,7 +1846,7 @@ export default function Admin() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="tpl-modal-card w-full max-w-4xl rounded-[2rem] border p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="tpl-modal-card tpl-modal-scroll w-full max-w-4xl rounded-[2rem] border p-6 sm:p-8 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-5">
                 <div>
@@ -1883,14 +1893,18 @@ export default function Admin() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
 
-      {/* New-website modal — gallery-dominant picker with sticky footer. */}
-      {formOpen && !editing && createStep === 1 && (
+      {/* New-website modal — portaled to body so motion.main's transform
+          doesn't create a wrong containing block for its `fixed inset-0`. */}
+      {typeof document !== 'undefined' && formOpen && !editing && createStep === 1 && createPortal(
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md"
+          data-lenis-prevent
           onClick={() => { if (!formSubmitting) setFormOpen(false); }}
         >
           <motion.form
@@ -1926,8 +1940,11 @@ export default function Admin() {
               >✕</button>
             </div>
 
-            {/* Body: gallery (starters mode) OR centered illustration (blank mode) */}
-            <div className="px-6 sm:px-8 py-5 overflow-y-auto flex-1">
+            {/* Body: gallery (starters mode) OR centered illustration (blank mode).
+                `min-h-0` is critical here — without it the flex child claims its
+                content height as min-height, ignores the parent's max-h cap,
+                and overflows the modal (clipped by `overflow-hidden` above). */}
+            <div className="px-6 sm:px-8 py-5 overflow-y-auto flex-1 min-h-0">
               {creationMode === 'starters' ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                   {STARTER_TEMPLATES.map((t) => {
@@ -2098,7 +2115,8 @@ export default function Admin() {
               </div>
             </div>
           </motion.form>
-        </motion.div>
+        </motion.div>,
+        document.body
       )}
 
       {/* Legacy modal step 2 — never renders now (we hide modal when createStep===2 or editing), but kept for any edge cases. */}

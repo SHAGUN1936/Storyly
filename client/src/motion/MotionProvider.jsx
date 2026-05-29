@@ -4,10 +4,16 @@ import Lenis from 'lenis';
 
 const MotionContext = createContext({ lenis: null, prefersReducedMotion: false });
 
-/** Routes where Lenis must NOT take over the wheel — these pages have
- *  their own inner scroll containers (template builder, admin studio)
- *  and smooth-wheel interception breaks them. */
-const NO_LENIS_PREFIXES = ['/template/', '/admin'];
+/** Routes where Lenis must NOT take over the wheel — these pages are
+ *  full-screen editor shells (their entire viewport is an editor with
+ *  internal scroll containers, so Lenis has nothing useful to do and
+ *  its wheel hijacking breaks the editor's panels).
+ *
+ *  Other pages that contain an editor shell (e.g. /admin, when the
+ *  inline editor opens) keep Lenis enabled for the page-level scroll,
+ *  and the editor itself opts out with `data-lenis-prevent` on its
+ *  root `.tpl-editor-shell` element. */
+const NO_LENIS_PREFIXES = ['/template/'];
 
 /**
  * Global motion provider — boots Lenis smooth scroll except on routes

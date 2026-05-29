@@ -7,7 +7,10 @@
       "Bash(npx vite *)",
       "PowerShell($f='c:\\\\Users\\\\agraw\\\\OneDrive\\\\Desktop\\\\Personal\\\\client\\\\src\\\\pages\\\\TemplateDetail.jsx'; \\(Get-Content $f | Measure-Object -Line\\).Lines)",
       "Bash(git -C \"c:\\\\Users\\\\agraw\\\\OneDrive\\\\Desktop\\\\Personal\" ls-files client/node_modules/)",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(powershell -Command \"\\(Get-Content src\\\\pages\\\\TemplateDetail.jsx | Measure-Object -Line\\).Lines\")",
+      "Bash(npm uninstall *)",
+      "Bash(npm view *)"
     ]
   }
 }

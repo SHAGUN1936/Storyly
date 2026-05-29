@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { videosAPI } from '../api/api';
@@ -12,6 +13,7 @@ import FloatingDecor from '../ui/FloatingDecor';
 import { GiftSticker, HeartSticker, MusicSticker } from '../ui/CartoonStickers';
 import { fadeUp, stagger } from '../motion/variants';
 import useLikedTemplates from '../hooks/useLikedTemplates';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 const STATUS_STYLE = {
   completed:  { tint: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.45)', color: '#6EE7B7' },
@@ -84,6 +86,8 @@ export default function MyVideos() {
   };
 
   const { count: likedCount } = useLikedTemplates();
+  // Lock body scroll while the QR popup is open (ConfirmDialog handles its own lock).
+  useLockBodyScroll(Boolean(qrData && qrVideo));
   const stats = useMemo(() => ({
     total:      videos.length,
     live:       videos.filter((v) => v.status === 'completed').length,
@@ -314,6 +318,10 @@ export default function MyVideos() {
         onConfirm={confirmDeletePage}
       />
 
+      {/* QR popup — portaled to <body> so it escapes any motion.main
+          transform/filter that would otherwise become its containing
+          block and position the popup off-center. */}
+      {typeof document !== 'undefined' && createPortal(
       <AnimatePresence>
         {qrData && qrVideo && (
           <motion.div
@@ -321,6 +329,7 @@ export default function MyVideos() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            data-lenis-prevent
             onClick={() => setQrVideo(null)}
           >
             <motion.div
@@ -329,11 +338,13 @@ export default function MyVideos() {
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 320, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="tpl-modal-card rounded-[2rem] p-8 max-w-sm w-full text-center relative overflow-hidden"
+              className="tpl-modal-card tpl-modal-scroll rounded-[2rem] p-8 max-w-sm w-full text-center relative"
             >
               <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
               <div className="story-ring p-[3px] w-fit mx-auto mb-4">
-                <div className="px-4 py-2 text-xs font-extrabold uppercase tracking-[0.22em] gradient-text">Share</div>
+                <div className="px-4 py-2 text-xs font-extrabold uppercase tracking-[0.22em]">
+                  <span className="gradient-text">Share</span>
+                </div>
               </div>
               <h3 className="tpl-modal-title text-xl font-extrabold font-display mb-1.5">Spread the vibe</h3>
               <p className="tpl-modal-desc text-sm mb-6">Scan the QR or copy the share link below.</p>
@@ -357,7 +368,9 @@ export default function MyVideos() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 }

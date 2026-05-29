@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import GradientText from '../ui/GradientText';
+import useLockBodyScroll from '../hooks/useLockBodyScroll';
 
 const FEEDBACK_TYPES = [
   { id: 'story',   label: 'Share my story', emoji: '✨', desc: 'Tell us how you used Storyly for your moment.' },
@@ -29,7 +31,9 @@ const FEEDBACK_KEY = 'storyly-feedback-log';
  *  - context: optional label shown as the subtitle (e.g. "from Customer Stories")
  */
 export default function FeedbackModal({ open, onClose, defaultKind = 'story', context }) {
-  return (
+  useLockBodyScroll(open);
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -37,6 +41,7 @@ export default function FeedbackModal({ open, onClose, defaultKind = 'story', co
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+          data-lenis-prevent
           onClick={onClose}
           role="dialog"
           aria-modal="true"
@@ -48,14 +53,15 @@ export default function FeedbackModal({ open, onClose, defaultKind = 'story', co
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: 'spring', stiffness: 320, damping: 26 }}
             onClick={(e) => e.stopPropagation()}
-            className="tpl-modal-card rounded-[2rem] w-full max-w-2xl relative overflow-hidden"
+            className="tpl-modal-card rounded-[2rem] w-full max-w-2xl relative flex flex-col"
           >
             <div className="absolute -top-px left-1/2 -translate-x-1/2 w-40 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
             <FeedbackForm defaultKind={defaultKind} context={context} onClose={onClose} />
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -123,15 +129,24 @@ export function FeedbackForm({ defaultKind = 'story', context, onClose, inline =
     );
   }
 
+  // In modal mode, render as flex-col with sticky header + scrollable body
+  // + sticky footer. In inline mode (embedded in a page), keep the simple
+  // flat layout — no scroll region needed.
   return (
-    <form onSubmit={submit} className={`relative ${inline ? '' : 'p-7 sm:p-9'}`}>
-      <h3 id="feedback-title" className="tpl-modal-title font-display text-2xl font-extrabold tracking-tight">
-        <GradientText variant="cosmic">Share with us.</GradientText>
-      </h3>
-      {context && <p className="tpl-modal-desc mt-1.5 text-sm">{context}</p>}
+    <form
+      onSubmit={submit}
+      className={inline ? 'relative' : 'relative flex flex-col flex-1 min-h-0 max-h-[90vh]'}
+    >
+      <div className={inline ? '' : 'shrink-0 px-7 pt-7 sm:px-9 sm:pt-9 pb-4'}>
+        <h3 id="feedback-title" className="tpl-modal-title font-display text-2xl font-extrabold tracking-tight">
+          <GradientText variant="cosmic">Share with us.</GradientText>
+        </h3>
+        {context && <p className="tpl-modal-desc mt-1.5 text-sm">{context}</p>}
+      </div>
+      <div className={inline ? '' : 'flex-1 min-h-0 overflow-y-auto px-7 sm:px-9 pb-2'}>
 
       {/* Kind picker */}
-      <div className="mt-5 grid grid-cols-2 gap-2">
+      <div className={`${inline ? 'mt-5' : 'mt-1'} grid grid-cols-2 gap-2`}>
         {FEEDBACK_TYPES.map((t) => {
           const active = kind === t.id;
           return (
@@ -253,7 +268,8 @@ export function FeedbackForm({ defaultKind = 'story', context, onClose, inline =
         </p>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-2 justify-end">
+      </div>
+      <div className={`${inline ? 'mt-6' : 'shrink-0 px-7 pb-7 sm:px-9 sm:pb-9 pt-4 border-t border-white/10'} flex flex-wrap items-center gap-2 justify-end`}>
         {!inline && (
           <button type="button" onClick={onClose} className="tpl-modal-cancel px-5 py-2.5 rounded-full text-sm font-bold transition">
             Cancel
