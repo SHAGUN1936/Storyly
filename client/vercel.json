@@ -2,6 +2,7 @@
   "buildCommand": "node ./node_modules/vite/bin/vite.js build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/api/:path*", "destination": "https://storyly-be.vercel.app/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
