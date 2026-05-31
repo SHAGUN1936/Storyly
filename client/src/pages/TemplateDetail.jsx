@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { templatesAPI, videosAPI } from '../api/api';
+import { getLikedTemplateSnapshot } from '../hooks/useLikedTemplates';
 import SlideshowBuilder from '../components/SlideshowBuilder';
 import { extractSlotsFromStructure } from '../data/exampleSlideshowTemplate';
 import {
@@ -37,8 +39,14 @@ const MOBILE_PALETTE = [
 export default function TemplateDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const editId = searchParams.get('edit');
+  // `?for=<name>` is set by the RecipientPromptModal — the saved page
+  // is dedicated to this person and the name flows through to share.
+  const recipientName = (searchParams.get('for') || '').trim();
+  // `?src=` distinguishes admin templates from builder templates so the
+  // editor knows which collection to fetch the base structure from.
+  const sourceType = searchParams.get('src') === 'BuilderTemplate' ? 'BuilderTemplate' : 'Template';
 
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +57,15 @@ export default function TemplateDetail() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [themeOverrides, setThemeOverrides] = useState({});
+  // Recipient name restored from the loaded draft — takes precedence
+  // over the `?for=` URL hint so re-saving doesn't lose the dedicatee.
+  const [loadedRecipient, setLoadedRecipient] = useState('');
+  // When the auto-create updates the URL with the new draft id, the load
+  // effect re-fires because `editId` changed. We don't want it to reload
+  // the just-created (empty) draft and wipe whatever the user has typed
+  // — set this flag right before the auto-create completes, and skip the
+  // next load fire.
+  const skipNextLoadRef = useRef(false);
 
   /** Editor UI state */
   const [activePage, setActivePage] = useState(0);
@@ -68,6 +85,11 @@ export default function TemplateDetail() {
   const overlayPhotoInputRef = useRef(null);
   const overlayGifInputRef = useRef(null);
   const pendingSlotRef = useRef(null);
+  /* Set when the live template is gone (admin deleted/unpublished it) and
+     we loaded the user's own liked snapshot instead. When true we ship the
+     structure snapshot with the save so the server can persist the page
+     without the source template. */
+  const usedLikedFallbackRef = useRef(false);
 
   const structure = useMemo(() => {
     const raw = template?.structure;
@@ -102,12 +124,19 @@ export default function TemplateDetail() {
   useEffect(() => { setSelectedOverlayIdx(null); }, [activePage]);
 
   useEffect(() => {
+    // The auto-create just changed the URL with our own new id — skip
+    // this load so we don't overwrite the user's in-progress edits.
+    if (skipNextLoadRef.current) {
+      skipNextLoadRef.current = false;
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError('');
     (async () => {
+      usedLikedFallbackRef.current = false;
       try {
-        const tpl = await templatesAPI.get(id);
+        const tpl = await templatesAPI.get(id, sourceType);
         if (cancelled) return;
         setTemplate(tpl);
         if (editId) {
@@ -128,6 +157,9 @@ export default function TemplateDetail() {
             );
             const urls = job.customizations?.mediaUrls;
             setMediaUrls(Array.isArray(urls) ? urls : []);
+            // Restore the dedicatee so subsequent draft saves keep the
+            // name attached even if the URL no longer carries `?for=`.
+            if (job.recipientName) setLoadedRecipient(job.recipientName);
           } catch {
             if (!cancelled) setError('Could not load your saved page.');
           }
@@ -135,7 +167,18 @@ export default function TemplateDetail() {
           setThemeOverrides({});
         }
       } catch {
-        if (!cancelled) setTemplate(null);
+        /* Live template unavailable — the admin deleted or unpublished it.
+           If the user has it in their Liked store, load that snapshot so
+           they can still use / customize / share it. */
+        if (cancelled) return;
+        const snap = getLikedTemplateSnapshot(id);
+        if (snap) {
+          usedLikedFallbackRef.current = true;
+          setTemplate(snap);
+          if (!editId) setThemeOverrides({});
+        } else {
+          setTemplate(null);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -338,7 +381,9 @@ export default function TemplateDetail() {
     if (pageIdx !== activePage) return;
     if (blockIdx < adminBlocksCount) return; // admin block, ignore
     const overlayIdx = blockIdx - adminBlocksCount;
-    updateOverlay(overlayIdx, { x, y });
+    // x/y are the block's CENTRE in design px (the canvas commits the
+    // centre); anchor:'center' tells the renderer to translate(-50%,-50%).
+    updateOverlay(overlayIdx, { x, y, anchor: 'center' });
   }, [activePage, adminBlocksCount, updateOverlay]);
 
   /** Canvas selection: only allow selecting user overlays. */
@@ -525,15 +570,27 @@ export default function TemplateDetail() {
         ? [...Object.values(slotFills).filter(Boolean), ...mediaUrls]
         : mediaUrls;
 
+      /* Always send the full editor state — text, media, slots, AND
+         themeOverrides — regardless of template type. The backend stores
+         what it gets; this guarantees that re-opening (Edit button) can
+         restore every field the user touched. */
+      const fullCustomizations = {
+        text: customText,
+        mediaUrls: allMedia,
+        slots: slotFills,
+        themeOverrides,
+        // When the source template is gone, carry our own snapshot so the
+        // server can persist the page without it.
+        ...(usedLikedFallbackRef.current ? {
+          structureSnapshot: structure,
+          templateName: template?.name,
+          templateCategory: template?.category,
+          templateThumb: template?.thumbnailUrl,
+        } : {}),
+      };
+
       if (editId) {
-        await videosAPI.update(editId, {
-          customizations: {
-            text: customText,
-            mediaUrls: allMedia,
-            slots: isSlideshow ? slotFills : undefined,
-            ...(isSlideshow && structure?.builderState ? { themeOverrides } : {}),
-          },
-        });
+        await videosAPI.update(editId, { customizations: fullCustomizations });
         if (!isSlideshow) await videosAPI.process(editId);
         navigate('/my-videos');
         return;
@@ -541,12 +598,9 @@ export default function TemplateDetail() {
 
       const { _id: jobId } = await videosAPI.createJob({
         templateId: id,
-        customizations: {
-          text: customText,
-          mediaUrls: allMedia,
-          slots: isSlideshow ? slotFills : undefined,
-          ...(isSlideshow && structure?.builderState ? { themeOverrides } : {}),
-        },
+        sourceType,
+        recipientName: effectiveRecipient,
+        customizations: fullCustomizations,
       });
       await videosAPI.process(jobId);
       navigate('/my-videos');
@@ -556,6 +610,177 @@ export default function TemplateDetail() {
       setGenerating(false);
     }
   };
+
+  // ── Draft save (explicit button + auto-save on tab switch) ──────────
+  // `draftJobIdRef` lets us reuse the same record across multiple saves
+  // so we don't pile up duplicate drafts every time the tab loses focus.
+  const draftJobIdRef = useRef(editId || null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const effectiveRecipient = (loadedRecipient || recipientName || '').trim();
+
+  const buildDraftPayload = useCallback(() => {
+    const allMedia = isSlideshow
+      ? [...Object.values(slotFills).filter(Boolean), ...mediaUrls]
+      : mediaUrls;
+    return {
+      id: draftJobIdRef.current || undefined,
+      templateId: id,
+      // Tells the backend which collection the templateId belongs to so
+      // it can populate the right structure (Template vs BuilderTemplate).
+      sourceType,
+      recipientName: effectiveRecipient,
+      /* Save EVERY piece of editor state — text, media, slot fills, AND
+         the full themeOverrides patch tree. The backend stores anything
+         it gets, so dropping the slideshow gate means non-slideshow
+         block edits also persist into the draft. */
+      customizations: {
+        text: customText,
+        mediaUrls: allMedia,
+        slots: slotFills,
+        themeOverrides,
+        ...(usedLikedFallbackRef.current ? {
+          structureSnapshot: structure,
+          templateName: template?.name,
+          templateCategory: template?.category,
+          templateThumb: template?.thumbnailUrl,
+        } : {}),
+      },
+    };
+  }, [id, sourceType, effectiveRecipient, customText, mediaUrls, slotFills, themeOverrides, isSlideshow, structure, template]);
+
+  const saveDraft = useCallback(async ({ silent = false, navigateAfter = false } = {}) => {
+    if (!template) return;
+    try {
+      if (!silent) setSavingDraft(true);
+      const saved = await videosAPI.saveDraft(buildDraftPayload());
+      if (saved?._id) {
+        draftJobIdRef.current = saved._id;
+        // First save? Sync the URL so refresh / next save updates this
+        // same record instead of creating a new one. Signal the load
+        // effect to ignore the upcoming editId change — we already have
+        // the latest customizations in state, and reloading the
+        // just-created (empty) draft would wipe them.
+        if (!editId && saved._id) {
+          skipNextLoadRef.current = true;
+          const params = new URLSearchParams(searchParams);
+          params.set('edit', saved._id);
+          params.delete('for');
+          setSearchParams(params, { replace: true });
+        }
+      }
+      if (!silent) toast.success('Draft saved');
+      if (navigateAfter) navigate('/my-videos');
+      return saved;
+    } catch (err) {
+      if (!silent) toast.error(err.message || 'Could not save draft');
+    } finally {
+      if (!silent) setSavingDraft(false);
+    }
+  }, [template, buildDraftPayload, editId, searchParams, setSearchParams, navigate]);
+
+  /* ── Auto-create + auto-save lifecycle ──────────────────────────────
+     1. Fresh template → POST a draft entry immediately so an empty
+        record exists in the DB. Once the response arrives, we know
+        `draftJobIdRef.current` and use it for every subsequent save.
+     2. Existing draft → wait for the load to populate state before
+        any exit-save runs (else we'd post the empty initial state
+        back to the server and wipe the saved customizations).
+     3. Exit paths (unmount, browserunload) only fire when we have a
+        real record id, so we never end up with duplicate records. */
+
+  // True once the editor has actually populated its state — either by
+  // finishing the network load (existing draft) OR by auto-creating a
+  // fresh draft (no editId case). Until this is true, exit-handlers do
+  // nothing, which protects against race conditions.
+  const readyForSaveRef = useRef(false);
+
+  // Keep the latest payload in a ref so cleanup handlers can read it
+  // without recapturing fresh closures.
+  const latestPayloadRef = useRef(null);
+  useEffect(() => {
+    latestPayloadRef.current = buildDraftPayload();
+  }, [buildDraftPayload]);
+
+  // (1) Auto-create draft on first mount with a fresh template.
+  //     On success, mark ready-for-save. If creation fails we leave
+  //     ready-for-save = false so we don't accidentally PATCH nothing.
+  useEffect(() => {
+    if (!template) return;
+    if (editId) return;
+    if (draftJobIdRef.current) return;
+    if (readyForSaveRef.current) return;
+    (async () => {
+      const saved = await saveDraft({ silent: true });
+      if (saved?._id) readyForSaveRef.current = true;
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template, editId]);
+
+  // For the "edit existing draft" path, wait for the load to actually
+  // hydrate state from the server before allowing exit-saves to fire.
+  useEffect(() => {
+    if (!editId) return;
+    if (!template) return;
+    if (loading) return;
+    readyForSaveRef.current = true;
+  }, [editId, template, loading]);
+
+  // (2) Unmount → flush latest state silently via fetch keepalive.
+  //     Skipped until we've either created a fresh draft or loaded an
+  //     existing one — protecting against the race where the editor
+  //     unmounts before it had a chance to hydrate.
+  useEffect(() => {
+    return () => {
+      if (!readyForSaveRef.current) return;
+      if (!draftJobIdRef.current) return;
+      const payload = latestPayloadRef.current;
+      if (!payload || !payload.templateId) return;
+      try {
+        fetch(`/api/videos/draft`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          keepalive: true,
+          body: JSON.stringify({ ...payload, id: draftJobIdRef.current }),
+        });
+      } catch { /* best-effort */ }
+    };
+  }, []);
+
+  // (3) beforeunload → ship via sendBeacon (survives the unload).
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      if (!readyForSaveRef.current) return;
+      if (!draftJobIdRef.current) return;
+      const payload = latestPayloadRef.current;
+      if (!payload || !payload.templateId) return;
+      try {
+        const url = `/api/videos/draft`;
+        const blob = new Blob(
+          [JSON.stringify({ ...payload, id: draftJobIdRef.current })],
+          { type: 'application/json' },
+        );
+        navigator.sendBeacon?.(url, blob);
+      } catch { /* best-effort */ }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
+  // Auto-save on tab switch / page hide. Gated by `readyForSaveRef` so
+  // we never POST before the editor has either created or loaded its
+  // draft — that's what was producing duplicate records.
+  useEffect(() => {
+    if (!template) return;
+    const onVisibility = () => {
+      if (document.visibilityState !== 'hidden') return;
+      if (!readyForSaveRef.current) return;
+      if (!draftJobIdRef.current) return;
+      saveDraft({ silent: true });
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [template, saveDraft]);
 
   /** ── Legacy non-slideshow video upload ────────────────────── */
   const handleFileUpload = async (e) => {
@@ -635,7 +860,9 @@ export default function TemplateDetail() {
             <Link
               to="/studio"
               className="shrink-0 inline-flex items-center justify-center rounded-xl bg-white/5 border border-white/10 px-2.5 py-2 text-xs font-bold text-slate-200 hover:bg-white/15 hover:border-white/25 active:scale-95 transition"
-              title="Back to feed"
+              data-tooltip="Back to feed"
+              data-tooltip-pos="bottom"
+              data-tooltip-align="start"
               aria-label="Back to feed"
             >
               <span className="sm:hidden text-base leading-none">←</span>
@@ -647,13 +874,13 @@ export default function TemplateDetail() {
             </div>
             <div className="hidden md:flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
               <button
-                type="button" title="Undo (Ctrl+Z)" aria-label="Undo"
+                type="button" data-tooltip="Undo (Ctrl+Z)" data-tooltip-pos="bottom" aria-label="Undo"
                 disabled={!history.past.length}
                 onClick={undo}
                 className="rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 px-2.5 py-2 text-xs text-slate-200 transition"
               >↶ Undo</button>
               <button
-                type="button" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"
+                type="button" data-tooltip="Redo (Ctrl+Shift+Z)" data-tooltip-pos="bottom" aria-label="Redo"
                 disabled={!history.future.length}
                 onClick={redo}
                 className="rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 px-2.5 py-2 text-xs text-slate-200 transition"
@@ -674,7 +901,8 @@ export default function TemplateDetail() {
                 type="button"
                 onClick={() => setPicker(picker === 'music' ? null : 'music')}
                 className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'music' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
-                title={themeOverrides.audioUrl ? 'Music ON' : 'Music off'}
+                data-tooltip={themeOverrides.audioUrl ? 'Music ON' : 'Music off'}
+                data-tooltip-pos="bottom"
               >🎵 {themeOverrides.audioUrl ? 'Music ✓' : 'Music'}</button>
             </div>
           </div>
@@ -683,6 +911,18 @@ export default function TemplateDetail() {
               <input type="checkbox" checked={dragMode} onChange={(e) => setDragMode(e.target.checked)} />
               <span>Drag mode</span>
             </label>
+            <button
+              type="button"
+              onClick={() => saveDraft({ navigateAfter: true })}
+              disabled={savingDraft || uploading}
+              className="rounded-xl px-3 py-2 text-xs font-bold border border-white/15 bg-white/5 text-slate-200 hover:bg-white/10 disabled:opacity-60 transition whitespace-nowrap"
+              data-tooltip="Save your progress and exit"
+              data-tooltip-pos="top"
+              data-tooltip-align="end"
+            >
+              {savingDraft ? '⏳' : '📥'}
+              <span className="hidden sm:inline ml-1">{savingDraft ? 'Saving…' : 'Save draft'}</span>
+            </button>
             <motion.button
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.96 }}
@@ -690,11 +930,13 @@ export default function TemplateDetail() {
               disabled={generating || uploading}
               className="rounded-xl px-3 py-2 sm:px-4 text-xs font-bold text-white border border-white/15 disabled:opacity-60 transition whitespace-nowrap"
               style={{
-                backgroundImage: 'linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%)',
+                backgroundImage: 'linear-gradient(120deg, #C4B5FD 0%, #A78BFA 50%, #F9A8D4 100%)',
                 backgroundSize: '200% 200%',
-                boxShadow: '0 18px 50px -16px rgba(168,85,247,0.65), inset 0 1px 0 rgba(255,255,255,0.25)',
+                boxShadow: '0 18px 50px -16px rgba(167,139,250,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
               }}
-              title={editId ? 'Save changes' : 'Publish your page'}
+              data-tooltip={editId ? 'Save changes' : 'Publish your page'}
+              data-tooltip-pos="top"
+              data-tooltip-align="end"
             >
               {generating ? '⏳' : editId ? '💾' : '🚀'}
               <span className="hidden sm:inline ml-1">
@@ -931,7 +1173,7 @@ export default function TemplateDetail() {
                               onClick={(e) => { e.stopPropagation(); duplicateOverlay(i); }}
                               className="w-5 h-5 rounded text-[10px] hover:bg-white/15 text-slate-300"
                             >📋</button>
-                            <button type="button" title="Delete" aria-label="Delete"
+                            <button type="button" data-tooltip="Delete" data-tooltip-pos="top" aria-label="Delete"
                               onClick={(e) => { e.stopPropagation(); deleteOverlayAt(i); }}
                               className="w-5 h-5 rounded text-[10px] hover:bg-red-500/40 text-rose-300"
                             >×</button>
@@ -1106,7 +1348,7 @@ export default function TemplateDetail() {
                     <span
                       className="absolute inset-1 rounded-xl"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(34,211,238,0.20), rgba(168,85,247,0.30) 50%, rgba(244,114,182,0.20))',
+                        background: 'linear-gradient(135deg, rgba(167,139,250,0.20), rgba(139,92,246,0.30) 50%, rgba(236,72,153,0.20))',
                         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
                       }}
                     />

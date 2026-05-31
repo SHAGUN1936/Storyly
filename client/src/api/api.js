@@ -41,11 +41,39 @@ export const authAPI = {
   google: (credential) => request('/auth/google', { method: 'POST', body: JSON.stringify({ credential }) }),
   me: () => request('/auth/me'),
   logout: () => request('/auth/logout', { method: 'POST' }),
+  updateProfile: (body) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(body) }),
+  changePassword: (body) => request('/auth/password', { method: 'POST', body: JSON.stringify(body) }),
 };
 
 export const templatesAPI = {
-  list: (category) => request(category ? `/templates?category=${category}` : '/templates'),
-  get: (id) => request(`/templates/${id}`),
+  /**
+   * Browse Templates list — combines admin templates AND builder
+   * templates into a single grid. Each item gets a `sourceType` tag
+   * ('Template' or 'BuilderTemplate') so the editor knows which API
+   * to refetch from. Admin templates always come first, then builder
+   * templates by newest.
+   */
+  list: async (category) => {
+    const q = category ? `?category=${encodeURIComponent(category)}` : '';
+    const [admin, builder] = await Promise.all([
+      request(`/templates${q}`).catch(() => []),
+      request(`/builder-templates${q}`).catch(() => []),
+    ]);
+    const adminTagged   = (admin   || []).map((t) => ({ ...t, sourceType: 'Template' }));
+    const builderTagged = (builder || []).map((t) => ({ ...t, sourceType: 'BuilderTemplate' }));
+    return [...adminTagged, ...builderTagged];
+  },
+  get: (id, sourceType = 'Template') =>
+    request(sourceType === 'BuilderTemplate' ? `/builder-templates/${id}` : `/templates/${id}`),
+};
+
+/* Builder-only — managing the calling user's own builder templates. */
+export const builderTemplatesAPI = {
+  mine: () => request('/builder-templates/mine'),
+  get: (id) => request(`/builder-templates/${id}`),
+  create: (body) => request('/builder-templates', { method: 'POST', body: JSON.stringify(body) }),
+  update: (id, body) => request(`/builder-templates/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: (id) => request(`/builder-templates/${id}`, { method: 'DELETE' }),
 };
 
 export const videosAPI = {
@@ -65,6 +93,9 @@ export const videosAPI = {
     return data;
   },
   createJob: (body) => request('/videos', { method: 'POST', body: JSON.stringify(body) }),
+  // Save (or update) a draft — no processing, status = 'draft'. Pass an
+  // `id` to patch an existing draft, or omit it to create a fresh one.
+  saveDraft: (body) => request('/videos/draft', { method: 'POST', body: JSON.stringify(body) }),
   process: (id) => request(`/videos/${id}/process`, { method: 'POST' }),
   myVideos: () => request('/videos/my'),
   getQR: (id) => request(`/videos/${id}/qr`),
@@ -98,4 +129,5 @@ export const adminAPI = {
   },
   deleteTemplate: (id) => request(`/admin/templates/${id}`, { method: 'DELETE' }),
   publishTemplate: (id) => request(`/admin/templates/${id}/publish`, { method: 'POST' }),
+  unpublishTemplate: (id) => request(`/admin/templates/${id}/unpublish`, { method: 'POST' }),
 };

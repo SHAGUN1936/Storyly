@@ -7,7 +7,8 @@ import {
   getVideoById,
   deleteVideoJob,
   updateVideoJob,
-  getQRCode
+  getQRCode,
+  saveDraft,
 } from '../controllers/videoController.js';
 import { uploadMedia } from '../controllers/uploadController.js';
 import { upload } from '../utils/upload.js';
@@ -15,6 +16,7 @@ import { upload } from '../utils/upload.js';
 const router = express.Router();
 router.use(protect);
 router.post('/upload', upload.single('media'), uploadMedia);
+router.post('/draft', saveDraft);
 router.post('/', createVideoJob);
 router.get('/my', getMyVideos);
 router.get('/:id/qr', getQRCode);

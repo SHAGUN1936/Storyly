@@ -64,6 +64,60 @@ export function extractSlotsFromStructure(structure) {
   const typeOk = !structure?.type || String(structure.type).toLowerCase() === 'slideshow';
   if (!structure || !typeOk) return empty;
 
+  /* JSON-mode templates carry only a `builderState` tree — derive
+     synthesized slot entries from each page's blocks so the
+     customize wizard can render its per-page edit controls. Slot ids
+     here match the data-* attributes emitted by visualTemplateBuilder
+     for the renderer, so a wizard write to slotFills[id] lands on
+     the right element. */
+  const bs = structure.builderState;
+  if (bs && Array.isArray(bs.pages) && bs.pages.length) {
+    const imageSlots = [];
+    const videoSlots = [];
+    const textSlots = [];
+    const buttonSlots = [];
+    const audioSlots = [];
+    const pages = bs.pages.map((page, pageIndex) => {
+      const pageNum = pageIndex + 1;
+      const blockSlots = [];
+      (page.blocks || []).forEach((block, blockIndex) => {
+        if (!block || typeof block !== 'object') return;
+        const t = String(block.type || '').toLowerCase();
+        if (t === 'heading') {
+          const id = `p${pageNum}_h_${blockIndex}`;
+          textSlots.push(id);
+          blockSlots.push({ id, kind: 'text', label: 'Heading', placeholder: block.text || 'Heading' });
+        } else if (t === 'subheading') {
+          const id = `p${pageNum}_h2_${blockIndex}`;
+          textSlots.push(id);
+          blockSlots.push({ id, kind: 'text', label: 'Subheading', placeholder: block.text || 'Subheading' });
+        } else if (t === 'text' || t === 'paragraph') {
+          const id = `p${pageNum}_t_${blockIndex}`;
+          textSlots.push(id);
+          blockSlots.push({ id, kind: 'text', label: 'Text', placeholder: block.text || 'Text' });
+        } else if (t === 'image' || t === 'photo') {
+          const id = `p${pageNum}_${block.slotKey || `img_${blockIndex}`}`;
+          imageSlots.push(id);
+          blockSlots.push({ id, kind: 'image', label: block.label || 'Photo' });
+        } else if (t === 'gif') {
+          const id = `p${pageNum}_${block.slotKey || `gif_${blockIndex}`}`;
+          imageSlots.push(id);
+          blockSlots.push({ id, kind: 'image', label: block.label || 'GIF' });
+        } else if (t === 'video') {
+          const id = `p${pageNum}_${block.slotKey || `vid_${blockIndex}`}`;
+          videoSlots.push(id);
+          blockSlots.push({ id, kind: 'video', label: block.label || 'Video' });
+        } else if (t === 'button') {
+          const id = `p${pageNum}_btn_${blockIndex}`;
+          buttonSlots.push(id);
+          blockSlots.push({ id, kind: 'button', label: 'Button' });
+        }
+      });
+      return { index: pageIndex, title: page.title || page.name || `Page ${pageNum}`, slots: blockSlots };
+    });
+    return { imageSlots, videoSlots, audioSlots, textSlots, buttonSlots, ordered: null, pages };
+  }
+
   if (structure.mode === 'html' && Array.isArray(structure.slots)) {
     const imageSlots = [];
     const videoSlots = [];

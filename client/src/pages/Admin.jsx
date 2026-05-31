@@ -1,6 +1,18 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Trash2,
+  /* Editor toolbar icons — sourced from lucide-react (the same icon
+     pack used elsewhere in the app, so no new dependency). */
+  Undo2, Redo2, Plus, Image as ImageIcon, Files, Layers, Sparkles,
+  Shapes as ShapesIcon, Music, Settings2, Library, Palette,
+  MousePointer2, Save, FileDown, X as XIcon, Wand2,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import Button from '../ui/Button';
+import AdminTemplateCard from '../components/AdminTemplateCard';
 import { adminAPI, videosAPI } from '../api/api';
 import { htmlToStructure } from '../lib/htmlTemplate';
 import {
@@ -10,21 +22,49 @@ import {
   normalizeBuilderState,
   updateBuilderTextBySlot,
   updateBuilderBlockPositionBySlot,
+  updateBuilderBlockPositionSynced,
+  updateBuilderBlockPositionPctSynced,
+  autoAlignBuilderPage,
+  updateBuilderBlockSizeSynced,
+  updateBuilderBlockRotateSynced,
+  defaultResponsiveConfig,
   FILTER_PRESETS,
   ENTER_ANIM_PRESETS,
   STICKER_PRESETS,
   SHAPE_PRESETS,
   MUSIC_LIBRARY,
   TEXT_EFFECT_PRESETS,
+  LOOP_ANIM_PRESETS,
+  PAGE_EFFECT_PRESETS,
+  MEDIA_SHAPE_PRESETS,
   BUILDER_FONT_OPTIONS,
+  VIEWPORT_PRESETS,
 } from '../lib/visualTemplateBuilder';
 import { APP_INPUT_CLASS, APP_SELECT_CLASS, DARK_INPUT_CLASS, DARK_SELECT_CLASS } from '../lib/uiClasses';
 import ConfirmDialog from '../components/ConfirmDialog';
+import DeviceSelect from '../components/DeviceSelect';
 import SlideshowBuilder from '../components/SlideshowBuilder';
 import { STARTER_TEMPLATES } from '../lib/starterTemplates';
 import { StarSticker, DiscoSticker, GiftSticker } from '../ui/CartoonStickers';
 import FloatingDecor from '../ui/FloatingDecor';
 import useLockBodyScroll from '../hooks/useLockBodyScroll';
+
+/** How many recent templates the studio shows inline before "Show all". */
+const RECENT_TEMPLATE_COUNT = 4;
+
+/* One-tap theme presets (Instagram-chat-style). Applying one sets the whole
+   page look: gradient background, text/heading/button colors, font, and a
+   gentle page animation. `bgMotion` themes use a slowly flowing gradient. */
+const THEME_PRESETS = [
+  { id: 'candy',     name: 'Candy',     bgMotion: true,  gradientFrom: '#fdf2f8', gradientTo: '#a78bfa', gradientAngle: 150, textColor: '#3b0764', headingColor: '#7c2d70', buttonBackground: '#d946ef', buttonText: '#ffffff', fontFamily: '"Fredoka", system-ui, sans-serif', pageAnimation: 'fade' },
+  { id: 'sunset',    name: 'Sunset',    bgMotion: true,  gradientFrom: '#fb7185', gradientTo: '#7c3aed', gradientAngle: 145, textColor: '#fff5f7', headingColor: '#ffd166', buttonBackground: '#ffd166', buttonText: '#3b0764', fontFamily: '"Poppins", system-ui, sans-serif', pageAnimation: 'fade' },
+  { id: 'ocean',     name: 'Ocean',     bgMotion: true,  gradientFrom: '#0ea5e9', gradientTo: '#6366f1', gradientAngle: 160, textColor: '#ecfeff', headingColor: '#a5f3fc', buttonBackground: '#a5f3fc', buttonText: '#083344', fontFamily: '"Inter", system-ui, sans-serif', pageAnimation: 'slideUp' },
+  { id: 'lavender',  name: 'Lavender',  bgMotion: false, gradientFrom: '#ede9fe', gradientTo: '#c4b5fd', gradientAngle: 155, textColor: '#3b0764', headingColor: '#6d28d9', buttonBackground: '#8b5cf6', buttonText: '#ffffff', fontFamily: '"Playfair Display", Georgia, serif', pageAnimation: 'fade' },
+  { id: 'midnight',  name: 'Midnight',  bgMotion: true,  gradientFrom: '#0f172a', gradientTo: '#7c3aed', gradientAngle: 150, textColor: '#e2e8f0', headingColor: '#c4b5fd', buttonBackground: '#a78bfa', buttonText: '#0f172a', fontFamily: '"Space Grotesk", system-ui, sans-serif', pageAnimation: 'zoom' },
+  { id: 'forest',    name: 'Forest',    bgMotion: false, gradientFrom: '#064e3b', gradientTo: '#0ea5e9', gradientAngle: 160, textColor: '#ecfdf5', headingColor: '#6ee7b7', buttonBackground: '#34d399', buttonText: '#064e3b', fontFamily: '"Inter", system-ui, sans-serif', pageAnimation: 'slideUp' },
+  { id: 'peach',     name: 'Peach',     bgMotion: false, gradientFrom: '#ffedd5', gradientTo: '#fbcfe8', gradientAngle: 150, textColor: '#7c2d12', headingColor: '#be185d', buttonBackground: '#fb7185', buttonText: '#ffffff', fontFamily: '"Quicksand", system-ui, sans-serif', pageAnimation: 'fade' },
+  { id: 'aurora',    name: 'Aurora',    bgMotion: true,  gradientFrom: '#22d3ee', gradientTo: '#d946ef', gradientAngle: 135, textColor: '#f0fdfa', headingColor: '#f5d0fe', buttonBackground: '#e879f9', buttonText: '#083344', fontFamily: '"Fredoka", system-ui, sans-serif', pageAnimation: 'drift' },
+];
 
 function ShapePreview({ kind }) {
   const size = 28;
@@ -49,6 +89,7 @@ function ShapePreview({ kind }) {
 }
 
 export default function Admin() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -59,16 +100,23 @@ export default function Admin() {
     description: '',
   });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [builderState, setBuilderState] = useState(() => defaultVisualBuilderState());
   const [activePage, setActivePage] = useState(0);
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState(0);
+  // Nothing is selected by default — an element only becomes active when the
+  // user actually clicks it (so the contextual top bar stays hidden until then).
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
   const [dragMode, setDragMode] = useState(true);
+  /** Responsive engine: which device the canvas previews ('mobile' |
+   *  'tablet' | 'desktop' | null). null = the design's base breakpoint.
+   *  Editing is enabled only on the base; other devices are preview-only
+   *  in this phase (per-breakpoint editing comes next). */
+  const [previewBreakpoint, setPreviewBreakpoint] = useState(null);
   const [uploadingAsset, setUploadingAsset] = useState(false);
+  const [bgUploading, setBgUploading] = useState(false);
   /** Create flow: 1 = name/category/desc only, 2 = Instagram-style story designer */
   const [createStep, setCreateStep] = useState(1);
   /** Phase 2a additions: undo/redo + Canva-style pickers */
@@ -78,7 +126,41 @@ export default function Admin() {
   const HISTORY_LIMIT = 80;
   /** Open picker key: 'sticker' | 'shape' | 'music' | null */
   const [picker, setPicker] = useState(null);
+  /** Instagram-style icon-rail flyouts — keeps the canvas maximal by
+      default. `null` = rail collapsed (icons only); a key = that panel
+      is expanded. */
+  const [leftPanel, setLeftPanel] = useState(null);  // 'elements'|'media'|'pages'|'layers'|null
+  const [rightPanel, setRightPanel] = useState(null); // 'info'|'properties'|null
   const normalizedBuilder = useMemo(() => normalizeBuilderState(builderState), [builderState]);
+
+  /* Responsive engine state derived from the design. The editor designs
+     each device (mobile/tablet/desktop) on its own artboard; edits on the
+     base device write base fields, others write per-device overrides. */
+  const responsiveCfg = normalizedBuilder.responsive;
+  const responsiveEnabled = !!responsiveCfg?.enabled;
+  const baseBp = responsiveEnabled ? responsiveCfg.base : null;
+  const activeBp = responsiveEnabled ? (previewBreakpoint || baseBp) : null;
+  const activeArtboard = responsiveEnabled
+    ? (responsiveCfg.breakpoints[activeBp] || responsiveCfg.breakpoints[baseBp])
+    : null;
+
+  /* Make every template edited in the studio responsive-capable, so the
+     device picker always offers Mobile / Tablet / Desktop and each can be
+     laid out independently. Legacy templates get upgraded on open (base =
+     their current viewport); their layout is unchanged until the admin
+     tweaks a device. */
+  useEffect(() => {
+    if (!formOpen || responsiveEnabled) return;
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      if (n.responsive?.enabled) return prev;
+      return { ...n, responsive: defaultResponsiveConfig(n.viewport || 'desktop') };
+    });
+  }, [formOpen, responsiveEnabled]);
+
+  /* Selecting an element no longer auto-opens the full properties panel —
+     the contextual top bar covers the common controls, and "More" opens the
+     panel only when the user actually taps it. */
 
   const thumbnailPreviewUrl = useMemo(() => {
     if (!thumbnailFile) return null;
@@ -146,27 +228,55 @@ export default function Admin() {
     });
   }, [builderState]);
 
-  /** Cmd/Ctrl+Z = undo, Cmd/Ctrl+Shift+Z = redo. Skip when typing in inputs/contenteditable. */
+  /** Keyboard shortcuts (editor open):
+   *   • Cmd/Ctrl+Z       — undo
+   *   • Cmd/Ctrl+Shift+Z — redo
+   *   • Cmd/Ctrl+S       — save (primary toolbar action)
+   *   • Cmd/Ctrl+Shift+S — save as draft
+   *
+   *  `handleSubmit` is declared later in the component body (TDZ), so
+   *  we route through a ref that an effect later in the body updates
+   *  to the latest handler. The keydown listener reads
+   *  `handleSubmitRef.current` at fire time — always the freshest
+   *  closure, no stale state. */
+  const handleSubmitRef = useRef(null);
   useEffect(() => {
     if (!formOpen) return;
     const onKey = (e) => {
       const inEditable =
         e.target?.matches?.('input, textarea, select, [contenteditable], [contenteditable="true"]');
-      if (inEditable) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (!mod || e.key.toLowerCase() !== 'z') return;
-      e.preventDefault();
-      if (e.shiftKey) redo();
-      else undo();
+      if (!mod) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z') {
+        if (inEditable) return;
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (k === 's' && (editing || createStep === 2)) {
+        // ALWAYS preventDefault on Cmd+S so the browser's "save page" doesn't trigger.
+        e.preventDefault();
+        if (formSubmitting) return;
+        const submit = handleSubmitRef.current;
+        if (!submit) return;
+        if (e.shiftKey && !editing) {
+          // Save-as-draft shortcut exists only for new, unsaved templates.
+          submit({ preventDefault: () => {}, _asDraft: true });
+        } else {
+          submit({ preventDefault: () => {} });
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [formOpen, undo, redo]);
+  }, [formOpen, undo, redo, formSubmitting, editing, createStep]);
 
   const addStickerQuick = (emoji) => {
     const page = normalizedBuilder.pages[activePage];
     if (!page) return;
-    const block = { type: 'sticker', emoji: emoji || '✨', size: 88, enterAnimation: 'pop' };
+    const block = { type: 'sticker', emoji: emoji || '✨', size: 88, enterAnimation: 'pop', loopAnimation: 'float' };
     const blocks = [...(page.blocks || []), block];
     setPageAt(activePage, { ...page, blocks });
     setSelectedBlockIndex(blocks.length - 1);
@@ -206,6 +316,7 @@ export default function Admin() {
       strokeWidth: 0,
       opacity: 1,
       enterAnimation: 'zoom',
+      loopAnimation: 'float',
     };
     const blocks = [...(page.blocks || []), block];
     setPageAt(activePage, { ...page, blocks });
@@ -255,16 +366,22 @@ export default function Admin() {
   }, []);
 
   const handleAdminSelectionChange = useCallback((slot) => {
-    if (!slot) return;
+    // Empty-canvas click → clear the selection (hides the contextual bar).
+    if (!slot) { setSelectedBlockIndex(null); return; }
     const m = /^p(\d+)_b(\d+)$/.exec(String(slot));
     if (!m) return;
     const pageIdx = Number(m[1]) - 1;
     const blockIdx = Number(m[2]);
     if (pageIdx !== activePage) setActivePage(pageIdx);
+    // Selecting an element closes any open tool panel/picker so the view is
+    // clean — only that element's contextual bar shows.
+    setLeftPanel(null);
+    setPicker(null);
     setSelectedBlockIndex(blockIdx);
   }, [activePage]);
 
   const selectedSlotForCanvas = useMemo(() => {
+    if (selectedBlockIndex == null) return null;
     return `p${activePage + 1}_b${selectedBlockIndex}`;
   }, [activePage, selectedBlockIndex]);
 
@@ -276,6 +393,63 @@ export default function Admin() {
     setPicker(null);
   };
   const clearGlobalMusic = () => setGlobalMusic('');
+
+  /* Background helpers — patch the whole-design theme (animated gradient) and
+     the CURRENT page's background media / live effect overlay. */
+  const patchTheme = (patch) =>
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      return { ...n, theme: { ...n.theme, ...patch } };
+    });
+  const patchActivePage = (patch) =>
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      const pages = [...n.pages];
+      if (!pages[activePage]) return n;
+      pages[activePage] = { ...pages[activePage], ...patch };
+      return { ...n, pages };
+    });
+  const uploadPageBg = async (file, kind) => {
+    if (!file) return;
+    setBgUploading(true);
+    try {
+      const { url } = await videosAPI.uploadMedia(file);
+      // Only one background medium at a time — setting a video clears any photo
+      // and vice-versa.
+      patchActivePage(kind === 'video' ? { pageVideoUrl: url, pageImageUrl: '' } : { pageImageUrl: url, pageVideoUrl: '' });
+      toast.success('Background updated.');
+    } catch (err) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setBgUploading(false);
+    }
+  };
+
+  /* Apply a one-tap theme preset — sets the page background gradient (with
+     optional motion), text/heading/button colors, font, and page animation
+     across the whole design. */
+  const applyTheme = (preset) => {
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      return {
+        ...n,
+        theme: {
+          ...n.theme,
+          backgroundKind: 'gradient',
+          bgMotion: !!preset.bgMotion,
+          gradientFrom: preset.gradientFrom,
+          gradientTo: preset.gradientTo,
+          gradientAngle: preset.gradientAngle,
+          textColor: preset.textColor,
+          headingColor: preset.headingColor,
+          buttonBackground: preset.buttonBackground,
+          buttonText: preset.buttonText,
+          fontFamily: preset.fontFamily,
+          pageAnimation: preset.pageAnimation,
+        },
+      };
+    });
+  };
 
   useEffect(() => {
     return () => {
@@ -293,6 +467,10 @@ export default function Admin() {
 
   /** Modal mode: 'starters' = show full gallery, 'blank' = blank-only quick form. */
   const [creationMode, setCreationMode] = useState('starters');
+  /** True when the user switched into 'starters' from the blank form via
+   *  "pick a starter instead". Lets a dismiss go BACK to blank rather than
+   *  closing the whole create flow. */
+  const [starterFromBlank, setStarterFromBlank] = useState(false);
 
   const openCreate = (mode = 'starters') => {
     setEditing(null);
@@ -300,9 +478,11 @@ export default function Admin() {
     setThumbnailFile(null);
     setBuilderState(defaultVisualBuilderState());
     setActivePage(0);
-    setSelectedBlockIndex(0);
+    setSelectedBlockIndex(null);
+    setPreviewBreakpoint(null);
     setCreateStep(1);
     setPickedStarterId(null);
+    setStarterFromBlank(false);
     setCreationMode(mode);
     setFormOpen(true);
     setError('');
@@ -311,27 +491,82 @@ export default function Admin() {
   const openCreateBlank = () => openCreate('blank');
   const openCreateWithStarters = () => openCreate('starters');
 
+  /* Fully exit the create flow. The starter picker can open on top of the
+     new-website step, so a single Cancel/✕/backdrop must close BOTH — not
+     just the topmost overlay — and return to the studio. */
+  const closeCreateFlow = () => {
+    if (formSubmitting) return;
+    setStarterPickerOpen(false);
+    setFormOpen(false);
+    setCreateStep(1);
+    setPickedStarterId(null);
+    setStarterFromBlank(false);
+  };
+
+  /* Dismiss (✕ / Cancel / backdrop) for the new-website modal. If the
+     starter gallery was opened FROM the blank form, dismiss returns to the
+     blank form (closes just the starter view); otherwise it exits the whole
+     create flow back to the studio. */
+  const dismissCreate = () => {
+    if (formSubmitting) return;
+    if (creationMode === 'starters' && starterFromBlank) {
+      setCreationMode('blank');
+      setStarterFromBlank(false);
+      setPickedStarterId(null);
+      return;
+    }
+    closeCreateFlow();
+  };
+
   const openEdit = (t) => {
     setEditing(t);
     setThumbnailFile(null);
     setCreateStep(2);
     const s = t.structure;
-    const isHtml = s && typeof s === 'object' && s.mode === 'html' && typeof s.html === 'string';
     setForm({
       name: t.name,
       category: t.category,
       description: t.description || '',
     });
-    if (isHtml && s.builderState && typeof s.builderState === 'object') {
+    /* The pre-save hook now pins `mode: 'json'` and `builderState` is
+       always present on a properly-saved template. Restore it directly
+       — the old `mode === 'html'` gate was wiping alignment because new
+       JSON-mode templates skipped this branch. */
+    if (s && typeof s === 'object' && s.builderState && typeof s.builderState === 'object') {
       setBuilderState(normalizeBuilderState(s.builderState));
     } else {
       setBuilderState(defaultVisualBuilderState());
     }
     setActivePage(0);
-    setSelectedBlockIndex(0);
+    setSelectedBlockIndex(null);
+    setPreviewBreakpoint(null);
     setFormOpen(true);
     setError('');
   };
+
+  /* Deep-links from the full library page:
+       /admin?edit=<id> — open that template in the editor
+       /admin?new=1     — start the New-website flow
+     Both consume their param so a refresh / re-render doesn't re-trigger. */
+  useEffect(() => {
+    if (formOpen) return;
+    const newFlag = searchParams.get('new');
+    if (newFlag) {
+      openCreateBlank();
+      const next = new URLSearchParams(searchParams);
+      next.delete('new');
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    const editId = searchParams.get('edit');
+    if (!editId || loading) return;
+    const t = templates.find((x) => x._id === editId);
+    if (t) openEdit(t);
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, templates, loading]);
 
   useEffect(() => {
     if (activePage >= normalizedBuilder.pages.length) setActivePage(Math.max(0, normalizedBuilder.pages.length - 1));
@@ -339,8 +574,18 @@ export default function Admin() {
 
   useEffect(() => {
     const blocks = normalizedBuilder.pages[activePage]?.blocks || [];
-    if (selectedBlockIndex >= blocks.length) setSelectedBlockIndex(Math.max(0, blocks.length - 1));
+    // Only clamp a real selection that fell out of range — never auto-select
+    // when nothing is selected (null stays null).
+    if (selectedBlockIndex != null && selectedBlockIndex >= blocks.length) {
+      setSelectedBlockIndex(blocks.length ? blocks.length - 1 : null);
+    }
   }, [normalizedBuilder, activePage, selectedBlockIndex]);
+
+  // Switching pages clears the selection — you start each page with nothing
+  // active until you click an element on it.
+  useEffect(() => {
+    setSelectedBlockIndex(null);
+  }, [activePage]);
 
   const setPageAt = (pageIndex, nextPage) => {
     const pages = [...normalizedBuilder.pages];
@@ -373,7 +618,7 @@ export default function Admin() {
     });
     setBuilderState({ ...normalizedBuilder, pages });
     setActivePage(nextPageIndex);
-    setSelectedBlockIndex(0);
+    setSelectedBlockIndex(null);
   };
 
   const addBlockQuick = (kind) => {
@@ -395,6 +640,9 @@ export default function Admin() {
       const target = Number(targetRaw);
       block = { type: 'button', label: 'Tap', navPage: Number.isFinite(target) && target > 0 ? target : 1, buttonStyle: 'stable' };
     }
+    // New elements gently float by default (dragging freezes motion live, so
+    // it stays easy to grab). Turn it off per element from the More panel.
+    block = { loopAnimation: 'float', ...block };
     const blocks = [...(page.blocks || []), block];
     setPageAt(activePage, { ...page, blocks });
     setSelectedBlockIndex(blocks.length - 1);
@@ -412,25 +660,49 @@ export default function Admin() {
 
   const addUploadedMediaBlock = async (file, mediaType) => {
     if (!file) return;
+    const page = normalizedBuilder.pages[activePage];
+    if (!page) return;
+    const tmpId = `up_${Date.now()}_${Math.round(performance.now())}`;
+    // Insert a placeholder IMMEDIATELY so the user sees a frosted box + spinner
+    // exactly where the media will land while it uploads.
+    const placeholder = {
+      type: mediaType,
+      slotKey: mediaType === 'gif' ? 'gif' : mediaType === 'video' ? 'video' : 'photo',
+      label: mediaType === 'gif' ? 'GIF' : mediaType === 'video' ? 'Video' : 'Photo',
+      defaultUrl: '',
+      mediaFit: 'cover',
+      mediaRadius: 12,
+      mediaShadow: true,
+      loopAnimation: 'float',
+      uploading: true,
+      _tmpId: tmpId,
+    };
+    const startBlocks = [...(page.blocks || []), placeholder];
+    setPageAt(activePage, { ...page, blocks: startBlocks });
+    setSelectedBlockIndex(startBlocks.length - 1);
     setUploadingAsset(true);
     try {
       const { url } = await videosAPI.uploadMedia(file);
-      const page = normalizedBuilder.pages[activePage];
-      if (!page) return;
-      const block = {
-        type: mediaType,
-        slotKey: mediaType === 'gif' ? 'gif' : mediaType === 'video' ? 'video' : 'photo',
-        label: mediaType === 'gif' ? 'GIF' : mediaType === 'video' ? 'Video' : 'Photo',
-        defaultUrl: url,
-        mediaFit: 'cover',
-        mediaRadius: 12,
-        mediaShadow: true,
-      };
-      const blocks = [...(page.blocks || []), block];
-      setPageAt(activePage, { ...page, blocks });
-      setSelectedBlockIndex(blocks.length - 1);
+      // Swap the placeholder for the real media (found by its temp id, so it
+      // survives any reordering that happened during the upload).
+      setBuilderState((prev) => {
+        const n = normalizeBuilderState(prev);
+        const pages = n.pages.map((pg) => ({
+          ...pg,
+          blocks: (pg.blocks || []).map((b) =>
+            b._tmpId === tmpId ? { ...b, defaultUrl: url, uploading: false, _tmpId: undefined } : b,
+          ),
+        }));
+        return { ...n, pages };
+      });
     } catch (err) {
-      setError(err.message || 'Upload failed');
+      // Drop the failed placeholder.
+      setBuilderState((prev) => {
+        const n = normalizeBuilderState(prev);
+        const pages = n.pages.map((pg) => ({ ...pg, blocks: (pg.blocks || []).filter((b) => b._tmpId !== tmpId) }));
+        return { ...n, pages };
+      });
+      toast.error(err.message || 'Upload failed');
     } finally {
       setUploadingAsset(false);
     }
@@ -500,7 +772,9 @@ export default function Admin() {
   // create-step-1 new-website picker and the starter-picker both pop over
   // the templates list and shouldn't scroll the page underneath. The
   // delete-confirm dialog handles its own lock via ConfirmDialog.
-  useLockBodyScroll(starterPickerOpen || (formOpen && !editing && createStep === 1));
+  // Lock body scroll while ANY of: the starter picker, the new-website
+  // step-1 modal, OR the editor modal (step-2 / editing) is open.
+  useLockBodyScroll(starterPickerOpen || (formOpen && (editing || createStep === 1 || createStep === 2)));
 
   const loadStarterTemplate = (id) => {
     const tpl = STARTER_TEMPLATES.find((t) => t.id === id);
@@ -514,11 +788,13 @@ export default function Admin() {
     skipNextHistoryRef.current = false;
     setBuilderState(normalizeBuilderState(tpl.builderState));
     setActivePage(0);
-    setSelectedBlockIndex(0);
+    setSelectedBlockIndex(null);
     setStarterPickerOpen(false);
   };
 
-  /** Pick (but don't load yet) — just stages the choice and pre-fills the name. */
+  /** Pick (but don't load yet) — stages the choice and overrides name +
+      category to match the starter. Description stays user-edited if
+      they already typed one. */
   const pickStarter = (id) => {
     setPickedStarterId(id);
     if (!id) {
@@ -528,8 +804,12 @@ export default function Admin() {
     const tpl = STARTER_TEMPLATES.find((t) => t.id === id);
     if (!tpl) return;
     setForm((f) => ({
-      name: f.name || tpl.name,
-      category: tpl.category || f.category || 'Memories',
+      ...f,
+      /* Always overwrite — picking a starter implies the admin wants
+         its identity, including its name + category. Hand-typed input
+         from before is replaced so the modal isn't out of sync. */
+      name: tpl.name,
+      category: tpl.category,
       description: f.description || tpl.description || '',
     }));
   };
@@ -553,7 +833,7 @@ export default function Admin() {
       setBuilderState(defaultVisualBuilderState());
     }
     setActivePage(0);
-    setSelectedBlockIndex(0);
+    setSelectedBlockIndex(null);
     setPickedStarterId(null);
     setCreateStep(2);
   };
@@ -570,7 +850,7 @@ export default function Admin() {
       const defaults = { ...(block.galleryDefaults || {}), [key]: url };
       updateSelectedBlock({ galleryDefaults: defaults });
     } catch (err) {
-      setError(err.message || 'Gallery upload failed');
+      toast.error(err.message || 'Gallery upload failed');
     } finally {
       setUploadingAsset(false);
     }
@@ -580,11 +860,10 @@ export default function Admin() {
     e.preventDefault();
     if (formSubmitting) return;
     setError('');
-    setSuccess('');
 
     const vErr = validateBuilderState(builderState);
     if (vErr) {
-      setError(vErr);
+      toast.error(vErr);
       return;
     }
     const htmlFromBuilder = visualBuilderToHtml(builderState);
@@ -593,17 +872,21 @@ export default function Admin() {
       structurePayload = htmlToStructure(htmlFromBuilder);
       structurePayload.builderState = normalizeBuilderState(builderState);
     } catch (err) {
-      setError(err.message || 'Could not build website from the visual design');
+      toast.error(err.message || 'Could not build website from the visual design');
       return;
     }
 
     setFormSubmitting(true);
+    // `_asDraft` flag is set by the "Save draft" button — forces the
+    // template to stay unpublished even when editing an existing one.
+    const saveAsDraft = e?._asDraft === true;
     const formData = new FormData();
     formData.append('name', form.name);
     formData.append('category', form.category);
     formData.append('description', form.description);
     formData.append('structure', JSON.stringify(structurePayload));
     formData.append('duration', '10');
+    if (saveAsDraft) formData.append('published', 'false');
     if (thumbnailFile) {
       formData.append('thumbnail', thumbnailFile);
     }
@@ -611,15 +894,15 @@ export default function Admin() {
     try {
       if (editing) {
         await adminAPI.updateTemplate(editing._id, formData);
-        setSuccess('Website saved.');
+        toast.success(saveAsDraft ? 'Draft saved.' : 'Website saved.');
       } else {
         await adminAPI.createTemplate(formData);
-        setSuccess('Website created.');
+        toast.success(saveAsDraft ? 'Draft created.' : 'Website created.');
       }
       setFormOpen(false);
       loadTemplates();
     } catch (err) {
-      setError(err.message || 'Failed');
+      toast.error(err.message || 'Failed');
     } finally {
       setFormSubmitting(false);
     }
@@ -629,12 +912,97 @@ export default function Admin() {
     setError('');
     try {
       await adminAPI.publishTemplate(id);
-      setSuccess('Website is live in the gallery.');
+      toast.success('Website is live in the gallery.');
       loadTemplates();
     } catch (err) {
-      setError(err.message || 'Failed');
+      toast.error(err.message || 'Failed');
     }
   };
+
+  /* Take a live template offline. Published templates aren't editable
+     (so users who have one open never see it change underneath them) —
+     to edit, an admin unlives it first, which sends it back to draft. */
+  const handleUnpublish = async (id) => {
+    setError('');
+    try {
+      await adminAPI.unpublishTemplate(id);
+      toast.success('Website taken offline.');
+      loadTemplates();
+    } catch (err) {
+      toast.error(err.message || 'Failed');
+    }
+  };
+
+  /* Keep the keyboard-shortcut ref pointed at the latest handleSubmit.
+     Without this the Cmd/Ctrl+S handler couldn't reach handleSubmit
+     (TDZ) when the effect ran. Assigning on every render means the
+     shortcut always invokes the most recent closure. */
+  handleSubmitRef.current = handleSubmit;
+
+  /** Close the editor — save as draft first so the admin's work is
+   *  persisted even if they hit X without thinking. Fire-and-forget;
+   *  the close happens immediately regardless of save success.  */
+  const closeEditorWithDraftSave = useCallback(() => {
+    if (formSubmitting) return;
+    if (editing) {
+      // Existing template: persist edits as a normal update — never as a
+      // draft — so its published status is preserved on close.
+      try {
+        handleSubmit({ preventDefault: () => {}, _silent: true });
+      } catch {}
+    } else if (createStep === 2) {
+      // Brand-new, never-saved template keeps the draft safety net so the
+      // admin's work isn't lost on a stray close.
+      try {
+        handleSubmit({ preventDefault: () => {}, _asDraft: true, _silent: true });
+      } catch {}
+    }
+    setFormOpen(false);
+    setCreateStep(1);
+    setEditing(null);
+  }, [formSubmitting, editing, createStep, handleSubmit]);
+
+  /** Best-effort auto-save when the user closes the tab or hides the
+   *  page mid-edit. Uses `fetch({keepalive: true})` so the request
+   *  survives tab teardown. Only fires when there's an `editing`
+   *  template with an `_id` (we can't draft-save a brand-new template
+   *  without uploading the thumbnail through multipart, so the
+   *  unload-save handles update-of-existing only). */
+  useEffect(() => {
+    if (!formOpen || !editing?._id) return;
+    const sendDraftBeacon = () => {
+      try {
+        const fd = new FormData();
+        fd.append('name', form.name || editing.name || '');
+        fd.append('category', form.category || editing.category || 'Memories');
+        fd.append('description', form.description || '');
+        // No `published` field: this is a plain edit-persist, NOT a draft —
+        // the template keeps whatever status it already had.
+        const struct = {
+          mode: 'json',
+          type: 'slideshow',
+          builderState: normalizeBuilderState(builderState),
+        };
+        fd.append('structure', JSON.stringify(struct));
+        fetch(`/api/admin/templates/${editing._id}`, {
+          method: 'POST',
+          body: fd,
+          credentials: 'include',
+          keepalive: true,
+        });
+      } catch {}
+    };
+    const onBeforeUnload = () => sendDraftBeacon();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') sendDraftBeacon();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [formOpen, editing, form, builderState]);
 
   const executeDeleteTemplate = async () => {
     if (!deleteConfirmId) return;
@@ -642,11 +1010,11 @@ export default function Admin() {
     setError('');
     try {
       await adminAPI.deleteTemplate(deleteConfirmId);
-      setSuccess('Website removed.');
+      toast.success('Website removed.');
       setDeleteConfirmId(null);
       loadTemplates();
     } catch (err) {
-      setError(err.message || 'Failed');
+      toast.error(err.message || 'Failed');
     } finally {
       setDeleteLoading(false);
     }
@@ -661,8 +1029,8 @@ export default function Admin() {
         className="glass-strong rounded-[2rem] p-8 mb-8 relative overflow-hidden"
       >
         <div className="absolute inset-0 bg-grid-soft opacity-30 pointer-events-none" />
-        <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(168,85,247,0.40) 0%, transparent 60%)', filter: 'blur(50px)' }} />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 w-72 h-72 rounded-full" style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.35) 0%, transparent 60%)', filter: 'blur(50px)' }} />
+        <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.40) 0%, transparent 60%)', filter: 'blur(50px)' }} />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 w-72 h-72 rounded-full" style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.35) 0%, transparent 60%)', filter: 'blur(50px)' }} />
 
         {/* Cartoon accents in the studio header */}
         <motion.div
@@ -714,12 +1082,22 @@ export default function Admin() {
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>
               <h2 className="text-xl font-display font-bold text-white">Template library</h2>
-              <p className="text-sm text-slate-400">Your published and draft websites in one place.</p>
+              <p className="text-sm text-slate-400">Your most recent websites. See them all in the full library.</p>
             </div>
             <div className="badge-pill badge-brand">
               {templates.length} templates
             </div>
           </div>
+
+          {/* Show-all (top) — always available so the full library is one
+              click away, even with just a few templates. */}
+          {!loading && templates.length > 0 && (
+            <div className="mb-4 flex justify-end">
+              <Link to="/admin/templates" className="btn-pill-soft !py-2 !text-xs inline-flex items-center gap-1.5">
+                <Library size={14} strokeWidth={2.2} /> Show all {templates.length} templates →
+              </Link>
+            </div>
+          )}
 
           {loading ? (
             <div className="space-y-4">
@@ -732,99 +1110,102 @@ export default function Admin() {
               No templates yet. Click “New website” to get started.
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 auto-rows-min gap-4">
-              {templates.map((t) => (
-                <motion.div
-                  key={t._id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ y: -3 }}
-                  className={`group rounded-[1.5rem] border overflow-hidden shadow-popSoft transition ${
-                    editing?._id === t._id ? 'border-brand-400 ring-2 ring-brand-400/30' : 'border-slate-200 bg-white hover:border-brand-300'
-                  }`}
-                >
-                  <div className="relative aspect-[16/9] bg-gradient-to-br from-brand-200 via-peach-200 to-sunset-400/40 overflow-hidden">
-                    {t.thumbnailUrl ? (
-                      <img src={t.thumbnailUrl} alt="" className="w-full h-full object-cover transition duration-500 group-hover:scale-105" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-5xl">🎬</div>
-                    )}
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent pointer-events-none" />
-                    <span className={`absolute top-3 left-3 rounded-full px-3 py-1 text-[10px] uppercase tracking-wider font-bold border backdrop-blur ${
-                      t.published
-                        ? 'bg-emerald-500/85 border-emerald-300 text-white'
-                        : 'bg-white/85 border-white/70 text-slate-700'
-                    }`}>
-                      {t.published ? '🟢 Live' : '📝 Draft'}
-                    </span>
-                    <h3 className="absolute inset-x-3 bottom-2 font-display font-extrabold text-white text-lg drop-shadow truncate">
-                      {t.name}
-                    </h3>
-                  </div>
-                  <div className="p-4">
-                    <p className="text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-3">{t.category}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => openEdit(t)}
-                        className="btn-glow flex-1 !py-2 !px-3 !text-xs"
-                      >
-                        ✏️ Edit
-                      </button>
-                      {!t.published && (
-                        <button
-                          onClick={() => handlePublish(t._id)}
-                          className="inline-flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95"
-                          style={{
-                            background: 'linear-gradient(120deg, rgba(16,185,129,0.18), rgba(16,185,129,0.10))',
-                            color: '#10B981',
-                            border: '1px solid rgba(16,185,129,0.45)',
-                          }}
-                        >
-                          🚀 Publish
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirmId(t._id)}
-                        aria-label={`Delete ${t.name}`}
-                        title="Delete template"
-                        className="inline-flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-bold transition active:scale-95"
-                        style={{
-                          background: 'linear-gradient(120deg, rgba(244,63,94,0.16), rgba(244,63,94,0.08))',
-                          color: '#F43F5E',
-                          border: '1px solid rgba(244,63,94,0.40)',
-                        }}
-                      >
-                        🗑
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            <>
+              <div className="grid sm:grid-cols-2 auto-rows-min gap-4">
+                {templates.slice(0, RECENT_TEMPLATE_COUNT).map((t) => (
+                  <AdminTemplateCard
+                    key={t._id}
+                    template={t}
+                    isEditing={editing?._id === t._id}
+                    onEdit={openEdit}
+                    onPublish={handlePublish}
+                    onUnpublish={handleUnpublish}
+                    onDelete={(tpl) => setDeleteConfirmId(tpl._id)}
+                  />
+                ))}
+              </div>
+
+              {/* Show-all (bottom) */}
+              <div className="mt-5 flex justify-center">
+                <Link to="/admin/templates" className="btn-glow !py-2.5 !text-sm inline-flex items-center gap-2">
+                  <Library size={15} strokeWidth={2.2} /> Show all {templates.length} templates
+                </Link>
+              </div>
+            </>
           )}
         </section>
 
-        <section className="glass-strong rounded-[2rem] p-6 min-h-[660px]">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+        {/* Editor — when actively editing/creating it renders as a
+            full-screen modal portaled to <body>. Portal escapes the
+            framer-motion `motion.main` stacking context that otherwise
+            traps `position: fixed` children inside it (which left the
+            navbar visible above the modal). When idle, it renders inline
+            inside the grid as the right-hand panel. `overflow-anchor:
+            none` stops scroll re-anchoring on block selects / focus. */}
+        {(() => {
+          const editorActive = formOpen && (editing || createStep === 2);
+          const editorJsx = (
+            <>
+              {editorActive && (
+                <div
+                  className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-md"
+                  data-lenis-prevent
+                  aria-hidden="true"
+                />
+              )}
+              <section
+                className={
+                  editorActive
+                    ? 'admin-editor-modal fixed inset-3 sm:inset-6 z-[100] glass-strong rounded-[2rem] px-4 py-3 overflow-hidden flex flex-col'
+                    : 'glass-strong rounded-[2rem] p-6 min-h-[660px]'
+                }
+                style={{ overflowAnchor: 'none' }}
+              >
+          <div className={`shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between ${editorActive ? 'gap-2 mb-2' : 'gap-4 mb-6'}`}>
             <div>
-              <h2 className="text-xl font-display font-bold text-white">Editor panel</h2>
-              <p className="text-sm text-slate-400">Build or edit the selected website in the story-driven editor.</p>
+              <h2 className={`font-display font-bold text-white ${editorActive ? 'text-base leading-tight' : 'text-xl'}`}>Editor panel</h2>
+              {!editorActive && (
+                <p className="text-sm text-slate-400">Build or edit the selected website in the story-driven editor.</p>
+              )}
             </div>
-            <button
-              type="button"
-              onClick={openCreateBlank}
-              className="btn-pill-soft"
-            >
-              ✨ Start new website
-            </button>
+            {/* "Start new website" is only meaningful from the empty
+                state — once the editor is actively in use, hide it so
+                the admin can't accidentally restart the form. */}
+            {!(formOpen && (editing || createStep === 2)) && (
+              <button
+                type="button"
+                onClick={openCreateBlank}
+                className="btn-pill-soft"
+              >
+                ✨ Start new website
+              </button>
+            )}
+            {/* Close button — lives at the popup-header level, opposite
+                the "Editor panel" title text. Persists work before closing:
+                a normal save when editing an existing template, or a draft
+                save for a brand-new, never-saved one. */}
+            {(formOpen && (editing || createStep === 2)) && (
+              <button
+                type="button"
+                onClick={closeEditorWithDraftSave}
+                disabled={formSubmitting}
+                className="self-start sm:self-auto inline-flex items-center gap-2 rounded-full bg-white/8 hover:bg-red-500/25 border border-white/15 hover:border-red-400/60 px-3.5 py-2 text-xs font-bold text-slate-200 hover:text-white shadow-lg transition disabled:opacity-50"
+                data-tooltip={editing ? 'Close editor (saves your changes)' : 'Close editor (saves as draft automatically)'}
+                data-tooltip-pos="bottom"
+                data-tooltip-align="end"
+                aria-label="Close editor"
+              >
+                <XIcon size={14} strokeWidth={2.4} />
+                <span>Close</span>
+              </button>
+            )}
           </div>
 
           {!formOpen ? (
             <div className="relative flex h-full min-h-[420px] flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-white/15 p-8 text-center overflow-hidden"
-              style={{ background: 'radial-gradient(circle at 30% 20%, rgba(168,85,247,0.15), transparent 60%), radial-gradient(circle at 80% 80%, rgba(6,182,212,0.12), transparent 60%), rgba(11,15,25,0.45)' }}
+              style={{ background: 'radial-gradient(circle at 30% 20%, rgba(139,92,246,0.15), transparent 60%), radial-gradient(circle at 80% 80%, rgba(124,58,237,0.12), transparent 60%), rgba(11,15,25,0.45)' }}
             >
-              <div className="text-6xl mb-4 drop-shadow-[0_8px_20px_rgba(168,85,247,0.6)]">🎨</div>
+              <div className="text-6xl mb-4 drop-shadow-[0_8px_20px_rgba(139,92,246,0.6)]">🎨</div>
               <p className="font-display text-2xl font-extrabold text-white">Ready to build something?</p>
               <p className="mt-2 text-sm text-slate-300 max-w-md leading-7">
                 Pick a template from the left or start a fresh website. You can also load one of our ready-made starters.
@@ -847,9 +1228,7 @@ export default function Admin() {
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              {error && !nameRequiredError && <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-              {success && <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>}
+            <div className={`space-y-6 ${editorActive ? 'flex-1 min-h-0 flex flex-col' : ''}`}>
 
               {!editing && createStep === 1 && (
                 <div className="space-y-6">
@@ -874,22 +1253,27 @@ export default function Admin() {
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <label className="block text-sm text-slate-700 mb-2">Website name</label>
+                      <label className="tpl-modal-label block text-xs font-bold uppercase tracking-[0.16em] mb-2">Website name</label>
                       <input
                         value={form.name}
                         onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                        className={`rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm ${APP_INPUT_CLASS}`}
+                        className={APP_INPUT_CLASS}
                         placeholder="Your campaign title"
                         required
                       />
-                      {nameRequiredError && <p className="mt-2 text-xs text-rose-600">{nameRequiredError}</p>}
+                      {nameRequiredError && (
+                        <p className="form-error-pill mt-2">
+                          <span aria-hidden="true">⚠</span>
+                          {nameRequiredError}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label className="block text-sm text-slate-700 mb-2">Category</label>
+                      <label className="tpl-modal-label block text-xs font-bold uppercase tracking-[0.16em] mb-2">Category</label>
                       <select
                         value={form.category}
                         onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                        className={`rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm ${APP_SELECT_CLASS}`}
+                        className={APP_SELECT_CLASS}
                       >
                         {['Love', 'Friendship', 'Birthday', 'Memories', 'Wedding'].map((c) => (
                           <option key={c} value={c}>
@@ -899,16 +1283,16 @@ export default function Admin() {
                       </select>
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm text-slate-700 mb-2">Description</label>
+                      <label className="tpl-modal-label block text-xs font-bold uppercase tracking-[0.16em] mb-2">Description</label>
                       <input
                         value={form.description}
                         onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                        className={`rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm ${APP_INPUT_CLASS}`}
+                        className={APP_INPUT_CLASS}
                         placeholder="What makes this page special?"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="block text-sm text-slate-700 mb-2">Thumbnail</label>
+                      <label className="tpl-modal-label block text-xs font-bold uppercase tracking-[0.16em] mb-2">Thumbnail</label>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/gif,image/webp"
@@ -928,86 +1312,186 @@ export default function Admin() {
               )}
 
               {(editing || createStep === 2) && (
-                <div data-lenis-prevent className="tpl-editor-shell relative isolate flex h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+                <div data-lenis-prevent className="tpl-editor-shell relative isolate flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
                   <div className="pointer-events-none absolute inset-0" style={{ zIndex: -1 }}>
                     <FloatingDecor density="subtle" opacity={0.08} size={36} />
                   </div>
-                  {/* Top Toolbar */}
-                  <div className="flex items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 py-3 gap-3 flex-wrap">
-                    <div className="flex items-center gap-3 min-w-0">
+                  {/* ── Top Toolbar — three clusters ─────────────────
+                       LEFT: identity (name + page indicator) + history
+                       CENTER: tool buttons (panels + pickers)
+                       RIGHT: viewport + drag + delete + Cancel/Save draft/Save
+                       Save is the primary action, gradient-styled, with
+                       a `⌘S` chip and a Ctrl/Cmd+S shortcut. */}
+                  <div className="flex items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 py-3 gap-3">
+                    {/* ── Left: identity + history ──────────────────── */}
+                    <div className="flex items-center gap-3 min-w-0 shrink-0">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-white truncate max-w-[16ch]">{form.name || 'Untitled'}</p>
-                        <p className="text-xs text-slate-400">Page {activePage + 1} of {normalizedBuilder.pages.length}</p>
+                        <p className="text-[11px] text-slate-400 leading-tight">
+                          Page {activePage + 1} of {normalizedBuilder.pages.length}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
+                      <div className="flex items-center gap-0.5 border-l border-white/10 pl-3 ml-1">
                         <button
                           type="button"
-                          title="Undo (Ctrl+Z)"
+                          data-tooltip="Undo (Ctrl+Z)"
+                          data-tooltip-pos="bottom"
+                          aria-label="Undo"
                           disabled={!history.past.length}
                           onClick={undo}
-                          className="rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 px-2.5 py-2 text-xs text-slate-200 transition"
-                        >↶ Undo</button>
+                          className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 flex items-center justify-center text-slate-200 transition"
+                        ><Undo2 size={16} strokeWidth={2.2} /></button>
                         <button
                           type="button"
-                          title="Redo (Ctrl+Shift+Z)"
+                          data-tooltip="Redo (Ctrl+Shift+Z)"
+                          data-tooltip-pos="bottom"
+                          aria-label="Redo"
                           disabled={!history.future.length}
                           onClick={redo}
-                          className="rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 px-2.5 py-2 text-xs text-slate-200 transition"
-                        >↷ Redo</button>
-                      </div>
-                      <div className="flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
-                        <button
-                          type="button"
-                          onClick={() => setPicker(picker === 'sticker' ? null : 'sticker')}
-                          className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'sticker' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
-                        >😎 Stickers</button>
-                        <button
-                          type="button"
-                          onClick={() => setPicker(picker === 'shape' ? null : 'shape')}
-                          className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'shape' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
-                        >⬢ Shapes</button>
-                        <button
-                          type="button"
-                          onClick={() => setPicker(picker === 'music' ? null : 'music')}
-                          className={`rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'music' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
-                          title={normalizedBuilder.theme?.audioUrl ? 'Music: ON' : 'Music: off'}
-                        >🎵 {normalizedBuilder.theme?.audioUrl ? 'Music ✓' : 'Music'}</button>
+                          className="w-9 h-9 rounded-lg bg-white/5 hover:bg-white/15 disabled:opacity-30 flex items-center justify-center text-slate-200 transition"
+                        ><Redo2 size={16} strokeWidth={2.2} /></button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-slate-300 hover:bg-white/10">
-                        <input type="checkbox" checked={dragMode} onChange={(e) => setDragMode(e.target.checked)} />
-                        <span>Drag mode</span>
-                      </label>
+
+                    {/* ── Right: device · drag · delete · save group ── */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {/* Device dropdown — pick which device you're designing.
+                          Each device keeps a SEPARATE layout (per-device
+                          overrides). */}
+                      <DeviceSelect
+                        value={responsiveEnabled ? activeBp : (normalizedBuilder.viewport || 'desktop')}
+                        options={['mobile', 'tablet', 'desktop']}
+                        size="sm"
+                        align="left"
+                        onChange={(v) => {
+                          if (responsiveEnabled) setPreviewBreakpoint(v);
+                          else setBuilderState((prev) => ({ ...prev, viewport: v }));
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setDragMode((d) => !d)}
+                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                          dragMode ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'
+                        }`}
+                        data-tooltip="Drag mode — click to toggle"
+                        data-tooltip-pos="bottom"
+                        aria-pressed={dragMode}
+                      ><MousePointer2 size={14} strokeWidth={2.2} /> Drag</button>
                       <button
                         type="button"
                         disabled={!normalizedBuilder.pages[activePage]?.blocks?.length}
                         onClick={removeSelectedBlock}
-                        className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-300 hover:bg-red-500/20 disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
+                        className="w-9 h-9 rounded-lg bg-red-500/10 hover:bg-red-500/25 disabled:opacity-30 flex items-center justify-center text-red-300 transition"
+                        data-tooltip="Delete selected block"
+                        data-tooltip-pos="bottom"
+                        aria-label="Delete"
+                      ><Trash2 size={15} strokeWidth={2.2} /></button>
+
                       <div className="w-px h-6 bg-white/10 mx-1" />
-                      <button
-                        type="button"
-                        disabled={formSubmitting}
-                        onClick={() => { setFormOpen(false); setCreateStep(1); setEditing(null); }}
-                        className="rounded-lg bg-white/5 px-3 py-2 text-xs text-slate-300 hover:bg-white/10 disabled:opacity-50"
-                      >
-                        Cancel
-                      </button>
+
+                      {/* Save draft — ONLY for a brand-new, never-saved
+                          template. Once a template exists it's edited and
+                          re-saved in place (no draft step), so editing never
+                          flips its published status. */}
+                      {!editing && (
+                        <button
+                          type="button"
+                          disabled={formSubmitting}
+                          onClick={() => handleSubmit({ preventDefault: () => {}, _asDraft: true })}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-white/5 px-3 py-2 text-xs font-bold text-slate-200 border border-white/15 hover:bg-white/10 disabled:opacity-60 transition"
+                          data-tooltip="Save as draft (Ctrl/Cmd+Shift+S)"
+                          data-tooltip-pos="bottom"
+                        ><FileDown size={14} strokeWidth={2.2} /> Save draft</button>
+                      )}
+                      {/* Save — primary action. Cmd/Ctrl+S also fires this. */}
                       <button
                         type="button"
                         disabled={formSubmitting}
                         onClick={() => handleSubmit({ preventDefault: () => {} })}
-                        className="rounded-lg bg-gradient-to-r from-brand-500 to-pink-500 px-3.5 py-2 text-xs font-bold text-white shadow-lg hover:opacity-95 active:scale-95 disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-500 to-pink-500 px-3.5 py-2 text-xs font-bold text-white shadow-lg hover:opacity-95 active:scale-95 disabled:opacity-60 transition"
+                        data-tooltip="Save (Ctrl/Cmd+S)"
+                        data-tooltip-pos="bottom"
+                        data-tooltip-align="end"
                       >
-                        {formSubmitting ? 'Saving…' : editing ? '💾 Save' : '🚀 Publish'}
+                        <Save size={14} strokeWidth={2.4} />
+                        {formSubmitting ? 'Saving…' : 'Save'}
+                        <kbd className="hidden lg:inline-flex items-center rounded bg-white/20 px-1 py-px text-[9px] font-bold tracking-wider ml-1">⌘S</kbd>
                       </button>
                     </div>
                   </div>
 
-                  {/* Pickers — Sticker / Shape / Music */}
+                  {/* ── Tools row — its OWN full-width strip so every tool stays
+                       visible (it never gets squeezed out by the save group);
+                       scrolls horizontally on narrow screens with a clear,
+                       always-visible scrollbar. */}
+                  <div className="tpl-tools-row shrink-0 flex items-center gap-0.5 border-b border-white/10 bg-slate-950/95 px-3 py-2 overflow-x-auto overflow-y-hidden">
+                    {[
+                      { key: 'elements', label: 'Add',     Icon: Plus },
+                      { key: 'media',    label: 'Media',   Icon: ImageIcon },
+                      { key: 'themes',   label: 'Themes',  Icon: Palette },
+                      { key: 'pages',    label: 'Pages',   Icon: Files },
+                      { key: 'layers',   label: 'Layers',  Icon: Layers },
+                    ].map(({ key, label, Icon }) => {
+                      const open = leftPanel === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setLeftPanel((cur) => (cur === key ? null : key))}
+                          className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                            open ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'
+                          }`}
+                        ><Icon size={14} strokeWidth={2.2} /> {label}</button>
+                      );
+                    })}
+                    <div className="shrink-0 w-px h-6 bg-white/10 mx-1" />
+                    {/* Auto-align — one tap snaps every element on this page into a
+                        clean, centered layout (clears scattered positions). Undoable. */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBuilderState((prev) => autoAlignBuilderPage(prev, activePage));
+                        setSelectedBlockIndex(null);
+                        toast.success('Aligned into a clean layout ✨', { position: 'bottom-center', duration: 1000 });
+                      }}
+                      className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-500/90 to-pink-500/90 px-2.5 py-2 text-xs font-bold text-white hover:opacity-95 active:scale-95 transition"
+                      data-tooltip="Auto-align — tidy every element into a clean layout"
+                      data-tooltip-pos="bottom"
+                    ><Wand2 size={14} strokeWidth={2.4} /> Auto-align</button>
+                    <div className="shrink-0 w-px h-6 bg-white/10 mx-1" />
+                    <button
+                      type="button"
+                      onClick={() => setPicker(picker === 'sticker' ? null : 'sticker')}
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'sticker' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                    ><Sparkles size={14} strokeWidth={2.2} /> Stickers</button>
+                    <button
+                      type="button"
+                      onClick={() => setPicker(picker === 'shape' ? null : 'shape')}
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'shape' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                    ><ShapesIcon size={14} strokeWidth={2.2} /> Shapes</button>
+                    <button
+                      type="button"
+                      onClick={() => setPicker(picker === 'music' ? null : 'music')}
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'music' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                      data-tooltip={normalizedBuilder.theme?.audioUrl ? 'Background music: ON' : 'Background music: off'}
+                      data-tooltip-pos="bottom"
+                    ><Music size={14} strokeWidth={2.2} /> {normalizedBuilder.theme?.audioUrl ? 'Music ✓' : 'Music'}</button>
+                    <button
+                      type="button"
+                      onClick={() => setRightPanel((cur) => (cur ? null : 'properties'))}
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${rightPanel ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                    ><Settings2 size={14} strokeWidth={2.2} /> Props</button>
+                  </div>
+
+                  {/* ── Pickers — Sticker / Shape / Music ────────────
+                       Wrapped in an absolute-positioned container so
+                       opening any picker overlays the canvas without
+                       resizing it. Width is constrained + the panel
+                       gets card styling (rounded, shadow) so it reads
+                       as a floating popover, not a wedge between
+                       toolbar and canvas. */}
+                  <div className="absolute left-3 right-3 top-[116px] z-30 pointer-events-none">
                   <AnimatePresence>
                     {picker === 'sticker' && (
                       <motion.div
@@ -1015,7 +1499,7 @@ export default function Admin() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="border-b border-white/10 bg-slate-900/95 px-4 py-3"
+                        className="pointer-events-auto rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl px-4 py-3 shadow-2xl max-w-2xl"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-xs uppercase tracking-widest text-slate-400">Pick a sticker</p>
@@ -1040,7 +1524,7 @@ export default function Admin() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="border-b border-white/10 bg-slate-900/95 px-4 py-3"
+                        className="pointer-events-auto rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl px-4 py-3 shadow-2xl max-w-2xl"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-xs uppercase tracking-widest text-slate-400">Add a shape</p>
@@ -1067,7 +1551,7 @@ export default function Admin() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        className="border-b border-white/10 bg-slate-900/95 px-4 py-3"
+                        className="pointer-events-auto rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl px-4 py-3 shadow-2xl max-w-2xl"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <p className="text-xs uppercase tracking-widest text-slate-400">Background music (whole site)</p>
@@ -1114,14 +1598,233 @@ export default function Admin() {
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  </div>
 
-                  {/* Main Content Area */}
-                  <div className="flex flex-1 overflow-hidden gap-4 p-4">
-                    {/* Left Sidebar - Elements & Layers */}
-                    <div className="w-48 flex flex-col gap-4 overflow-y-auto border-r border-white/10 pr-3">
+                  {/* Main Content Area — canvas always takes the full
+                      editor width. All tool panels are floating overlays
+                      anchored to the toolbar buttons above, so the canvas
+                      preview never shrinks for sidebars. */}
+                  <div className="relative flex flex-1 overflow-hidden gap-0 p-0">
+                    {/* ── Contextual top control bar (Instagram-story style) ──
+                         Floats at the top-center of the canvas the moment an
+                         element is selected, surfacing THAT element's key
+                         controls inline — font, color, align, effect, motion —
+                         exactly like tapping text in a story. "More" opens the
+                         full properties panel for the long-tail options. All
+                         controls reuse updateSelectedBlock so they stay in sync
+                         with the right panel. */}
+                    {(() => {
+                      const blocks = normalizedBuilder.pages[activePage]?.blocks || [];
+                      const sb = blocks[selectedBlockIndex];
+                      if (!sb) return null;
+                      const isText = sb.type === 'text' || sb.type === 'heading' || sb.type === 'button' || 'text' in sb;
+                      const isMedia = sb.type === 'image' || sb.type === 'gif' || sb.type === 'video';
+                      const colorKey = sb.type === 'shape' ? 'fillColor' : 'color';
+                      const colorVal = (sb.type === 'shape' ? sb.fillColor : sb.color) || '#ffffff';
+                      const TYPE_ICON = { text: '📝', heading: '📌', button: '🔘', gallery: '🖼️', gif: '🎬', image: '🖼️', video: '🎞️', sticker: '✨', shape: '⬛', countdown: '⏱️' };
+                      return (
+                        <div className="pointer-events-none absolute inset-x-0 top-2 z-30 flex justify-center px-3">
+                          <div className="ig-context-bar pointer-events-auto flex items-center gap-1.5 max-w-[calc(100%-1.5rem)] overflow-x-auto hide-scrollbar rounded-2xl border border-white/15 bg-slate-900/95 backdrop-blur-xl px-2 py-1.5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.85)] animate-fade-in">
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-white/5 px-2 py-1.5 text-[11px] font-bold text-slate-200">
+                              <span>{TYPE_ICON[sb.type] || '⬚'}</span>
+                              <span className="capitalize hidden sm:inline">{sb.type}</span>
+                            </span>
+                            <span className="shrink-0 w-px h-6 bg-white/10" />
+
+                            {isText && (
+                              <>
+                                <select
+                                  value={sb.fontFamily || ''}
+                                  onChange={(e) => updateSelectedBlock({ fontFamily: e.target.value })}
+                                  data-tooltip="Font" data-tooltip-pos="bottom"
+                                  className={`shrink-0 w-24 rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-[11px] text-white ${DARK_SELECT_CLASS}`}
+                                >
+                                  <option value="">Font</option>
+                                  {BUILDER_FONT_OPTIONS.map((f) => (
+                                    <option key={f.value} value={f.value}>{f.label}</option>
+                                  ))}
+                                </select>
+                                <label className="shrink-0 relative w-8 h-8 rounded-lg border border-white/10 overflow-hidden cursor-pointer" data-tooltip="Text color" data-tooltip-pos="bottom">
+                                  <input
+                                    type="color"
+                                    value={colorVal}
+                                    onChange={(e) => updateSelectedBlock({ [colorKey]: e.target.value })}
+                                    className="absolute inset-0 w-[150%] h-[150%] -m-1 cursor-pointer"
+                                  />
+                                </label>
+                                <div className="shrink-0 flex rounded-lg border border-white/10 overflow-hidden">
+                                  {['left', 'center', 'right'].map((al) => {
+                                    const cur = sb.align || 'center';
+                                    return (
+                                      <button
+                                        key={al}
+                                        type="button"
+                                        onClick={() => updateSelectedBlock({ align: al })}
+                                        className={`px-2 py-1.5 text-[11px] transition ${cur === al ? 'bg-brand-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}
+                                        aria-label={`Align ${al}`}
+                                      >{al === 'left' ? '⬅' : al === 'center' ? '↔' : '➡'}</button>
+                                    );
+                                  })}
+                                </div>
+                                <select
+                                  value={sb.textEffect || 'none'}
+                                  onChange={(e) => updateSelectedBlock({ textEffect: e.target.value })}
+                                  data-tooltip="Text effect" data-tooltip-pos="bottom"
+                                  className={`shrink-0 w-24 rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-[11px] text-white ${DARK_SELECT_CLASS}`}
+                                >
+                                  {TEXT_EFFECT_PRESETS.map((p) => (
+                                    <option key={p.value} value={p.value}>{p.label}</option>
+                                  ))}
+                                </select>
+                                <span className="shrink-0 w-px h-6 bg-white/10" />
+                              </>
+                            )}
+
+                            {/* Frame shape + outline — quick controls for media */}
+                            {isMedia && (
+                              <>
+                                <select
+                                  value={sb.mediaShape || 'none'}
+                                  onChange={(e) => updateSelectedBlock({ mediaShape: e.target.value })}
+                                  data-tooltip="Frame shape" data-tooltip-pos="bottom"
+                                  className={`shrink-0 w-24 rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-[11px] text-white ${DARK_SELECT_CLASS}`}
+                                >
+                                  {MEDIA_SHAPE_PRESETS.map((sh) => (
+                                    <option key={sh.value} value={sh.value}>{sh.value === 'none' ? '🖼️ Frame' : sh.label}</option>
+                                  ))}
+                                </select>
+                                <div
+                                  className="shrink-0 flex items-center gap-1 rounded-lg bg-slate-900 border border-white/10 px-1.5 py-1"
+                                  data-tooltip="Frame outline" data-tooltip-pos="bottom"
+                                >
+                                  <input
+                                    type="range" min={0} max={20} step={1}
+                                    value={Number(sb.borderWidth) || 0}
+                                    onChange={(e) => updateSelectedBlock({ borderWidth: Number(e.target.value) })}
+                                    className="w-14 accent-brand-500 cursor-pointer"
+                                    aria-label="Outline width"
+                                  />
+                                  <label className="relative w-6 h-6 rounded-md border border-white/10 overflow-hidden cursor-pointer" aria-label="Outline color">
+                                    <input
+                                      type="color"
+                                      value={sb.borderColor || '#ffffff'}
+                                      onChange={(e) => updateSelectedBlock({ borderColor: e.target.value })}
+                                      className="absolute inset-0 w-[150%] h-[150%] -m-1 cursor-pointer"
+                                    />
+                                  </label>
+                                </div>
+                                <span className="shrink-0 w-px h-6 bg-white/10" />
+                              </>
+                            )}
+
+                            {/* Outline — for shapes (stroke) */}
+                            {sb.type === 'shape' && (
+                              <>
+                                <div
+                                  className="shrink-0 flex items-center gap-1 rounded-lg bg-slate-900 border border-white/10 px-1.5 py-1"
+                                  data-tooltip="Outline" data-tooltip-pos="bottom"
+                                >
+                                  <input
+                                    type="range" min={0} max={20} step={1}
+                                    value={Number(sb.strokeWidth) || 0}
+                                    onChange={(e) => updateSelectedBlock({ strokeWidth: Number(e.target.value) })}
+                                    className="w-14 accent-brand-500 cursor-pointer"
+                                    aria-label="Outline width"
+                                  />
+                                  <label className="relative w-6 h-6 rounded-md border border-white/10 overflow-hidden cursor-pointer" aria-label="Outline color">
+                                    <input
+                                      type="color"
+                                      value={sb.strokeColor && sb.strokeColor !== 'transparent' ? sb.strokeColor : '#ffffff'}
+                                      onChange={(e) => updateSelectedBlock({ strokeColor: e.target.value })}
+                                      className="absolute inset-0 w-[150%] h-[150%] -m-1 cursor-pointer"
+                                    />
+                                  </label>
+                                </div>
+                                <span className="shrink-0 w-px h-6 bg-white/10" />
+                              </>
+                            )}
+
+                            {/* Loop motion — Float is the default; no "none"
+                                option here (turn motion off in More if needed). */}
+                            <select
+                              value={!sb.loopAnimation || sb.loopAnimation === 'none' ? 'float' : sb.loopAnimation}
+                              onChange={(e) => updateSelectedBlock({ loopAnimation: e.target.value })}
+                              data-tooltip="Loop motion" data-tooltip-pos="bottom"
+                              className={`shrink-0 w-24 rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-[11px] text-white ${DARK_SELECT_CLASS}`}
+                            >
+                              {LOOP_ANIM_PRESETS.filter((a) => a.value !== 'none').map((a) => (
+                                <option key={a.value} value={a.value}>{a.label}</option>
+                              ))}
+                            </select>
+
+                            {/* Opacity — available on every element */}
+                            <div
+                              className="shrink-0 flex items-center gap-1.5 rounded-lg bg-slate-900 border border-white/10 px-2 py-1.5"
+                              data-tooltip="Opacity" data-tooltip-pos="bottom"
+                            >
+                              <span className="text-[11px] text-slate-400">◐</span>
+                              <input
+                                type="range" min={10} max={100} step={1}
+                                value={Math.round((sb.opacity ?? 1) * 100)}
+                                onChange={(e) => updateSelectedBlock({ opacity: Number(e.target.value) / 100 })}
+                                className="w-16 accent-brand-500 cursor-pointer"
+                                aria-label="Opacity"
+                              />
+                              <span className="text-[10px] tabular-nums text-slate-400 w-7 text-right">{Math.round((sb.opacity ?? 1) * 100)}%</span>
+                            </div>
+
+                            <span className="shrink-0 w-px h-6 bg-white/10" />
+                            <button
+                              type="button"
+                              onClick={() => setRightPanel((cur) => (cur ? null : 'properties'))}
+                              className={`shrink-0 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-bold transition ${rightPanel ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                              data-tooltip="All properties" data-tooltip-pos="bottom"
+                            ><Settings2 size={13} strokeWidth={2.3} /> More</button>
+                            <button
+                              type="button"
+                              onClick={removeSelectedBlock}
+                              className="shrink-0 w-8 h-8 rounded-lg bg-red-500/10 hover:bg-red-500/25 flex items-center justify-center text-red-300 transition"
+                              data-tooltip="Delete element" data-tooltip-pos="bottom"
+                              aria-label="Delete element"
+                            ><Trash2 size={14} strokeWidth={2.2} /></button>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Click-away backdrop — tapping anywhere outside an open
+                        panel/picker closes them all. */}
+                    {(leftPanel || picker) && (
+                      <div
+                        className="absolute inset-0 z-20"
+                        onClick={() => { setLeftPanel(null); setPicker(null); }}
+                        aria-hidden
+                      />
+                    )}
+
+                    {/* ── Left tool panel (floating overlay) ────────── */}
+                    {leftPanel && (
+                      <div className="absolute top-2 left-3 z-30 w-64 lg:w-72 max-h-[calc(100%-1rem)] flex flex-col gap-3 overflow-y-auto hide-scrollbar rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)] px-3.5 py-3 animate-fade-in">
+                        <div className="flex items-center justify-between sticky top-0 z-10 bg-slate-950/95 pb-2.5 -mt-1 pt-1 -mx-3.5 px-3.5 border-b border-white/10">
+                          <h4 className="flex items-center gap-1.5 text-sm font-extrabold text-white">
+                            {leftPanel === 'elements' && <>➕ <span>Add elements</span></>}
+                            {leftPanel === 'media' && <>📸 <span>Media</span></>}
+                            {leftPanel === 'themes' && <>🎨 <span>Themes</span></>}
+                            {leftPanel === 'pages' && <>📄 <span>Pages</span></>}
+                            {leftPanel === 'layers' && <>📐 <span>Layers</span></>}
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => setLeftPanel(null)}
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition"
+                            aria-label="Close panel"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       {/* Templates/Elements Section */}
+                      {leftPanel === 'elements' && (
                       <div>
-                        <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Add Elements</h4>
                         <div className="grid grid-cols-2 gap-2">
                           {[
                             { label: '📝 Text', kind: 'text' },
@@ -1162,10 +1865,11 @@ export default function Admin() {
                           </button>
                         </div>
                       </div>
+                      )}
 
                       {/* Media Upload */}
+                      {leftPanel === 'media' && (
                       <div>
-                        <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Media</h4>
                         <div className="space-y-2">
                           <label className="flex cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-slate-900 px-2 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:border-brand-400 transition">
                             📸 Photo
@@ -1195,10 +1899,134 @@ export default function Admin() {
                           </label>
                         </div>
                       </div>
+                      )}
+
+                      {/* Themes — one-tap looks (gradient bg + colors + font) */}
+                      {leftPanel === 'themes' && (
+                      <div>
+                        <p className="mb-2 text-[11px] text-slate-400">Tap a theme — it restyles the whole design and syncs to every device.</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {THEME_PRESETS.map((t) => {
+                            const active =
+                              normalizedBuilder.theme?.gradientFrom === t.gradientFrom &&
+                              normalizedBuilder.theme?.gradientTo === t.gradientTo;
+                            return (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => applyTheme(t)}
+                                aria-pressed={active}
+                                className={`group relative rounded-xl overflow-hidden border text-left transition active:scale-[0.97] ${
+                                  active ? 'border-brand-400 ring-2 ring-brand-400/50' : 'border-white/10 hover:border-brand-400'
+                                }`}
+                              >
+                                <div
+                                  className="h-14 w-full"
+                                  style={{ background: `linear-gradient(${t.gradientAngle}deg, ${t.gradientFrom}, ${t.gradientTo})` }}
+                                />
+                                <div className="flex items-center justify-between px-2 py-1.5 bg-slate-900">
+                                  <span className="text-[11px] font-bold text-slate-100">{t.name}</span>
+                                  {t.bgMotion && <span className="text-[9px] text-brand-300 font-bold">● motion</span>}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* ── Page background — live wallpaper / media / effects ── */}
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
+                          <h5 className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-brand-200 font-extrabold">
+                            <span className="text-sm">🌈</span> Background
+                          </h5>
+
+                          {/* Animated gradient (motion theme) */}
+                          <label className="flex items-center justify-between gap-2 rounded-xl bg-white/5 hover:bg-white/[0.08] px-3 py-2 text-xs font-semibold text-slate-100 cursor-pointer transition">
+                            <span>✨ Animated gradient</span>
+                            <input
+                              type="checkbox"
+                              checked={!!normalizedBuilder.theme?.bgMotion}
+                              onChange={(e) => patchTheme({ bgMotion: e.target.checked })}
+                              className="accent-brand-500 w-4 h-4"
+                            />
+                          </label>
+
+                          {/* Live effect overlay */}
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-300 mb-1">🪄 Live effect</label>
+                            <select
+                              value={normalizedBuilder.pages[activePage]?.pageEffect || 'none'}
+                              onChange={(e) => patchActivePage({ pageEffect: e.target.value })}
+                              className={`tpl-cute-select w-full rounded-xl border border-white/12 bg-slate-900/80 px-3 py-2 text-xs font-medium text-white ${DARK_SELECT_CLASS}`}
+                            >
+                              {PAGE_EFFECT_PRESETS.map((fx) => (
+                                <option key={fx.value} value={fx.value}>{fx.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Background image — video & photo are mutually exclusive */}
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-300 mb-1">🖼️ Background image</label>
+                            <div className="flex gap-1.5">
+                              <input
+                                key={`bgimg-${activePage}-${normalizedBuilder.pages[activePage]?.pageImageUrl || ''}`}
+                                type="url"
+                                defaultValue={normalizedBuilder.pages[activePage]?.pageImageUrl || ''}
+                                onBlur={(e) => { const u = e.target.value.trim(); patchActivePage(u ? { pageImageUrl: u, pageVideoUrl: '' } : { pageImageUrl: '' }); }}
+                                placeholder="https://…/photo.jpg"
+                                className={`tpl-cute-input flex-1 min-w-0 rounded-xl border border-white/12 bg-slate-900/80 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
+                              />
+                              <label className="shrink-0 flex cursor-pointer items-center justify-center w-9 rounded-xl border border-white/12 bg-slate-900/80 text-sm text-slate-200 hover:bg-brand-500/20 hover:border-brand-400 transition" data-tooltip="Upload image" data-tooltip-pos="top">
+                                ⬆
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => { uploadPageBg(e.target.files?.[0], 'image'); e.target.value = ''; }} />
+                              </label>
+                              {normalizedBuilder.pages[activePage]?.pageImageUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => patchActivePage({ pageImageUrl: '' })}
+                                  className="shrink-0 w-9 rounded-xl border border-rose-400/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 transition flex items-center justify-center"
+                                  data-tooltip="Remove image" data-tooltip-pos="top" aria-label="Remove background image"
+                                ><Trash2 size={13} strokeWidth={2.2} /></button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Background video (live wallpaper) */}
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-300 mb-1">🎥 Background video</label>
+                            <div className="flex gap-1.5">
+                              <input
+                                key={`bgvid-${activePage}-${normalizedBuilder.pages[activePage]?.pageVideoUrl || ''}`}
+                                type="url"
+                                defaultValue={normalizedBuilder.pages[activePage]?.pageVideoUrl || ''}
+                                onBlur={(e) => { const u = e.target.value.trim(); patchActivePage(u ? { pageVideoUrl: u, pageImageUrl: '' } : { pageVideoUrl: '' }); }}
+                                placeholder="https://…/clip.mp4"
+                                className={`tpl-cute-input flex-1 min-w-0 rounded-xl border border-white/12 bg-slate-900/80 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
+                              />
+                              <label className="shrink-0 flex cursor-pointer items-center justify-center w-9 rounded-xl border border-white/12 bg-slate-900/80 text-sm text-slate-200 hover:bg-brand-500/20 hover:border-brand-400 transition" data-tooltip="Upload video" data-tooltip-pos="top">
+                                ⬆
+                                <input type="file" accept="video/*" className="hidden" onChange={(e) => { uploadPageBg(e.target.files?.[0], 'video'); e.target.value = ''; }} />
+                              </label>
+                              {normalizedBuilder.pages[activePage]?.pageVideoUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => patchActivePage({ pageVideoUrl: '' })}
+                                  className="shrink-0 w-9 rounded-xl border border-rose-400/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/25 transition flex items-center justify-center"
+                                  data-tooltip="Remove video" data-tooltip-pos="top" aria-label="Remove background video"
+                                ><Trash2 size={13} strokeWidth={2.2} /></button>
+                              )}
+                            </div>
+                            <p className="mt-1 text-[10px] text-slate-500">A photo and video can't both be the background — setting one clears the other.</p>
+                          </div>
+
+                          {bgUploading && <p className="text-[10px] font-semibold text-brand-300">Uploading…</p>}
+                        </div>
+                      </div>
+                      )}
 
                       {/* Pages/Layers */}
+                      {leftPanel === 'pages' && (
                       <div>
-                        <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Pages</h4>
                         <div className="flex flex-wrap gap-2">
                           {normalizedBuilder.pages.map((p, i) => (
                             <button
@@ -1221,11 +2049,11 @@ export default function Admin() {
                           </button>
                         </div>
                       </div>
+                      )}
 
                       {/* Layers / Blocks List */}
-                      {(normalizedBuilder.pages[activePage]?.blocks || []).length > 0 && (
+                      {leftPanel === 'layers' && (normalizedBuilder.pages[activePage]?.blocks || []).length > 0 && (
                         <div>
-                          <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Layers</h4>
                           <div className="space-y-1.5">
                             {normalizedBuilder.pages[activePage].blocks.map((b, i) => {
                               const total = normalizedBuilder.pages[activePage].blocks.length;
@@ -1281,7 +2109,8 @@ export default function Admin() {
                                       >📋</button>
                                       <button
                                         type="button"
-                                        title="Delete"
+                                        data-tooltip="Delete"
+                                        data-tooltip-pos="top"
                                         onClick={() => deleteBlockAt(activePage, i)}
                                         className="w-5 h-5 rounded text-[10px] hover:bg-red-500/40 text-rose-300"
                                       >×</button>
@@ -1293,40 +2122,145 @@ export default function Admin() {
                           </div>
                         </div>
                       )}
-                    </div>
-
-                    {/* Center Canvas */}
-                    <div className="flex-1 flex flex-col gap-3 overflow-hidden">
-                      <div className="flex-1 rounded-xl border border-white/10 bg-black overflow-hidden shadow-2xl">
-                        {builderPreviewError ? (
-                          <div className="p-6 text-sm text-amber-300 flex items-center justify-center h-full">{builderPreviewError}</div>
-                        ) : (
-                          <SlideshowBuilder
-                            structure={previewStructure}
-                            fills={{}}
-                            editable
-                            dragMode={dragMode}
-                            activeIndex={activePage}
-                            onActiveIndexChange={setActivePage}
-                            onTextSlotCommit={(slot, text) =>
-                              setBuilderState((prev) => updateBuilderTextBySlot(prev, slot, text))
-                            }
-                            onBlockMoveCommit={(slot, x, y) =>
-                              setBuilderState((prev) => updateBuilderBlockPositionBySlot(prev, slot, x, y))
-                            }
-                            selectedSlot={selectedSlotForCanvas}
-                            onSelectionChange={handleAdminSelectionChange}
-                            onResizeCommit={handleResizeCommit}
-                            onRotateCommit={handleRotateCommit}
-                            className="w-full h-full [&_.html-deck-root]:h-full [&_.html-deck-root]:min-h-full"
-                          />
-                        )}
                       </div>
-                      <p className="text-center text-xs text-slate-500">Click any block to select • Drag corners to resize • Top handle to rotate (hold Shift for 15°)</p>
+                    )}
+
+                    {/* Center Canvas — sized to the active viewport's
+                        aspect ratio (mobile 9:19.5, desktop 16:9). Blocks
+                        are positioned in design pixels relative to this
+                        canvas; the renderer scales it uniformly to fit
+                        end-user devices, so the editor view is exactly
+                        what the user will see.
+
+                        The outer "canvas host" uses `container-type: size`
+                        so the canvas can size itself with `min(100cqi,
+                        100cqb × aspect)` — meaning it picks the largest
+                        rectangle that fits inside the available space
+                        in both dimensions. Result: switching mobile /
+                        desktop / any device just reshapes the rectangle
+                        in place without overflow. */}
+                    <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+                      <div
+                        className="flex-1 min-h-0 p-3 relative overflow-auto"
+                        style={{
+                          containerType: 'size',
+                          containerName: 'canvas-host',
+                          // When an element is selected the contextual bar floats
+                          // at the top — drop the canvas below it so the bar never
+                          // overlaps the element or its handles.
+                          paddingTop: selectedBlockIndex != null ? '5.5rem' : undefined,
+                        }}
+                      >
+                        {(() => {
+                          /* Canvas aspect follows the active device artboard so
+                             the preview box matches the breakpoint (portrait on
+                             mobile, landscape on desktop) — no letterboxing.
+                             It's sized by WIDTH (up to a comfy per-device max)
+                             so the device is large & clearly visible; if it's
+                             taller than the editor it just scrolls. */
+                          const vpKey = normalizedBuilder.viewport || 'desktop';
+                          const vp = responsiveEnabled && activeArtboard
+                            ? activeArtboard
+                            : (VIEWPORT_PRESETS[vpKey] || VIEWPORT_PRESETS.desktop);
+                          const deviceKey = responsiveEnabled ? activeBp : vpKey;
+                          const maxW = deviceKey === 'mobile' ? 460 : deviceKey === 'tablet' ? 820 : 1280;
+                          return (
+                            <div className="min-h-full w-full flex justify-center" style={{ alignItems: 'safe center' }}>
+                            <div
+                              className="relative shrink-0 rounded-xl border border-white/10 bg-black overflow-hidden shadow-2xl"
+                              style={{
+                                aspectRatio: `${vp.width} / ${vp.height}`,
+                                width: `min(100cqi, ${maxW}px)`,
+                              }}
+                            >
+                              {builderPreviewError ? (
+                                <div className="p-6 text-sm text-amber-300 flex items-center justify-center h-full">{builderPreviewError}</div>
+                              ) : (
+                                <SlideshowBuilder
+                                  structure={previewStructure}
+                                  fills={{}}
+                                  editable
+                                  dragMode={dragMode}
+                                  previewBreakpoint={activeBp}
+                                  activeIndex={activePage}
+                                  onActiveIndexChange={setActivePage}
+                                  onTextSlotCommit={(slot, text) =>
+                                    setBuilderState((prev) => updateBuilderTextBySlot(prev, slot, text))
+                                  }
+                                  /* Auto-sync: every edit writes the ONE base
+                                     design (relative %, scaled size) so the
+                                     change applies to ALL devices, adapted per
+                                     screen — the previewed device just sets the
+                                     coordinate space. */
+                                  onBlockMoveCommit={(slot, x, y, refW, refH) => {
+                                    // Convert the dropped centre to a % of the
+                                    // SAME box the canvas measured against, so
+                                    // the block lands exactly where released.
+                                    const xPct = refW > 0 ? (x / refW) * 100 : null;
+                                    const yPct = refH > 0 ? (y / refH) * 100 : null;
+                                    setBuilderState((prev) => updateBuilderBlockPositionPctSynced(prev, slot, xPct, yPct));
+                                  }}
+                                  selectedSlot={selectedSlotForCanvas}
+                                  onSelectionChange={handleAdminSelectionChange}
+                                  onResizeCommit={(slot, w, h) =>
+                                    setBuilderState((prev) => updateBuilderBlockSizeSynced(prev, slot, w, h, activeBp))
+                                  }
+                                  onRotateCommit={(slot, deg) =>
+                                    setBuilderState((prev) => updateBuilderBlockRotateSynced(prev, slot, deg))
+                                  }
+                                  embedded
+                                  className="!w-full !h-full [&_.html-deck-root]:!h-full [&_.html-deck-root]:!min-h-0 [&_.html-deck-root]:!border-0 [&_.html-deck-root]:!rounded-none"
+                                />
+                              )}
+                              {/* Background-upload feedback — blur the canvas
+                                  and show a cute loader so you know something
+                                  is happening. */}
+                              {bgUploading && (
+                                <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-slate-950/40 backdrop-blur-md animate-fade-in">
+                                  <span className="relative flex h-12 w-12">
+                                    <span className="absolute inset-0 rounded-full border-[3px] border-white/25" />
+                                    <span className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-brand-400 animate-spin" />
+                                    <span className="absolute inset-0 flex items-center justify-center text-lg">🖼️</span>
+                                  </span>
+                                  <p className="text-xs font-semibold text-white/90 tracking-wide">Updating background…</p>
+                                </div>
+                              )}
+                            </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <p className="text-center text-xs text-slate-500">
+                        Click any block to select • Drag corners to resize • Top handle to rotate (hold Shift for 15°) •{' '}
+                        <span className="text-pink-300/80 font-semibold capitalize">
+                          {responsiveEnabled
+                            ? `Previewing ${activeBp} (${activeArtboard.width}×${activeArtboard.height})`
+                            : ((normalizedBuilder.viewport === 'desktop')
+                              ? 'Designing for desktop (1280×720)'
+                              : 'Designing for mobile (390×844)')}
+                        </span>
+                        {responsiveEnabled && (
+                          <span className="ml-1 text-brand-300">— edits sync to every device ✨</span>
+                        )}
+                      </p>
                     </div>
 
-                    {/* Right Sidebar - Properties */}
-                    <div className="w-60 flex flex-col gap-4 overflow-y-auto border-l border-white/10 pl-3">
+                    {/* ── Right tool panel (floating overlay) ─────── */}
+                    {rightPanel && (
+                    <div className="absolute top-2 right-3 z-30 w-60 lg:w-72 max-h-[calc(100%-1rem)] flex flex-col gap-4 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)] px-3 py-3 animate-fade-in">
+                      <div className="flex items-center justify-between sticky top-0 bg-slate-950/95 pb-2 -mt-1 pt-1 -mx-3 px-3 border-b border-white/10">
+                        <h4 className="text-xs uppercase tracking-widest text-slate-300 font-bold">
+                          ⚙️ {rightPanel === 'info' ? 'Campaign info' : 'Properties'}
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setRightPanel(null)}
+                          className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition"
+                          aria-label="Close panel"
+                        >
+                          ✕
+                        </button>
+                      </div>
                       {editing && (
                         <div>
                           <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Campaign Info</h4>
@@ -1405,10 +2339,25 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      {/* Selected Block Properties */}
-                      {(normalizedBuilder.pages[activePage]?.blocks || []).length > 0 && (
+                      {/* Selected Block Properties — header reflects the
+                          clicked element so the panel reads as a contextual
+                          inspector (only this element's controls show). */}
+                      {(normalizedBuilder.pages[activePage]?.blocks || []).length > 0 && (() => {
+                        const selType = normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type;
+                        const TYPE_META = {
+                          heading: { icon: '🅰', label: 'Heading' }, subheading: { icon: '🅰', label: 'Subheading' },
+                          text: { icon: '🅰', label: 'Text' }, image: { icon: '🖼️', label: 'Image' },
+                          gif: { icon: '🎬', label: 'GIF' }, video: { icon: '🎞️', label: 'Video' },
+                          sticker: { icon: '😎', label: 'Sticker' }, shape: { icon: '⬢', label: 'Shape' },
+                          countdown: { icon: '⏱', label: 'Countdown' }, gallery: { icon: '🖼️', label: 'Gallery' },
+                          button: { icon: '🔘', label: 'Button' }, buttons: { icon: '🔘', label: 'Buttons' },
+                        };
+                        const meta = TYPE_META[selType] || { icon: '⬚', label: 'Element' };
+                        return (
                         <div>
-                          <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Block Properties</h4>
+                          <h4 className="mb-3 flex items-center gap-1.5 text-xs uppercase tracking-widest text-brand-300 font-bold">
+                            <span>{meta.icon}</span> {meta.label} properties
+                          </h4>
                           <div className="space-y-3">
                             {'text' in (normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex] || {}) && (
                               <div>
@@ -1488,6 +2437,32 @@ export default function Admin() {
                                       <option value="cover">Cover</option>
                                       <option value="contain">Contain</option>
                                       <option value="fill">Fill</option>
+                                    </select>
+                                  </div>
+                                )}
+                                {/* Frame shape — mask the media into a shape */}
+                                <div>
+                                  <label className="block text-xs text-slate-400 mb-1">🖼️ Frame shape</label>
+                                  <select
+                                    value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.mediaShape || 'none'}
+                                    onChange={(e) => updateSelectedBlock({ mediaShape: e.target.value })}
+                                    className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_SELECT_CLASS}`}
+                                  >
+                                    {MEDIA_SHAPE_PRESETS.map((s) => (
+                                      <option key={s.value} value={s.value}>{s.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                {normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type === 'video' && (
+                                  <div>
+                                    <label className="block text-xs text-slate-400 mb-1">🎬 Video display</label>
+                                    <select
+                                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.videoMode || 'inline'}
+                                      onChange={(e) => updateSelectedBlock({ videoMode: e.target.value })}
+                                      className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_SELECT_CLASS}`}
+                                    >
+                                      <option value="inline">Show inline (play in place)</option>
+                                      <option value="lightbox">Tap to play fullscreen</option>
                                     </select>
                                   </div>
                                 )}
@@ -1757,6 +2732,77 @@ export default function Admin() {
                                     />
                                   </div>
                                 </div>
+                                {/* Size · Color · Align */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 mb-1">Size</label>
+                                    <input
+                                      type="number" min={8} max={220}
+                                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.fontSize ?? ''}
+                                      onChange={(e) => updateSelectedBlock({ fontSize: e.target.value === '' ? '' : Number(e.target.value) })}
+                                      className={`w-full rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-xs text-white ${DARK_INPUT_CLASS}`}
+                                      placeholder="auto"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 mb-1">Color</label>
+                                    <input
+                                      type="color"
+                                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.color || '#ffffff'}
+                                      onChange={(e) => updateSelectedBlock({ color: e.target.value })}
+                                      className="w-full h-[30px] rounded-lg border border-white/10 bg-slate-900"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 mb-1">Align</label>
+                                    <div className="flex rounded-lg border border-white/10 overflow-hidden">
+                                      {['left', 'center', 'right'].map((al) => {
+                                        const cur = normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.align || 'center';
+                                        return (
+                                          <button
+                                            key={al}
+                                            type="button"
+                                            onClick={() => updateSelectedBlock({ align: al })}
+                                            className={`flex-1 py-1.5 text-[11px] transition ${cur === al ? 'bg-brand-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}
+                                            aria-label={`Align ${al}`}
+                                          >{al === 'left' ? '⬅' : al === 'center' ? '↔' : '➡'}</button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* Border + corners (curve ↔ square) */}
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 mb-1">Border</label>
+                                    <input
+                                      type="number" min={0} max={40}
+                                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.borderWidth ?? ''}
+                                      onChange={(e) => updateSelectedBlock({ borderWidth: e.target.value === '' ? '' : Number(e.target.value) })}
+                                      className={`w-full rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-xs text-white ${DARK_INPUT_CLASS}`}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 mb-1">Border color</label>
+                                    <input
+                                      type="color"
+                                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.borderColor || '#ffffff'}
+                                      onChange={(e) => updateSelectedBlock({ borderColor: e.target.value })}
+                                      className="w-full h-[30px] rounded-lg border border-white/10 bg-slate-900"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[10px] text-slate-500 mb-1">Corners</label>
+                                    <input
+                                      type="number" min={0} max={400}
+                                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.cornerRadius ?? ''}
+                                      onChange={(e) => updateSelectedBlock({ cornerRadius: e.target.value === '' ? '' : Number(e.target.value) })}
+                                      className={`w-full rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-xs text-white ${DARK_INPUT_CLASS}`}
+                                      placeholder="0"
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             )}
 
@@ -1779,40 +2825,41 @@ export default function Admin() {
                                 onChange={(e) => updateSelectedBlock({ enterDelayMs: Number(e.target.value) || 0 })}
                                 className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
                               />
+                              {/* Continuous loop motion (every block) */}
+                              <label className="block text-xs text-slate-400 mt-3 mb-1">🔁 Loop motion</label>
+                              <select
+                                value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.loopAnimation || 'none'}
+                                onChange={(e) => updateSelectedBlock({ loopAnimation: e.target.value })}
+                                className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_SELECT_CLASS}`}
+                              >
+                                {LOOP_ANIM_PRESETS.map((a) => (
+                                  <option key={a.value} value={a.value}>{a.label}</option>
+                                ))}
+                              </select>
+                              {(normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.loopAnimation || 'none') !== 'none' && (
+                                <p className="mt-1 text-[10px] text-slate-500">Loop motion plays continuously (replaces the entrance for this element).</p>
+                              )}
                             </div>
                           </div>
                         </div>
-                      )}
+                        );
+                      })()}
 
-                      {/* Countdown Timer */}
-                      <div className="border-t border-white/10 pt-4">
-                        <h4 className="mb-3 text-xs uppercase tracking-widest text-slate-400">Countdown Timer</h4>
-                        <label className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-slate-200">
-                          <input
-                            type="checkbox"
-                            checked={normalizedBuilder.scheduledReveal.enabled}
-                            onChange={(e) => patchScheduledReveal({ enabled: e.target.checked })}
-                          />
-                          Enable
-                        </label>
-                        {normalizedBuilder.scheduledReveal.enabled && (
-                          <div className="mt-3 space-y-3">
-                            <input
-                              type="datetime-local"
-                              value={normalizedBuilder.scheduledReveal.targetLocal}
-                              onChange={(e) => patchScheduledReveal({ targetLocal: e.target.value })}
-                              className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
-                            />
-                          </div>
-                        )}
-                      </div>
                     </div>
+                    )}
+
                   </div>
                 </div>
               )}
             </div>
           )}
         </section>
+            </>
+          );
+          return editorActive
+            ? createPortal(editorJsx, document.body)
+            : editorJsx;
+        })()}
       </div>
 
       <ConfirmDialog
@@ -1861,31 +2908,54 @@ export default function Admin() {
                   aria-label="Close"
                 >✕</button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Denser grid + photo-backed cards. The accent gradient
+                  sits underneath the <img> as a fallback if the Unsplash
+                  photo fails to load, so cards never render as a blank
+                  rectangle. A 2-stop dark gradient overlays the photo
+                  so the white title at the bottom always reads. */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {STARTER_TEMPLATES.map((t) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => loadStarterTemplate(t.id)}
-                    className="group text-left rounded-[1.5rem] overflow-hidden border-2 border-slate-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-400 transition active:scale-[0.98]"
+                    className="group text-left rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-400 transition active:scale-[0.97] relative aspect-[3/4]"
+                    style={{ background: t.accent }}
                   >
-                    <div
-                      className="aspect-[4/5] flex items-center justify-center text-6xl relative"
-                      style={{ background: t.accent }}
-                    >
-                      <div className="absolute inset-x-2 top-2 flex gap-1">
-                        <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-                        <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                        <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                      </div>
-                      <span className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)] group-hover:scale-110 transition">{t.emoji}</span>
+                    {t.image && (
+                      <img
+                        src={t.image}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-[1.08]"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+                    {/* Tinted accent wash + bottom legibility gradient */}
+                    <div className="absolute inset-0 mix-blend-overlay opacity-40" style={{ background: t.accent }} />
+                    {/* Stronger 3-stop legibility gradient: pure black at
+                        the very bottom so the title is bold even on
+                        light/busy photos, fading to transparent ~55%
+                        up so the image still reads. */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-transparent" style={{ '--tw-gradient-via-position': '32%', '--tw-gradient-to-position': '60%' }} />
+                    {/* Story-progress bars */}
+                    <div className="absolute inset-x-2 top-2 flex gap-1">
+                      <span className="h-0.5 flex-1 rounded-full bg-white/90" />
+                      <span className="h-0.5 flex-1 rounded-full bg-white/40" />
+                      <span className="h-0.5 flex-1 rounded-full bg-white/40" />
                     </div>
-                    <div className="tpl-modal-tile-footer p-4">
-                      <p className="tpl-modal-title font-bold" style={{ fontSize: '16px' }}>{t.name}</p>
-                      <p className="tpl-modal-label text-[11px] uppercase tracking-wider mt-0.5">
+                    {/* Emoji pill in the top-left */}
+                    <div className="absolute top-4 left-2.5 w-9 h-9 rounded-full bg-white/95 backdrop-blur flex items-center justify-center text-xl shadow-lg">
+                      {t.emoji}
+                    </div>
+                    {/* Bottom caption */}
+                    <div className="absolute inset-x-3 bottom-3 text-white">
+                      <p className="font-display font-extrabold text-[15px] leading-tight" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.85)' }}>
+                        {t.name}
+                      </p>
+                      <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/85 font-bold" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.85)' }}>
                         {t.category} · {t.builderState.pages.length} pages
                       </p>
-                      <p className="tpl-modal-desc text-xs mt-2 line-clamp-2">{t.description}</p>
                     </div>
                   </button>
                 ))}
@@ -1905,7 +2975,7 @@ export default function Admin() {
           animate={{ opacity: 1 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md"
           data-lenis-prevent
-          onClick={() => { if (!formSubmitting) setFormOpen(false); }}
+          onClick={dismissCreate}
         >
           <motion.form
             initial={{ scale: 0.94, y: 16 }}
@@ -1915,7 +2985,7 @@ export default function Admin() {
             className="tpl-modal-card relative w-full max-w-5xl rounded-[2rem] border shadow-2xl flex flex-col max-h-[94vh] overflow-hidden"
           >
             {/* Soft gradient stripe across the top */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-orange-400 via-fuchsia-500 to-violet-600" />
+            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-400 via-violet-500 to-pink-500" />
 
             {/* Header */}
             <div className="flex items-start justify-between gap-4 px-6 pt-6 sm:px-8 sm:pt-7">
@@ -1934,7 +3004,7 @@ export default function Admin() {
               </div>
               <button
                 type="button"
-                onClick={() => !formSubmitting && setFormOpen(false)}
+                onClick={dismissCreate}
                 className="shrink-0 text-slate-400 hover:text-slate-900 dark:hover:text-white text-lg w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition flex items-center justify-center"
                 aria-label="Close"
               >✕</button>
@@ -1946,7 +3016,10 @@ export default function Admin() {
                 and overflows the modal (clipped by `overflow-hidden` above). */}
             <div className="px-6 sm:px-8 py-5 overflow-y-auto flex-1 min-h-0">
               {creationMode === 'starters' ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                /* Same photo-backed card pattern as the standalone picker
+                   — denser grid (4 cols on lg), 3:4 portrait aspect,
+                   gradient fallback under the Unsplash photo. */
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {STARTER_TEMPLATES.map((t) => {
                     const active = pickedStarterId === t.id;
                     return (
@@ -1955,29 +3028,40 @@ export default function Admin() {
                         type="button"
                         onClick={() => pickStarter(t.id)}
                         aria-pressed={active}
-                        className={`group text-left rounded-2xl overflow-hidden border-2 transition active:scale-[0.97] ${
+                        className={`group text-left rounded-xl overflow-hidden border transition active:scale-[0.97] relative aspect-[3/4] ${
                           active
                             ? 'border-brand-500 ring-4 ring-brand-500/20 shadow-xl shadow-brand-500/15'
                             : 'border-slate-200 dark:border-white/10 hover:border-brand-400 dark:hover:border-brand-400'
                         }`}
+                        style={{ background: t.accent }}
                       >
-                        <div
-                          className="aspect-[4/5] flex items-center justify-center text-5xl relative overflow-hidden"
-                          style={{ background: t.accent }}
-                        >
-                          {active && (
-                            <span className="absolute top-2 right-2 rounded-full bg-white text-brand-700 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 shadow">✓ Picked</span>
-                          )}
-                          <div className="absolute inset-x-2 top-2 flex gap-1 pr-16">
-                            <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-                            <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                            <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                          </div>
-                          <span className="drop-shadow-[0_4px_8px_rgba(0,0,0,0.4)] group-hover:scale-110 transition">{t.emoji}</span>
+                        {t.image && (
+                          <img
+                            src={t.image}
+                            alt=""
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-[1.08]"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        )}
+                        <div className="absolute inset-0 mix-blend-overlay opacity-50" style={{ background: t.accent }} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+                        {active && (
+                          <span className="absolute top-2 right-2 rounded-full bg-white text-brand-700 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 shadow">✓ Picked</span>
+                        )}
+                        <div className="absolute inset-x-2 top-2 flex gap-1 pr-16">
+                          <span className="h-0.5 flex-1 rounded-full bg-white/90" />
+                          <span className="h-0.5 flex-1 rounded-full bg-white/40" />
+                          <span className="h-0.5 flex-1 rounded-full bg-white/40" />
                         </div>
-                        <div className="tpl-modal-tile-footer p-3">
-                          <p className="tpl-modal-title font-bold text-sm truncate" style={{ fontSize: '14px' }}>{t.name}</p>
-                          <p className="tpl-modal-label text-[10px] uppercase tracking-wider mt-0.5">
+                        <div className="absolute top-4 left-2.5 w-9 h-9 rounded-full bg-white/95 backdrop-blur flex items-center justify-center text-xl shadow-lg">
+                          {t.emoji}
+                        </div>
+                        <div className="absolute inset-x-3 bottom-2.5 text-white">
+                          <p className="font-display font-extrabold text-sm leading-tight drop-shadow">
+                            {t.name}
+                          </p>
+                          <p className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-white/80">
                             {t.category} · {t.builderState.pages.length} pages
                           </p>
                         </div>
@@ -2012,9 +3096,50 @@ export default function Admin() {
                       </label>
                     </div>
                   ) : (
-                    <label className="w-28 h-28 rounded-3xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-white/5 dark:to-white/[0.02] border-2 border-dashed border-slate-300 dark:border-white/15 flex flex-col items-center justify-center mb-3 shadow-pop cursor-pointer hover:border-brand-400 hover:from-brand-50 hover:to-peach-100 dark:hover:from-fuchsia-500/8 dark:hover:to-purple-500/8 transition group">
-                      <span className="text-3xl tpl-modal-title group-hover:scale-110 transition">+</span>
-                      <span className="tpl-modal-label text-[10px] uppercase tracking-wider mt-1">Add cover</span>
+                    <label
+                      className="add-cover-tile relative w-28 h-28 rounded-3xl flex flex-col items-center justify-center mb-3 cursor-pointer transition group overflow-hidden"
+                    >
+                      {/* Pastel candy gradient bg — pops on dark, soft on light */}
+                      <span
+                        className="absolute inset-0 rounded-3xl"
+                        style={{
+                          background: 'linear-gradient(135deg, #C4B5FD 0%, #F9A8D4 45%, #FDE68A 100%)',
+                          opacity: 0.92,
+                        }}
+                        aria-hidden="true"
+                      />
+                      {/* Glassy inner overlay so the gradient reads as a sticker */}
+                      <span
+                        className="absolute inset-0 rounded-3xl"
+                        style={{
+                          background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 60%)',
+                        }}
+                        aria-hidden="true"
+                      />
+                      {/* Soft inner ring */}
+                      <span
+                        className="absolute inset-[6px] rounded-[1.4rem] border-2 border-dashed border-white/70"
+                        aria-hidden="true"
+                      />
+                      <span
+                        className="relative z-10 w-10 h-10 rounded-full inline-flex items-center justify-center text-white transition-transform duration-300 group-hover:scale-110 group-hover:rotate-90"
+                        style={{
+                          background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+                          boxShadow: '0 6px 14px -4px rgba(139,92,246,0.55)',
+                        }}
+                        aria-hidden="true"
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </span>
+                      <span
+                        className="relative z-10 text-[10px] font-extrabold uppercase tracking-[0.18em] mt-2"
+                        style={{ color: '#5B21B6' }}
+                      >
+                        Add cover
+                      </span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/gif,image/webp"
@@ -2031,7 +3156,7 @@ export default function Admin() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setCreationMode('starters')}
+                    onClick={() => { setCreationMode('starters'); setStarterFromBlank(true); }}
                     className="mt-3 text-xs font-bold text-brand-700 dark:text-fuchsia-300 hover:underline"
                   >
                     or pick a starter instead →
@@ -2039,35 +3164,40 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* Category selector (both modes) */}
-              <div className="mt-5 pt-5 border-t border-slate-100 dark:border-white/5">
-                <p className="tpl-modal-label block text-[10px] font-extrabold uppercase tracking-[0.16em] mb-2">
-                  Category
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { name: 'Birthday',   emoji: '🎂' },
-                    { name: 'Love',       emoji: '💖' },
-                    { name: 'Wedding',    emoji: '💍' },
-                    { name: 'Friendship', emoji: '🫶' },
-                    { name: 'Memories',   emoji: '📸' },
-                  ].map((c) => {
-                    const active = form.category === c.name;
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => setForm((f) => ({ ...f, category: c.name }))}
-                        aria-pressed={active}
-                        className={`tpl-modal-chip ${active ? 'is-active' : ''} inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition active:scale-95`}
-                      >
-                        <span>{c.emoji}</span>
-                        <span>{c.name}</span>
-                      </button>
-                    );
-                  })}
+              {/* Category selector — only relevant for the blank-website
+                  flow. In starters mode the category is determined by
+                  whichever starter the admin picks (pre-filled by
+                  pickStarter), so showing a chooser would be redundant. */}
+              {creationMode === 'blank' && (
+                <div className="mt-5 pt-5 border-t border-slate-100 dark:border-white/5">
+                  <p className="tpl-modal-label block text-[10px] font-extrabold uppercase tracking-[0.16em] mb-2">
+                    Category
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: 'Birthday',   emoji: '🎂' },
+                      { name: 'Love',       emoji: '💖' },
+                      { name: 'Wedding',    emoji: '💍' },
+                      { name: 'Friendship', emoji: '🫶' },
+                      { name: 'Memories',   emoji: '📸' },
+                    ].map((c) => {
+                      const active = form.category === c.name;
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, category: c.name }))}
+                          aria-pressed={active}
+                          className={`tpl-modal-chip ${active ? 'is-active' : ''} inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition active:scale-95`}
+                        >
+                          <span>{c.emoji}</span>
+                          <span>{c.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Sticky footer: name + Continue */}
@@ -2088,29 +3218,33 @@ export default function Admin() {
                     }
                     required
                   />
-                  {nameRequiredError && <p className="mt-1 text-xs text-rose-600">{nameRequiredError}</p>}
+                  {nameRequiredError && (
+                    <p className="form-error-pill mt-2">
+                      <span aria-hidden="true">⚠</span>
+                      {nameRequiredError}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setFormOpen(false)}
+                    onClick={dismissCreate}
                     className="tpl-modal-cancel rounded-full px-4 py-2.5 text-sm font-bold transition"
                   >
                     Cancel
                   </button>
-                  <button
-                    type="button"
+                  <Button
                     onClick={commitStarterAndContinue}
                     disabled={creationMode === 'starters' && !pickedStarterId}
-                    className="rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-fuchsia-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-brand-500/30 hover:opacity-95 active:scale-[0.98] transition flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="whitespace-nowrap"
                   >
                     {creationMode === 'starters'
                       ? (pickedStarterId
                           ? `Use ${STARTER_TEMPLATES.find(t => t.id === pickedStarterId)?.emoji || ''} ${STARTER_TEMPLATES.find(t => t.id === pickedStarterId)?.name || 'starter'} →`
                           : 'Pick a template above ↑')
                       : 'Open the editor →'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2402,7 +3536,7 @@ export default function Admin() {
                               setPageAt(activePage, { ...page, blocks });
                               setSelectedBlockIndex(blocks.length - 1);
                             } catch (err) {
-                              setError(err.message || 'Song upload failed');
+                              toast.error(err.message || 'Song upload failed');
                             } finally {
                               setUploadingAsset(false);
                               e.target.value = '';

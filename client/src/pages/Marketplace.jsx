@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+﻿import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicShell from '../components/PublicShell';
@@ -20,24 +20,24 @@ const CATEGORIES = [
 const TEMPLATES = [
   // Wedding
   { id: 'w1', name: 'Royal Heritage',     cat: 'wedding',     price: 299, grad: 'from-rose-400 via-fuchsia-500 to-violet-600',  likes: 1284, uses: 312 },
-  { id: 'w2', name: 'Beach Sunset Vows',  cat: 'wedding',     price: 199, grad: 'from-amber-400 via-rose-400 to-fuchsia-500',  likes: 894,  uses: 211 },
+  { id: 'w2', name: 'Beach Sunset Vows',  cat: 'wedding',     price: 199, grad: 'from-pink-400 via-violet-400 to-indigo-400',  likes: 894,  uses: 211 },
   { id: 'w3', name: 'Minimal Ivory',      cat: 'wedding',     price: 149, grad: 'from-slate-300 via-rose-200 to-fuchsia-300',  likes: 612,  uses: 178 },
-  { id: 'w4', name: 'Hindu Mandap',       cat: 'wedding',     price: 249, grad: 'from-orange-400 via-rose-500 to-fuchsia-600', likes: 1502, uses: 408 },
+  { id: 'w4', name: 'Hindu Mandap',       cat: 'wedding',     price: 249, grad: 'from-pink-400 via-violet-500 to-indigo-500', likes: 1502, uses: 408 },
   // Birthday
   { id: 'b1', name: 'Confetti Pop',       cat: 'birthday',    price: 99,  grad: 'from-fuchsia-400 via-purple-500 to-indigo-600', likes: 942,  uses: 354 },
-  { id: 'b2', name: 'Disco Decade',       cat: 'birthday',    price: 149, grad: 'from-cyan-400 via-violet-500 to-fuchsia-600',  likes: 728,  uses: 188 },
+  { id: 'b2', name: 'Disco Decade',       cat: 'birthday',    price: 149, grad: 'from-indigo-400 via-violet-500 to-pink-500',  likes: 728,  uses: 188 },
   { id: 'b3', name: 'Pastel Surprise',    cat: 'birthday',    price: 79,  grad: 'from-pink-300 via-rose-300 to-fuchsia-300',    likes: 466,  uses: 142 },
   { id: 'b4', name: 'Sweet Sixteen',      cat: 'birthday',    price: 129, grad: 'from-pink-400 via-rose-400 to-fuchsia-500',    likes: 815,  uses: 246 },
   // Invitation
   { id: 'i1', name: 'Save The Date Noir', cat: 'invitation',  price: 199, grad: 'from-slate-700 via-violet-700 to-fuchsia-700', likes: 538,  uses: 161 },
   { id: 'i2', name: 'Engagement Eve',     cat: 'invitation',  price: 179, grad: 'from-rose-300 via-fuchsia-500 to-violet-500',  likes: 624,  uses: 198 },
-  { id: 'i3', name: 'Housewarming',       cat: 'invitation',  price: 99,  grad: 'from-amber-300 via-rose-400 to-fuchsia-500',   likes: 312,  uses: 95 },
-  { id: 'i4', name: 'Office Launch',      cat: 'invitation',  price: 149, grad: 'from-cyan-400 via-indigo-500 to-violet-600',   likes: 281,  uses: 78 },
+  { id: 'i3', name: 'Housewarming',       cat: 'invitation',  price: 99,  grad: 'from-pink-300 via-violet-400 to-indigo-400',   likes: 312,  uses: 95 },
+  { id: 'i4', name: 'Office Launch',      cat: 'invitation',  price: 149, grad: 'from-indigo-400 via-violet-500 to-pink-400',   likes: 281,  uses: 78 },
   // Celebration
-  { id: 'c1', name: 'Anniversary Glow',   cat: 'celebration', price: 199, grad: 'from-rose-400 via-pink-500 to-fuchsia-600',   likes: 712,  uses: 234 },
-  { id: 'c2', name: 'New Year Reel',      cat: 'celebration', price: 129, grad: 'from-amber-400 via-fuchsia-500 to-cyan-500',  likes: 584,  uses: 167 },
+  { id: 'c1', name: 'Anniversary Glow',   cat: 'celebration', price: 199, grad: 'from-pink-400 via-fuchsia-400 to-violet-500',   likes: 712,  uses: 234 },
+  { id: 'c2', name: 'New Year Reel',      cat: 'celebration', price: 129, grad: 'from-indigo-400 via-violet-500 to-teal-400',  likes: 584,  uses: 167 },
   { id: 'c3', name: 'Baby Reveal',        cat: 'celebration', price: 149, grad: 'from-sky-300 via-rose-300 to-pink-400',       likes: 894,  uses: 312 },
-  { id: 'c4', name: 'Graduation',         cat: 'celebration', price: 99,  grad: 'from-amber-400 via-rose-500 to-fuchsia-500',  likes: 442,  uses: 134 },
+  { id: 'c4', name: 'Graduation',         cat: 'celebration', price: 99,  grad: 'from-pink-400 via-violet-500 to-indigo-400',  likes: 442,  uses: 134 },
 ];
 
 const CAT_EMOJI = {
@@ -151,7 +151,7 @@ export default function Marketplace() {
         {/* Become a seller cross-link */}
         <section className="mt-20">
           <GlassCard tone="strong" className="!rounded-[2rem] p-8 sm:p-12 relative overflow-hidden">
-            <NeonOrb color="#A855F7" size="20rem" style={{ top: '-5rem', right: '-5rem' }} />
+            <NeonOrb color="#8B5CF6" size="20rem" style={{ top: '-5rem', right: '-5rem' }} />
             <div className="relative flex flex-col md:flex-row items-center justify-between gap-6">
               <div>
                 <span className="eyebrow"><span>Builder program</span></span>

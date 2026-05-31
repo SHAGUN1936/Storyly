@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import GradientText from '../ui/GradientText';
@@ -104,7 +104,7 @@ export function FeedbackForm({ defaultKind = 'story', context, onClose, inline =
   if (submitted) {
     return (
       <div className={`relative ${inline ? 'p-2' : 'p-8 sm:p-10'} text-center`}>
-        <div className="text-7xl mb-5 drop-shadow-[0_10px_30px_rgba(168,85,247,0.55)]">🎉</div>
+        <div className="text-7xl mb-5 drop-shadow-[0_10px_30px_rgba(167,139,250,0.40)]">🎉</div>
         <h3 className="tpl-modal-title font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
           Thanks for sharing!
         </h3>
@@ -247,8 +247,8 @@ export function FeedbackForm({ defaultKind = 'story', context, onClose, inline =
                 onClick={() => setRating(n)}
                 className="text-2xl transition active:scale-90"
                 style={{
-                  color: filled ? '#FBBF24' : 'rgba(255,255,255,0.20)',
-                  filter: filled ? 'drop-shadow(0 0 10px rgba(251,191,36,0.6))' : 'none',
+                  color: filled ? '#A78BFA' : 'rgba(255,255,255,0.20)',
+                  filter: filled ? 'drop-shadow(0 0 10px rgba(167,139,250,0.6))' : 'none',
                 }}
                 aria-label={`${n} star${n > 1 ? 's' : ''}`}
               >

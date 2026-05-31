@@ -19,17 +19,36 @@ function sendError(res, err, logLabel) {
   return res.status(500).json({ message: err.message || 'Server error' });
 }
 
+import { stripHtmlFields } from '../utils/jsonOnly.js';
+
+/**
+ * Parse the incoming `structure` field. Accepts either a JS object or a
+ * JSON string. JSON-only enforcement: raw `html` / `mode: 'html'` are
+ * stripped at the model layer, but we also require a `builderState`
+ * object up front so admins can't ship un-editable templates.
+ */
 function parseStructure(structure) {
   if (structure == null || structure === '') return undefined;
-  if (typeof structure === 'object' && !Array.isArray(structure)) return structure;
+  let parsed = structure;
   if (typeof structure === 'string') {
     try {
-      return JSON.parse(structure || '{}');
+      parsed = JSON.parse(structure || '{}');
     } catch {
       throw new Error('Invalid JSON in structure field');
     }
   }
-  return structure;
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    parsed = stripHtmlFields(parsed);
+    // Soft-require builderState — the renderer + user editor both need
+    // it to apply customizations on top.
+    if (!parsed.builderState || typeof parsed.builderState !== 'object') {
+      throw new Error('Template structure must include a `builderState` JSON tree. Build the template through the Visual Builder instead of pasting HTML.');
+    }
+    parsed.type = parsed.type || 'slideshow';
+    parsed.mode = 'json';
+    return parsed;
+  }
+  return parsed;
 }
 
 export const createTemplate = async (req, res) => {
@@ -87,7 +106,10 @@ export const updateTemplate = async (req, res) => {
       }
     }
     if (duration !== undefined && duration !== '') template.duration = Number(duration);
-    if (typeof published === 'boolean') template.published = published;
+    // `published` may come through as a real boolean (JSON body) OR as a
+    // string 'true'/'false' (FormData) — normalize both.
+    if (published === true || published === 'true') template.published = true;
+    if (published === false || published === 'false') template.published = false;
     if (req.files?.thumbnail?.[0]?.path) {
       const result = await uploadToCloudinary(req.files.thumbnail[0].path, 'template-thumbnails');
       template.thumbnailUrl = result.secure_url.replace('/upload/', '/upload/w_400,h_300,c_fill/');
@@ -136,5 +158,23 @@ export const publishTemplate = async (req, res) => {
     res.json(template);
   } catch (err) {
     sendError(res, err, '[admin publishTemplate]');
+  }
+};
+
+/* Take a live template offline (back to draft) WITHOUT touching its
+   structure — admins can toggle live/unlive freely; only drafts are
+   editable, so a published template's design never changes underneath
+   users who already have it open. */
+export const unpublishTemplate = async (req, res) => {
+  try {
+    const template = await Template.findByIdAndUpdate(
+      req.params.id,
+      { published: false },
+      { new: true }
+    );
+    if (!template) return res.status(404).json({ message: 'Website not found' });
+    res.json(template);
+  } catch (err) {
+    sendError(res, err, '[admin unpublishTemplate]');
   }
 };

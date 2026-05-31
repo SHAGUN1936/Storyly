@@ -1,58 +1,44 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Home, LayoutGrid, Sparkles, Shield, LogOut, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { StorylyMark } from './StorylyLogo';
 import ThemeToggle from './ThemeToggle';
 import Footer from './Footer';
 import FeedbackModal from './FeedbackModal';
+import ConfirmDialog from './ConfirmDialog';
 import NeonOrb from '../ui/NeonOrb';
 import FloatingDecor from '../ui/FloatingDecor';
 import CursorHalo from '../ui/CursorHalo';
 import { pageTransition } from '../motion/variants';
 
-const HomeIcon = ({ filled }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 11l9-7 9 7" /><path d="M5 10v10h14V10" />
-  </svg>
+/* Adapter so the existing `<Icon filled={active}/>` API keeps working —
+   lucide icons are stroked by default; when `filled` we tint the fill
+   to currentColor for the active-pill look. */
+const iconAdapter = (LucideIcon) => ({ filled, size = 20 }) => (
+  <LucideIcon
+    size={size}
+    strokeWidth={2}
+    fill={filled ? 'currentColor' : 'none'}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />
 );
-const GridIcon = ({ filled }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-    <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-  </svg>
-);
-const SparkleIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" />
-  </svg>
-);
-const ShieldIcon = ({ filled }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z" />
-  </svg>
-);
-const HeartIcon = ({ filled }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-);
-const LogoutIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" />
-  </svg>
-);
-const FeedbackIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
+const HomeIcon     = iconAdapter(Home);
+const GridIcon     = iconAdapter(LayoutGrid);
+const ShieldIcon   = iconAdapter(Shield);
+const SparkleIcon  = () => <Sparkles size={20} strokeWidth={2} />;
+const LogoutIcon   = () => <LogOut size={16} strokeWidth={2} />;
+const FeedbackIcon = () => <MessageCircle size={16} strokeWidth={2} />;
 
 export default function Layout() {
   const { user, loading, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     // Wait for the server to invalidate the session, then hard-navigate.
@@ -62,13 +48,13 @@ export default function Layout() {
     //   2. guarantees Login.jsx mounts fresh with no user state (no
     //      auto-redirect back into the studio),
     //   3. clears any cached page state / motion contexts cleanly.
+    setLoggingOut(true);
     try { await logout(); } catch (_) { /* best-effort server cleanup */ }
     window.location.replace('/login');
   };
 
   const navItems = [
     { to: '/studio',    label: 'Feed',     icon: HomeIcon },
-    { to: '/liked',     label: 'Liked',    icon: HeartIcon },
     { to: '/my-videos', label: 'My pages', icon: GridIcon },
   ];
 
@@ -95,10 +81,14 @@ export default function Layout() {
       {/* Cursor halo (desktop only, respects reduced-motion) */}
       <CursorHalo />
 
-      {/* Ambient drifting orbs */}
-      <NeonOrb color="#7C3AED" size="36rem" style={{ top: '-12rem', left: '-8rem' }} opacity={0.32} />
-      <NeonOrb color="#06B6D4" size="30rem" style={{ top: '-6rem', right: '-6rem' }} opacity={0.22} />
-      <NeonOrb color="#F472B6" size="28rem" style={{ bottom: '-10rem', left: '30%' }} opacity={0.18} />
+      {/* Five candy orbs scattered around the viewport — lavender, pink,
+          peach, mint, yellow — at low alphas so the page reads colorful
+          without ever feeling chaotic. */}
+      <NeonOrb color="#C4B5FD" size="34rem" style={{ top: '-10rem', left: '-6rem' }} opacity={0.14} />
+      <NeonOrb color="#F9A8D4" size="28rem" style={{ top: '-4rem', right: '-6rem' }} opacity={0.12} />
+      <NeonOrb color="#FDBA74" size="24rem" style={{ top: '38%', right: '-8rem' }} opacity={0.08} />
+      <NeonOrb color="#A7F3D0" size="26rem" style={{ bottom: '-6rem', left: '22%' }} opacity={0.10} />
+      <NeonOrb color="#FDE68A" size="22rem" style={{ bottom: '22%', left: '-6rem' }} opacity={0.07} />
 
       {/* Sitewide floating decor — clipped away from the top + bottom
           navbars so emojis never paint under them. Single subtle layer. */}
@@ -144,8 +134,8 @@ export default function Layout() {
                         layoutId="nav-pill"
                         className="absolute inset-0 rounded-full"
                         style={{
-                          background: 'linear-gradient(120deg, rgba(34,211,238,0.25), rgba(168,85,247,0.35) 60%, rgba(244,114,182,0.25))',
-                          boxShadow: '0 8px 24px -8px rgba(168,85,247,0.55), inset 0 1px 0 rgba(255,255,255,0.15)',
+                          background: 'linear-gradient(120deg, rgba(167,139,250,0.25), rgba(139,92,246,0.35) 60%, rgba(236,72,153,0.25))',
+                          boxShadow: '0 8px 24px -8px rgba(167,139,250,0.40), inset 0 1px 0 rgba(255,255,255,0.15)',
                         }}
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
@@ -167,8 +157,8 @@ export default function Layout() {
                       layoutId="nav-pill"
                       className="absolute inset-0 rounded-full"
                       style={{
-                        background: 'linear-gradient(120deg, rgba(34,211,238,0.25), rgba(168,85,247,0.35) 60%, rgba(244,114,182,0.25))',
-                        boxShadow: '0 8px 24px -8px rgba(168,85,247,0.55), inset 0 1px 0 rgba(255,255,255,0.15)',
+                        background: 'linear-gradient(120deg, rgba(196,181,253,0.18), rgba(167,139,250,0.22) 60%, rgba(244,114,182,0.18))',
+                        boxShadow: '0 6px 18px -10px rgba(167,139,250,0.40), inset 0 1px 0 rgba(255,255,255,0.12)',
                       }}
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
@@ -183,14 +173,23 @@ export default function Layout() {
             <div className="flex items-center gap-2">
               <ThemeToggle className="!w-9 !h-9" />
               <Link
-                to="/studio"
+                to={location.pathname === '/studio' ? '/studio' : '/studio?scroll=templates'}
+                onClick={(e) => {
+                  // Already on /studio? Don't reload — scroll the templates
+                  // grid into view instead. Dashboard listens for the event
+                  // and does a smoothscroll with the topbar offset accounted.
+                  if (location.pathname === '/studio') {
+                    e.preventDefault();
+                    window.dispatchEvent(new Event('storyly:scroll-to-templates'));
+                  }
+                }}
                 className="hidden sm:inline-flex btn-glow !py-2 !px-4 !text-xs"
-                title="Create something new"
+                data-tooltip="Create something new"
               >
                 <SparkleIcon /> <span className="hidden lg:inline">Create</span>
               </Link>
               <div className="tpl-user-cluster flex items-center gap-2 rounded-full pl-1.5 pr-2 py-1">
-                <div className="story-ring p-[2px]">
+                <Link to="/account" className="story-ring p-[2px] hover:opacity-90 transition" data-tooltip="Account & profile">
                   {user?.avatar ? (
                     <img src={user.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
                   ) : (
@@ -198,16 +197,17 @@ export default function Layout() {
                       {user?.name?.[0]?.toUpperCase() ?? '?'}
                     </div>
                   )}
-                </div>
-                <span className="tpl-user-name hidden sm:block text-xs font-semibold max-w-[8ch] truncate">
+                </Link>
+                <Link to="/account" className="tpl-user-name hidden sm:block text-xs font-semibold max-w-[8ch] truncate hover:opacity-80 transition" data-tooltip="Account & profile">
                   {user?.name}
-                </span>
+                </Link>
                 <motion.button
                   whileTap={{ scale: 0.92 }}
                   type="button"
                   onClick={() => setFeedbackOpen(true)}
                   className="tpl-user-signout rounded-full p-1.5 transition"
-                  title="Send feedback"
+                  data-tooltip="Send feedback"
+                  data-tooltip-align="end"
                   aria-label="Send feedback"
                 >
                   <FeedbackIcon />
@@ -215,9 +215,10 @@ export default function Layout() {
                 <motion.button
                   whileTap={{ scale: 0.92 }}
                   type="button"
-                  onClick={handleLogout}
+                  onClick={() => setConfirmLogoutOpen(true)}
                   className="tpl-user-signout rounded-full p-1.5 transition"
-                  title="Sign out"
+                  data-tooltip="Sign out"
+                  data-tooltip-align="end"
                   aria-label="Sign out"
                 >
                   <LogoutIcon />
@@ -263,7 +264,13 @@ export default function Layout() {
               );
             })}
             <Link
-              to="/studio"
+              to={location.pathname === '/studio' ? '/studio' : '/studio?scroll=templates'}
+              onClick={(e) => {
+                if (location.pathname === '/studio') {
+                  e.preventDefault();
+                  window.dispatchEvent(new Event('storyly:scroll-to-templates'));
+                }
+              }}
               className="flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand-200"
             >
               <SparkleIcon />
@@ -282,7 +289,7 @@ export default function Layout() {
             ) : (
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => setConfirmLogoutOpen(true)}
                 className="flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400"
               >
                 <LogoutIcon />
@@ -299,6 +306,26 @@ export default function Layout() {
         onClose={() => setFeedbackOpen(false)}
         defaultKind="general"
         context="From the in-app avatar menu"
+      />
+
+      {/* Sign-out confirmation — prevents accidental logout. */}
+      <ConfirmDialog
+        open={confirmLogoutOpen}
+        title={`Heading out, ${user?.name?.split(' ')[0] || 'friend'}? 👋`}
+        description="Your stories, drafts, and likes stay safe in your account — pop back in any time. Want us to sign you out on this device?"
+        confirmLabel="Yes, sign me out"
+        cancelLabel="Stay a while"
+        loading={loggingOut}
+        iconTone="pink"
+        icon={
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        }
+        onConfirm={handleLogout}
+        onClose={() => !loggingOut && setConfirmLogoutOpen(false)}
       />
     </div>
   );

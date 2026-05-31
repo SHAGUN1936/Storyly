@@ -1,4 +1,4 @@
-import { useLocation, Link } from 'react-router-dom';
+﻿import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicShell from '../components/PublicShell';
 import SubNav from '../components/SubNav';
@@ -143,7 +143,7 @@ export default function Builder() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <div className="grid lg:grid-cols-2 gap-6">
               <GlassCard tone="strong" className="!rounded-[2rem] p-8 relative overflow-hidden">
-                <NeonOrb color="#FBBF24" size="18rem" style={{ top: '-4rem', right: '-4rem' }} />
+                <NeonOrb color="#A78BFA" size="18rem" style={{ top: '-4rem', right: '-4rem' }} />
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">For sellers</p>
                 <h3 className="mt-3 font-display text-3xl font-extrabold">
                   <GradientText variant="warm">Two paid signals.</GradientText>
@@ -157,7 +157,7 @@ export default function Builder() {
                     <span><strong>Likes</strong> — every user that saves your template to their feed earns you a small fixed payout.</span>
                   </li>
                   <li className="flex items-start gap-3 text-slate-200">
-                    <span className="shrink-0 mt-1 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[10px] font-extrabold text-white">✓</span>
+                    <span className="shrink-0 mt-1 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-[10px] font-extrabold text-white">✓</span>
                     <span><strong>Uses</strong> — every time someone publishes a real page using your template, you earn a larger payout scaled by your plan tier.</span>
                   </li>
                 </ul>
@@ -165,7 +165,7 @@ export default function Builder() {
               </GlassCard>
 
               <GlassCard tone="strong" className="!rounded-[2rem] p-8 relative overflow-hidden">
-                <NeonOrb color="#22D3EE" size="18rem" style={{ top: '-4rem', left: '-4rem' }} />
+                <NeonOrb color="#A78BFA" size="18rem" style={{ top: '-4rem', left: '-4rem' }} />
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">Why subscribe</p>
                 <h3 className="mt-3 font-display text-3xl font-extrabold">
                   <GradientText variant="cosmic">It funds your earnings.</GradientText>
@@ -263,7 +263,7 @@ export default function Builder() {
                   <ul className="mt-6 space-y-2.5">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-slate-200">
-                        <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[9px] font-extrabold text-white">✓</span>
+                        <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-[9px] font-extrabold text-white">✓</span>
                         {f}
                       </li>
                     ))}

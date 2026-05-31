@@ -1,9 +1,9 @@
-/* ─────────────────────────────────────────────────────────────
+﻿/* ─────────────────────────────────────────────────────────────
    STORYLY — Premium Dark Luxury System
    Inspired by Apple, Linear, Vercel, Framer, award-winning SaaS.
    Dark is the DEFAULT; light is the alternate theme.
    ───────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -28,30 +28,91 @@
   --txt-3:       #8A90A2;
   --txt-4:       #5D6478;
 
-  --brand:       #A855F7;
+  --brand:       #8B5CF6;
   --brand-2:     #7C3AED;
-  --neon:        #22D3EE;
-  --neon-2:      #06B6D4;
-  --warm:        #F472B6;
+  /* Candy palette — five pastel anchor colors used across decor.
+     Pick from these whenever you need a multicolor accent. */
+  --candy-lavender: #C4B5FD;
+  --candy-pink:     #F9A8D4;
+  --candy-peach:    #FDBA74;
+  --candy-yellow:   #FDE68A;
+  --candy-mint:     #A7F3D0;
+  --candy-sky:      #A5F3FC;
+  /* Backwards-compat names kept for existing JSX. */
+  --neon:        #A78BFA;
+  --neon-2:      #7C3AED;
+  --warm:        #EC4899;
+  --indigo:      #A78BFA;
+  --pink:        #EC4899;
+  --success:     #14B8A6;
+  --success-soft: #5EEAD4;
+
+  /* Light-mode tokens (used by html.light) — exposed here so JSX
+     gradients and shadows can reference the same source of truth. */
+  --light-bg:     #F8FAFC;
+  --light-bg-2:   #F5F3FF;
+  --light-text:   #334155;
+  --light-text-2: #64748B;
 
   --border:      rgba(255,255,255,0.08);
   --border-strong: rgba(255,255,255,0.14);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
 html, body, #root { min-height: 100%; }
-/* Stop the document from accidentally side-scrolling — fixes the
-   horizontal-scroll fluctuations users were seeing on some pages. */
+/* Site-wide single-scroller policy:
+   • `<body>` is the sole scroll surface. Modals (admin editor, wizard,
+     dialogs, popups) all lock body via useLockBodyScroll so their own
+     internal scrollbar is the only one visible while open.
+   • `overflow-x: hidden` blocks accidental horizontal scroll from any
+     stray wide element.
+   • `scroll-behavior: smooth` makes anchor jumps + programmatic scrolls
+     glide. The earlier "phantom scroll" bug in the admin editor is
+     fixed at its root now — the editor is portaled to <body> with its
+     own `overflow-anchor: none` container, so a smooth html behavior
+     no longer animates its internal layout shifts.
+   • `overscroll-behavior-y: contain` keeps over-scroll from chaining
+     past the body (no rubber-band bleed into modals underneath).
+   • `scrollbar-gutter: stable` reserves space so content doesn't shift
+     horizontally when the scrollbar appears/disappears. */
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
 html, body { overflow-x: hidden; }
+body { overscroll-behavior-y: contain; }
+.smooth-scroll { scroll-behavior: smooth; }
+
+/* Hide the inner scrollbar inside template render containers (the
+   deck's `.html-deck-root`, single-page `.html-template-root`, and the
+   per-page `.page` scroll boxes). They still scroll on wheel/touch for
+   tall content, but no visible track competes with the body bar — so
+   the preview, wizard, and any embedded template view look like they
+   have a single global scroller. */
+.template-html-sandbox,
+.template-html-sandbox .page {
+  scrollbar-width: none; /* Firefox */
+}
+.template-html-sandbox::-webkit-scrollbar,
+.template-html-sandbox .page::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  background-color: #06070C;
+  /* Deep ink with six candy glows — lavender, pink, peach, yellow, mint,
+     plus a second mint pop. Green + yellow now hold their weight in the
+     rotation so the bg reads as multicolor candy, not just violet. */
+  background-color: #07060D;
   background-image:
-    radial-gradient(60rem 40rem at 90% -10%, rgba(124,58,237,0.16), transparent 60%),
-    radial-gradient(50rem 35rem at -10% 30%, rgba(6,182,212,0.10), transparent 60%),
-    radial-gradient(70rem 50rem at 50% 120%, rgba(168,85,247,0.10), transparent 60%);
+    radial-gradient(55rem 40rem at 88% -8%,  rgba(196,181,253,0.08), transparent 60%),
+    radial-gradient(50rem 36rem at -8% 28%,  rgba(249,168,212,0.07), transparent 60%),
+    radial-gradient(48rem 34rem at 95% 78%,  rgba(253,186,116,0.07), transparent 60%),
+    radial-gradient(50rem 36rem at 5% 95%,   rgba(167,243,208,0.09), transparent 60%),
+    radial-gradient(42rem 30rem at 65% 50%,  rgba(253,230,138,0.07), transparent 60%),
+    radial-gradient(38rem 28rem at 35% 15%,  rgba(110,231,183,0.06), transparent 60%);
   background-attachment: fixed;
   color: #E7E9F0;
   -webkit-font-smoothing: antialiased;
@@ -59,20 +120,27 @@ body {
   overflow-x: hidden;
 }
 
-::selection { background: rgba(168,85,247,0.45); color: #FFFFFF; }
+::selection { background: rgba(167,139,250,0.35); color: #FFFFFF; }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, rgba(168,85,247,0.45), rgba(6,182,212,0.40));
+  background: linear-gradient(180deg, rgba(167,139,250,0.35), rgba(196,181,253,0.30));
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(168,85,247,0.75), rgba(6,182,212,0.70));
+  background: linear-gradient(180deg, rgba(167,139,250,0.55), rgba(196,181,253,0.50));
 }
+/* Hide the OS-native up/down arrow buttons on all scrollbars. */
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner { display: none; height: 0; width: 0; }
 
 /* ── Typography helpers ───────────────────────────────────── */
-.font-display { font-family: 'Space Grotesk','Inter',sans-serif; letter-spacing: -0.02em; }
+.font-display {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.022em;
+  font-weight: 700;
+}
 .font-mono    { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
 .gradient-text {
@@ -80,7 +148,10 @@ body {
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%);
+  /* Softer pastel triad for dark mode — easier on the eye than the
+     500-tier saturated triad. Light mode override below uses deeper
+     hues so it stays sharp on the near-white pastel background. */
+  background-image: linear-gradient(120deg, #DDD6FE 0%, #C4B5FD 50%, #F9A8D4 100%);
   background-size: 200% auto;
 }
 .gradient-text-soft {
@@ -88,18 +159,94 @@ body {
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(120deg, #FFFFFF 0%, #C4B5FD 60%, #67E8F9 100%);
+  background-image: linear-gradient(120deg, #FFFFFF 0%, #C4B5FD 60%, #DDD6FE 100%);
 }
 .gradient-text-warm {
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(120deg, #FBBF24, #F472B6 50%, #A855F7);
+  background-image: linear-gradient(120deg, #A78BFA, #EC4899 50%, #8B5CF6);
 }
 
+/* Light-mode gradient text — deeper hues so the text stays sharp and
+   readable on the near-white pastel background instead of washing out. */
+html.light .gradient-text {
+  background-image: linear-gradient(120deg, #7C3AED 0%, #7C3AED 50%, #DB2777 100%);
+}
+html.light .gradient-text-warm {
+  background-image: linear-gradient(120deg, #7C3AED, #DB2777 50%, #7C3AED);
+}
+html.light .gradient-text-soft {
+  background-image: linear-gradient(120deg, #7C3AED 0%, #7C3AED 60%, #DB2777 100%);
+}
+
+/* Rainbow candy text — five-stop multicolor for hero headlines that
+   should feel maximally playful. Use sparingly. */
+.gradient-text-rainbow {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(
+    120deg,
+    #C4B5FD 0%,
+    #F9A8D4 25%,
+    #FDBA74 50%,
+    #FDE68A 70%,
+    #A7F3D0 100%
+  );
+  background-size: 200% auto;
+}
+html.light .gradient-text-rainbow {
+  background-image: linear-gradient(
+    120deg,
+    #7C3AED 0%,
+    #DB2777 25%,
+    #EA580C 50%,
+    #CA8A04 70%,
+    #047857 100%
+  );
+}
+
+/* Mint candy text — fresh green→mint→lavender for "live", "saved",
+   "active" labels. */
+.gradient-text-mint {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(120deg, #6EE7B7 0%, #34D399 50%, #A78BFA 100%);
+  background-size: 200% auto;
+}
+html.light .gradient-text-mint {
+  background-image: linear-gradient(120deg, #047857 0%, #0D9488 50%, #6D28D9 100%);
+}
+
+/* Honey candy text — buttercup yellow → peach for celebratory / pricing
+   headlines. */
+.gradient-text-honey {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(120deg, #FDE68A 0%, #FCD34D 45%, #FB923C 100%);
+  background-size: 200% auto;
+}
+html.light .gradient-text-honey {
+  background-image: linear-gradient(120deg, #CA8A04 0%, #D97706 50%, #C2410C 100%);
+}
+
+/* Glow-dot color variants — drop one of these alongside `.glow-dot` to
+   change the orb hue. Same pulse animation across all. */
+.glow-dot.dot-pink   { background: radial-gradient(circle, #FBCFE8 0%, #F472B6 55%, #EC4899 100%); box-shadow: 0 0 10px rgba(244,114,182,0.85), 0 0 18px rgba(236,72,153,0.50), inset 0 0 2px rgba(255,255,255,0.85); }
+.glow-dot.dot-peach  { background: radial-gradient(circle, #FED7AA 0%, #FB923C 55%, #F97316 100%); box-shadow: 0 0 10px rgba(251,146,60,0.80), 0 0 18px rgba(249,115,22,0.50), inset 0 0 2px rgba(255,255,255,0.85); }
+.glow-dot.dot-yellow { background: radial-gradient(circle, #FEF3C7 0%, #FCD34D 55%, #F59E0B 100%); box-shadow: 0 0 10px rgba(252,211,77,0.80), 0 0 18px rgba(245,158,11,0.45), inset 0 0 2px rgba(255,255,255,0.85); }
+.glow-dot.dot-violet { background: radial-gradient(circle, #DDD6FE 0%, #A78BFA 55%, #7C3AED 100%); box-shadow: 0 0 10px rgba(167,139,250,0.80), 0 0 18px rgba(124,58,237,0.50), inset 0 0 2px rgba(255,255,255,0.85); }
+.glow-dot.dot-sky    { background: radial-gradient(circle, #BAE6FD 0%, #38BDF8 55%, #0284C7 100%); box-shadow: 0 0 10px rgba(56,189,248,0.75), 0 0 18px rgba(2,132,199,0.40), inset 0 0 2px rgba(255,255,255,0.85); }
+
 .text-shadow-glow {
-  text-shadow: 0 0 30px rgba(168,85,247,0.45), 0 0 60px rgba(34,211,238,0.25);
+  text-shadow: 0 0 30px rgba(139,92,246,0.45), 0 0 60px rgba(167,139,250,0.25);
 }
 
 /* ── Glass surfaces ───────────────────────────────────────── */
@@ -130,6 +277,23 @@ body {
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   box-shadow: 0 16px 50px -28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: transform 360ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 360ms ease, border-color 280ms ease;
+}
+.card-glass:hover {
+  transform: translateY(-3px);
+  border-color: rgba(139,92,246,0.30);
+  box-shadow:
+    0 24px 60px -24px rgba(0,0,0,0.65),
+    0 12px 28px -12px rgba(139,92,246,0.40),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+html.light .card-glass:hover {
+  transform: translateY(-3px);
+  border-color: rgba(139,92,246,0.30);
+  box-shadow:
+    0 22px 48px -22px rgba(139,92,246,0.35),
+    0 8px 16px -8px rgba(236,72,153,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.80);
 }
 .panel-surface {
   background: rgba(11, 15, 25, 0.65);
@@ -168,7 +332,7 @@ body {
   inset: 0;
   padding: 1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(168,85,247,0.55), rgba(6,182,212,0.55) 50%, rgba(244,114,182,0.45));
+  background: linear-gradient(135deg, rgba(139,92,246,0.55), rgba(124,58,237,0.55) 50%, rgba(236,72,153,0.45));
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -177,42 +341,69 @@ body {
   pointer-events: none;
 }
 
-/* ── Buttons ──────────────────────────────────────────────── */
+/* ── Buttons ──────────────────────────────────────────────────────────
+   Gen-Z friendly buttons: gentle bounce on press, sweep-of-light shimmer
+   on hover, pastel rest states. All buttons share the `.btn-bounce` easing
+   so micro-interactions feel cohesive. ─────────────────────────────── */
+@keyframes btnShimmer {
+  0%   { transform: translateX(-120%) skewX(-12deg); }
+  100% { transform: translateX(220%)  skewX(-12deg); }
+}
+@keyframes btnWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-1.4deg); }
+  75%      { transform: rotate( 1.4deg); }
+}
+
 .btn-glow {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.5rem;
+  padding: 0.875rem 1.6rem;
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  color: #FFFFFF;
-  background-image: linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%);
-  background-size: 220% 220%;
+  color: #1E1B4B;
+  /* DARK MODE — duller medium-violet radial. Top-left lavender lights
+     the bubble; the rest sits in mid-tone violet so deep-indigo text
+     reads cleanly everywhere. */
+  background-image: radial-gradient(130% 110% at 25% 20%, #C4B5FD 0%, #A78BFA 45%, #8B5CF6 80%, #6D28D9 100%);
+  background-size: 100% 100%;
   background-position: 0% 50%;
-  border: 1px solid rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.35);
   box-shadow:
-    0 0 0 1px rgba(168,85,247,0.25),
-    0 18px 60px -16px rgba(168,85,247,0.55),
-    inset 0 1px 0 rgba(255,255,255,0.22);
-  transition: transform 200ms cubic-bezier(0.22,1,0.36,1), background-position 500ms ease, box-shadow 300ms ease;
+    0 0 0 1px rgba(124,58,237,0.30),
+    0 12px 30px -14px rgba(91,33,182,0.55),
+    0 6px 14px -8px rgba(167,139,250,0.40),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+  transition:
+    background-size 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 280ms ease,
+    box-shadow 320ms ease,
+    filter 280ms ease;
   cursor: pointer;
 }
 .btn-glow:hover {
-  background-position: 100% 50%;
-  transform: translateY(-1px);
+  /* Subtle radial zoom (no element transform, so no "bubble" feel) +
+     brighter glow + a double-ring halo so the press target feels alive
+     in dark mode. */
+  background-size: 135% 135%;
+  border-color: rgba(255,255,255,0.55);
+  filter: brightness(1.10) saturate(1.05);
   box-shadow:
-    0 0 0 1px rgba(168,85,247,0.4),
-    0 22px 70px -16px rgba(168,85,247,0.75),
-    0 0 30px -4px rgba(34,211,238,0.45),
-    inset 0 1px 0 rgba(255,255,255,0.30);
+    0 0 0 1px rgba(196,181,253,0.55),
+    0 0 0 5px rgba(167,139,250,0.18),
+    0 24px 48px -16px rgba(91,33,182,0.75),
+    0 12px 26px -10px rgba(196,181,253,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.60);
 }
-.btn-glow:active { transform: scale(0.97); }
+.btn-glow:active { transform: scale(0.97); transition-duration: 90ms; }
 
 .btn-ghost {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -220,22 +411,23 @@ body {
   padding: 0.75rem 1.25rem;
   border-radius: 9999px;
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #E7E9F0;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
+  font-weight: 700;
+  color: #EDE9FE;
+  background: rgba(196,181,253,0.10);
+  border: 1px solid rgba(196,181,253,0.30);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  transition: all 200ms ease;
+  transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
   cursor: pointer;
 }
 .btn-ghost:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.20);
+  background: rgba(196,181,253,0.18);
+  border-color: rgba(196,181,253,0.55);
   color: #FFFFFF;
   transform: translateY(-1px);
+  box-shadow: 0 8px 22px -12px rgba(167,139,250,0.55);
 }
-.btn-ghost:active { transform: scale(0.97); }
+.btn-ghost:active { transform: scale(0.97); transition-duration: 90ms; }
 
 .btn-pill-dark {
   display: inline-flex;
@@ -249,17 +441,18 @@ body {
   color: #06070C;
   background: #F5F7FB;
   border: 1px solid rgba(255,255,255,0.85);
-  transition: all 200ms ease;
+  transition: all 220ms cubic-bezier(0.34,1.56,0.64,1);
   cursor: pointer;
 }
 .btn-pill-dark:hover {
   background: #FFFFFF;
-  transform: translateY(-1px);
-  box-shadow: 0 12px 30px -10px rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px -12px rgba(167,139,250,0.30);
 }
-.btn-pill-dark:active { transform: scale(0.97); }
+.btn-pill-dark:active { transform: scale(0.96); transition-duration: 90ms; }
 
 .btn-pill-soft {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,19 +462,174 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   color: #C4B5FD;
-  background: rgba(124,58,237,0.12);
-  border: 1px solid rgba(124,58,237,0.30);
-  transition: all 200ms ease;
+  background: rgba(139,92,246,0.12);
+  border: 1px solid rgba(139,92,246,0.30);
+  transition: all 220ms cubic-bezier(0.34,1.56,0.64,1);
   cursor: pointer;
 }
 .btn-pill-soft:hover {
-  background: rgba(124,58,237,0.20);
-  border-color: rgba(124,58,237,0.5);
+  background: rgba(139,92,246,0.22);
+  border-color: rgba(139,92,246,0.55);
   color: #E9D5FF;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px -10px rgba(139,92,246,0.50);
 }
-.btn-pill-soft:active { transform: scale(0.97); }
+.btn-pill-soft:active { transform: scale(0.96); transition-duration: 90ms; }
 
-/* Magnetic button — hover-glow shell. Pair with motion magnet logic in JS. */
+/* ── Candy: playful primary CTA with bigger bounce + heart-shaped glow ── */
+.btn-candy {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.95rem 1.7rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #5B21B6;
+  background-image: linear-gradient(120deg, #F5F3FF 0%, #EDE9FE 30%, #DDD6FE 65%, #C4B5FD 100%);
+  background-size: 240% 240%;
+  background-position: 0% 50%;
+  border: 1.5px solid rgba(139,92,246,0.30);
+  box-shadow:
+    0 12px 30px -16px rgba(139,92,246,0.35),
+    0 6px 14px -8px rgba(196,181,253,0.45),
+    inset 0 1.5px 0 rgba(255,255,255,0.85);
+  transition:
+    transform 240ms ease,
+    background-position 500ms ease,
+    box-shadow 280ms ease;
+  cursor: pointer;
+}
+.btn-candy:hover {
+  background-position: 100% 50%;
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 38px -18px rgba(244,114,182,0.48),
+    0 8px 18px -10px rgba(167,139,250,0.40),
+    inset 0 1.5px 0 rgba(255,255,255,0.50);
+}
+.btn-candy:active { transform: scale(0.97); transition-duration: 90ms; }
+
+/* ── Meadow: mint + lavender pill ───────────────────────────────────── */
+.btn-meadow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #064E3B;
+  background-image: linear-gradient(120deg, #A7F3D0 0%, #6EE7B7 45%, #C4B5FD 100%);
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow:
+    0 10px 26px -12px rgba(52,211,153,0.50),
+    0 4px 10px -6px rgba(167,139,250,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.55);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+.btn-meadow:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 30px -12px rgba(52,211,153,0.62),
+    0 6px 14px -8px rgba(167,139,250,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.65);
+}
+.btn-meadow:active { transform: scale(0.97); transition-duration: 90ms; }
+
+/* ── Honey: buttercup yellow + peach pill ───────────────────────────── */
+.btn-honey {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #7C2D12;
+  background-image: linear-gradient(120deg, #FDE68A 0%, #FCD34D 50%, #FDBA74 100%);
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow:
+    0 10px 26px -12px rgba(252,211,77,0.55),
+    0 4px 10px -6px rgba(253,186,116,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.55);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+.btn-honey:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 30px -12px rgba(252,211,77,0.65),
+    0 6px 14px -8px rgba(253,186,116,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.65);
+}
+.btn-honey:active { transform: scale(0.97); transition-duration: 90ms; }
+
+/* ── Mint: teal success/secondary CTA ───────────────────────────────── */
+.btn-mint {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.4rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  background-image: linear-gradient(120deg, #2DD4BF 0%, #14B8A6 100%);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    0 12px 30px -12px rgba(20,184,166,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.30);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+.btn-mint:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 34px -12px rgba(20,184,166,0.62),
+    inset 0 1px 0 rgba(255,255,255,0.38);
+}
+.btn-mint:active { transform: scale(0.97); transition-duration: 90ms; }
+
+/* ── Bouncy icon-only round button — cute for floating actions ──────── */
+.btn-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, #A78BFA, #8B5CF6 60%, #EC4899);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  box-shadow:
+    0 10px 24px -10px rgba(139,92,246,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+  transition: transform 220ms ease, box-shadow 220ms ease;
+  cursor: pointer;
+}
+.btn-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 14px 28px -10px rgba(139,92,246,0.62),
+    inset 0 1px 0 rgba(255,255,255,0.42);
+}
+.btn-bubble:active { transform: scale(0.94); transition-duration: 90ms; }
+
+/* Magnetic button — hover-glow shell. Pair with motion magnet logic in JS.
+   Halo is now flush with the button border (`inset: 0`) so it never paints
+   outside the pill when the cursor approaches the edge — previously the
+   negative inset made the glow read as a "bubble" leaking past the border. */
 .btn-magnet {
   position: relative;
   isolation: isolate;
@@ -289,16 +637,576 @@ body {
 .btn-magnet::after {
   content: '';
   position: absolute;
-  inset: -2px;
+  inset: 0;
   border-radius: inherit;
-  background: radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(168,85,247,0.55), transparent 60%);
+  background: radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(139,92,246,0.40), transparent 60%);
   opacity: 0;
   transition: opacity 250ms ease;
   z-index: -1;
 }
 .btn-magnet:hover::after { opacity: 1; }
 
-.focus-ring { outline: 2px solid rgba(168,85,247,0.5); outline-offset: 2px; }
+.focus-ring { outline: 2px solid rgba(139,92,246,0.5); outline-offset: 2px; }
+
+/* ── NProgress (route-change top bar) ────────────────────────────────
+   Stock NProgress ships a hard-coded blue. Override to the soft pastel
+   gradient + drop the spinner peg so it reads as a clean progress line. */
+#nprogress .bar {
+  background: linear-gradient(90deg, #A78BFA 0%, #8B5CF6 50%, #EC4899 100%);
+  height: 3px;
+  box-shadow: 0 0 12px rgba(139,92,246,0.55);
+}
+#nprogress .peg { display: none; }
+#nprogress .spinner { display: none; }
+
+/* ── Sonner toasts ───────────────────────────────────────────────────
+   Sonner ships with sensible defaults; we just tint the success/error/
+   info accents to match the palette and round the corners a bit more. */
+.storyly-toast[data-sonner-toast] {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+[data-sonner-toast][data-type="success"] {
+  --normal-bg: linear-gradient(120deg, #CCFBF1 0%, #99F6E4 100%);
+  --normal-text: #115E59;
+  --normal-border: rgba(20,184,166,0.35);
+}
+[data-sonner-toast][data-type="error"] {
+  --normal-bg: linear-gradient(120deg, #FFE4E6 0%, #FECDD3 100%);
+  --normal-text: #9F1239;
+  --normal-border: rgba(225,29,72,0.30);
+}
+[data-sonner-toast][data-type="info"] {
+  --normal-bg: linear-gradient(120deg, #F5F3FF 0%, #EDE9FE 100%);
+  --normal-text: #6D28D9;
+  --normal-border: rgba(167,139,250,0.30);
+}
+html:not(.light) [data-sonner-toast][data-type="success"] {
+  --normal-bg: linear-gradient(120deg, rgba(20,184,166,0.18), rgba(139,92,246,0.14));
+  --normal-text: #99F6E4;
+}
+html:not(.light) [data-sonner-toast][data-type="error"] {
+  --normal-bg: linear-gradient(120deg, rgba(244,63,94,0.18), rgba(139,92,246,0.14));
+  --normal-text: #FECACA;
+}
+html:not(.light) [data-sonner-toast][data-type="info"] {
+  --normal-bg: linear-gradient(120deg, rgba(167,139,250,0.20), rgba(139,92,246,0.14));
+  --normal-text: #EDE9FE;
+}
+
+/* ── Theme toggle button ──────────────────────────────────────────────
+   Hover deepens its shadow only — no translate / scale, so it can never
+   "bubble" or shrink when the cursor grazes the edge. ──────────────── */
+.theme-toggle:hover {
+  box-shadow:
+    0 14px 30px -10px rgba(167,139,250,0.75),
+    0 0 0 5px rgba(196,181,253,0.16),
+    inset 0 1px 0 rgba(255,255,255,0.35);
+}
+html.light .theme-toggle:hover {
+  box-shadow:
+    0 14px 30px -10px rgba(244,114,182,0.50),
+    0 0 0 5px rgba(253,230,138,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.90);
+}
+
+/* ── Phone mockup (Landing "Save the date" preview) ──────────────────
+   Dark mode keeps the cinematic deep-violet look; light mode flips to
+   a baby-pastel sticker so the mockup doesn't read as a heavy dark slab
+   on the cream pastel page. */
+.phone-mockup-frame {
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.4));
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.phone-mockup-screen {
+  background: linear-gradient(135deg, #1E1B4B, #4C1D95 40%, #7C3AED 90%);
+}
+.phone-mockup-eyebrow  { color: #67E8F9; }
+.phone-mockup-title    { color: #FFFFFF; -webkit-text-fill-color: #FFFFFF; }
+.phone-mockup-meta     { color: rgba(226,232,240,0.92); }
+.phone-mockup-divider  { background: rgba(255,255,255,0.40); }
+.phone-mockup-rsvp     {
+  background: rgba(255,255,255,0.15);
+  color: #FFFFFF;
+  border: 1px solid rgba(255,255,255,0.20);
+}
+.phone-mockup-selection { border-color: #67E8F9; }
+.phone-mockup-cursor    {
+  background: #67E8F9;
+  box-shadow: 0 0 12px 4px rgba(167,139,250,0.65);
+}
+
+html.light .phone-mockup-frame {
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(196,181,253,0.40));
+  border-color: rgba(139,92,246,0.22);
+  box-shadow:
+    0 30px 60px -30px rgba(139,92,246,0.45),
+    0 12px 24px -10px rgba(244,114,182,0.30);
+}
+html.light .phone-mockup-screen {
+  background: linear-gradient(135deg, #FED7AA 0%, #FBCFE8 40%, #DDD6FE 70%, #C4B5FD 100%);
+}
+html.light .phone-mockup-eyebrow  { color: #6D28D9; }
+html.light .phone-mockup-title    { color: #1E1B4B; -webkit-text-fill-color: #1E1B4B; }
+html.light .phone-mockup-meta     { color: #475569; }
+html.light .phone-mockup-divider  { background: rgba(91,33,182,0.30); }
+html.light .phone-mockup-rsvp     {
+  background: #FFFFFF;
+  color: #5B21B6;
+  border: 1px solid rgba(139,92,246,0.35);
+  box-shadow: 0 4px 12px -4px rgba(139,92,246,0.25);
+}
+html.light .phone-mockup-selection { border-color: #EC4899; }
+html.light .phone-mockup-cursor    {
+  background: #EC4899;
+  box-shadow: 0 0 12px 4px rgba(244,114,182,0.55);
+}
+
+/* ── Social chips (Footer brand cluster) ─────────────────────────────
+   36px rounded button that fills with its real brand color on hover.
+   The MOTION (scale + ring halo) is identical in both themes so the
+   cluster feels coordinated; only the brand fill color changes. */
+.social-chip {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #C8CCDA;
+  transition:
+    transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease,
+    box-shadow 240ms ease;
+}
+html.light .social-chip {
+  background: #FFFFFF;
+  border-color: rgba(139,92,246,0.18);
+  color: #475569;
+  box-shadow: 0 2px 6px -3px rgba(99,102,241,0.18);
+}
+
+/* Unified hover MOTION — scale + a soft neutral ring, same in both
+   themes. Brand colors come from the per-brand rules below. */
+.social-chip:hover {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 4px rgba(148,163,184,0.18),
+    0 10px 22px -10px rgba(15,23,42,0.45);
+}
+.social-chip:active { transform: scale(0.96); }
+
+/* Per-brand hover FILLS (color only — motion is shared above) */
+.social-chip-instagram:hover {
+  background: linear-gradient(45deg, #F09433 0%, #E6683C 25%, #DC2743 50%, #CC2366 75%, #BC1888 100%);
+  border-color: rgba(220,39,67,0.55);
+  color: #FFFFFF;
+}
+.social-chip-x:hover         { background: #0F172A; border-color: #0F172A; color: #FFFFFF; }
+html.light .social-chip-x:hover { background: #000000; border-color: #000000; }
+.social-chip-youtube:hover   { background: #FF0000; border-color: #DC2626; color: #FFFFFF; }
+.social-chip-github:hover    { background: #1F2937; border-color: #111827; color: #FFFFFF; }
+html.light .social-chip-github:hover { background: #0F172A; border-color: #0F172A; }
+
+/* ── My Pages card + icon button kit ─────────────────────────────────
+   Compact icon buttons sized for the dense My-pages grid. Each variant
+   has its own color tint but they share a unified size + hover behavior. */
+.my-page-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  transition: transform 180ms ease, background 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.my-page-icon-btn:active { transform: scale(0.92); }
+
+.my-page-icon-btn-primary {
+  background: rgba(167,139,250,0.16);
+  border-color: rgba(167,139,250,0.30);
+  color: #DDD6FE;
+}
+.my-page-icon-btn-primary:hover {
+  background: linear-gradient(135deg, #A78BFA, #8B5CF6);
+  border-color: rgba(255,255,255,0.40);
+  color: #FFFFFF;
+  box-shadow: 0 8px 18px -8px rgba(139,92,246,0.55);
+}
+html.light .my-page-icon-btn-primary {
+  background: #EDE9FE; border-color: rgba(139,92,246,0.30); color: #5B21B6;
+}
+html.light .my-page-icon-btn-primary:hover {
+  background: linear-gradient(135deg, #C4B5FD, #A78BFA);
+  color: #FFFFFF; border-color: rgba(139,92,246,0.50);
+  box-shadow: 0 8px 18px -8px rgba(139,92,246,0.45);
+}
+
+.my-page-icon-btn-soft {
+  background: rgba(244,114,182,0.14);
+  border-color: rgba(244,114,182,0.30);
+  color: #FBCFE8;
+}
+.my-page-icon-btn-soft:hover {
+  background: linear-gradient(135deg, #F9A8D4, #EC4899);
+  border-color: rgba(255,255,255,0.40);
+  color: #FFFFFF;
+  box-shadow: 0 8px 18px -8px rgba(236,72,153,0.55);
+}
+html.light .my-page-icon-btn-soft {
+  background: #FCE7F3; border-color: rgba(236,72,153,0.30); color: #9D174D;
+}
+html.light .my-page-icon-btn-soft:hover {
+  background: linear-gradient(135deg, #F9A8D4, #EC4899);
+  color: #FFFFFF; border-color: rgba(236,72,153,0.55);
+  box-shadow: 0 8px 18px -8px rgba(236,72,153,0.45);
+}
+
+.my-page-icon-btn-ghost {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  color: #C8CCDA;
+}
+.my-page-icon-btn-ghost:hover {
+  background: rgba(196,181,253,0.18);
+  border-color: rgba(196,181,253,0.45);
+  color: #FFFFFF;
+  box-shadow: 0 8px 18px -10px rgba(167,139,250,0.45);
+}
+html.light .my-page-icon-btn-ghost {
+  background: #FFFFFF; border-color: rgba(99,102,241,0.18); color: #475569;
+  box-shadow: 0 2px 6px -3px rgba(99,102,241,0.18);
+}
+html.light .my-page-icon-btn-ghost:hover {
+  background: #EDE9FE; color: #5B21B6; border-color: rgba(139,92,246,0.40);
+  box-shadow: 0 8px 18px -10px rgba(139,92,246,0.30);
+}
+
+.my-page-icon-btn-danger {
+  background: rgba(244,63,94,0.10);
+  border-color: rgba(244,63,94,0.30);
+  color: #FCA5A5;
+}
+.my-page-icon-btn-danger:hover {
+  background: linear-gradient(135deg, #FB7185, #E11D48);
+  border-color: rgba(255,255,255,0.40);
+  color: #FFFFFF;
+  box-shadow: 0 8px 18px -8px rgba(225,29,72,0.55);
+}
+html.light .my-page-icon-btn-danger {
+  background: #FFE4E6; border-color: rgba(225,29,72,0.30); color: #9F1239;
+}
+html.light .my-page-icon-btn-danger:hover {
+  background: linear-gradient(135deg, #FB7185, #E11D48);
+  color: #FFFFFF; border-color: rgba(225,29,72,0.55);
+  box-shadow: 0 8px 18px -8px rgba(225,29,72,0.45);
+}
+
+/* Card hover — soft lift + violet/pink halo around the whole card. */
+.my-page-card {
+  transition: transform 320ms cubic-bezier(0.22,1,0.36,1), box-shadow 320ms ease, border-color 280ms ease;
+}
+.my-page-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(167,139,250,0.40);
+  box-shadow:
+    0 22px 50px -22px rgba(139,92,246,0.45),
+    0 10px 22px -10px rgba(244,114,182,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+html.light .my-page-card:hover {
+  border-color: rgba(139,92,246,0.35);
+  box-shadow:
+    0 22px 48px -22px rgba(139,92,246,0.35),
+    0 10px 22px -10px rgba(244,114,182,0.25),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+/* Admin builder template card — same lift/halo as My pages so the two
+   surfaces feel coordinated. */
+.admin-tpl-card {
+  border-color: #E2E8F0;
+  box-shadow: 0 8px 22px -14px rgba(99,102,241,0.18);
+  transition: transform 320ms cubic-bezier(0.22,1,0.36,1), box-shadow 320ms ease, border-color 280ms ease;
+}
+.admin-tpl-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139,92,246,0.45);
+  box-shadow:
+    0 22px 48px -22px rgba(139,92,246,0.45),
+    0 10px 22px -10px rgba(244,114,182,0.30);
+}
+.admin-tpl-card.is-selected {
+  border-color: rgba(139,92,246,0.65);
+  box-shadow:
+    0 0 0 3px rgba(139,92,246,0.18),
+    0 14px 30px -14px rgba(139,92,246,0.45);
+}
+html:not(.light) .admin-tpl-card {
+  background: rgba(17,24,39,0.65);
+  border-color: rgba(196,181,253,0.18);
+  box-shadow: 0 10px 24px -16px rgba(0,0,0,0.55);
+}
+html:not(.light) .admin-tpl-card:hover {
+  border-color: rgba(196,181,253,0.45);
+  box-shadow:
+    0 22px 48px -22px rgba(139,92,246,0.55),
+    0 12px 24px -10px rgba(244,114,182,0.30);
+}
+html:not(.light) .admin-tpl-card.is-selected {
+  border-color: rgba(196,181,253,0.70);
+  box-shadow:
+    0 0 0 3px rgba(167,139,250,0.22),
+    0 14px 30px -14px rgba(139,92,246,0.55);
+}
+
+/* ── Card-marquee gradient pan ────────────────────────────────────────
+   Slowly drifts the bg-gradient position so the trending-templates row
+   feels alive — gentle 14s loop, no jumpy motion. */
+.card-marquee-pan {
+  background-size: 220% 220% !important;
+  animation: cardMarqueePan 14s ease-in-out infinite;
+}
+@keyframes cardMarqueePan {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ── "Add cover" tile (Admin starter modal) ──────────────────────────
+   Candy-gradient sticker with a dashed inner ring + a floating + bubble.
+   Hover lifts the whole tile and warms the shadow. */
+.add-cover-tile {
+  box-shadow:
+    0 10px 24px -12px rgba(139,92,246,0.40),
+    0 4px 10px -6px rgba(244,114,182,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.45);
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+.add-cover-tile:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 32px -12px rgba(139,92,246,0.55),
+    0 8px 18px -8px rgba(244,114,182,0.40),
+    0 0 0 4px rgba(196,181,253,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.55);
+}
+
+/* ── Themed search bar ────────────────────────────────────────────────
+   Single-stop styling so the typed text reads sharp in both themes.
+   The shell highlights with a soft violet ring on focus-within. */
+.search-shell {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
+}
+.search-shell:focus-within {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(167,139,250,0.45);
+  box-shadow: 0 0 0 3px rgba(167,139,250,0.14), 0 10px 26px -16px rgba(167,139,250,0.40);
+}
+.search-shell .search-icon { color: #94A3B8; transition: color 200ms ease; }
+.search-shell:focus-within .search-icon { color: #C4B5FD; }
+
+/* Typed text — Fredoka (rounded candy display face) with the pastel
+   gradient via bg-clip. The caret stays solid (caret-color is separate
+   from fill) and the placeholder bypasses the gradient + the candy font
+   so it reads as neutral slate. */
+.search-input {
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.005em;
+  caret-color: #A78BFA;
+  background: linear-gradient(120deg, #EDE9FE 0%, #DDD6FE 50%, #FBCFE8 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+}
+.search-input::placeholder {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: 0;
+  color: rgba(148,163,184,0.65);
+  -webkit-text-fill-color: rgba(148,163,184,0.65);
+  background: none;
+}
+
+.search-clear {
+  background: rgba(255,255,255,0.06);
+  color: #CBD5E1;
+  border: 1px solid rgba(255,255,255,0.10);
+  transition: all 180ms ease;
+}
+.search-clear:hover {
+  background: rgba(167,139,250,0.18);
+  color: #FFFFFF;
+  border-color: rgba(167,139,250,0.45);
+}
+
+/* Light-mode search bar — solid white pill, deep slate text, indigo focus. */
+html.light .search-shell {
+  background: #FFFFFF;
+  border-color: rgba(167,139,250,0.12);
+  box-shadow: 0 2px 6px -3px rgba(167,139,250,0.12);
+}
+html.light .search-shell:focus-within {
+  background: #FFFFFF;
+  border-color: rgba(139,92,246,0.45);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.12), 0 10px 24px -14px rgba(139,92,246,0.30);
+}
+html.light .search-shell .search-icon { color: #64748B; }
+html.light .search-shell:focus-within .search-icon { color: #6D28D9; }
+/* Light-mode typed text uses the deeper gradient so it stays sharp on
+   the white shell. `!important` defeats the global light-input color
+   override that otherwise forces solid slate text on `bg-*` inputs. */
+html.light .search-input {
+  background: linear-gradient(120deg, #A78BFA 0%, #8B5CF6 50%, #BE185D 100%) !important;
+  -webkit-background-clip: text !important;
+          background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+          color: transparent !important;
+  caret-color: #7C3AED;
+  opacity: 0.82;
+}
+html.light .search-input::placeholder {
+  background: none !important;
+  color: rgba(100,116,139,0.65) !important;
+  -webkit-text-fill-color: rgba(100,116,139,0.65) !important;
+}
+html.light .search-clear {
+  background: #F5F3FF;
+  color: #475569;
+  border-color: rgba(167,139,250,0.18);
+}
+html.light .search-clear:hover {
+  background: #EDE9FE;
+  color: #6D28D9;
+  border-color: rgba(139,92,246,0.45);
+}
+
+/* ── Inline form-error pill ───────────────────────────────────────────
+   Reusable rose pill shown under invalid inputs. Themed for both modes
+   so the message is always readable. ───────────────────────────────── */
+.form-error-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(244,63,94,0.14);
+  border: 1px solid rgba(244,63,94,0.35);
+  color: #FECACA;
+}
+html.light .form-error-pill {
+  background: #FFE4E6;
+  border-color: rgba(225,29,72,0.30);
+  color: #9F1239;
+}
+
+/* ── Themed tooltips ──────────────────────────────────────────────────
+   Replace ugly OS-native `title="..."` tooltips. Add `data-tooltip="..."`
+   to any interactive element and the bubble shows on hover/focus, themed
+   to match the soft pastel palette. Default placement: below the element.
+   Pass `data-tooltip-pos="top"` to flip it above. ─────────────────── */
+[data-tooltip] {
+  position: relative;
+}
+/* Triggers that live inside cards lift themselves above siblings on
+   hover so the tooltip paints on top of neighboring cards. */
+[data-tooltip]:hover,
+[data-tooltip]:focus-visible {
+  z-index: 60;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  transform: translateX(-50%) translateY(-4px);
+  /* DARK — frosted-glass pill, near-white text. */
+  background: rgba(30, 27, 75, 0.45);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+          backdrop-filter: blur(18px) saturate(180%);
+  color: #F1F5F9;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+  z-index: 80;
+  border: 1px solid rgba(196,181,253,0.30);
+  box-shadow:
+    0 10px 24px -12px rgba(0,0,0,0.45),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
+[data-tooltip][data-tooltip-pos="top"]::after {
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+}
+
+/* Horizontal alignment modifiers — use these on edge triggers so the
+   tooltip doesn't overflow the viewport. */
+[data-tooltip][data-tooltip-align="start"]::after {
+  left: 0;
+  transform: translateX(0) translateY(-4px);
+}
+[data-tooltip][data-tooltip-align="end"]::after {
+  left: auto;
+  right: 0;
+  transform: translateX(0) translateY(-4px);
+}
+[data-tooltip][data-tooltip-align="start"][data-tooltip-pos="top"]::after,
+[data-tooltip][data-tooltip-align="end"][data-tooltip-pos="top"]::after {
+  transform: translateX(0) translateY(4px);
+}
+
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+[data-tooltip][data-tooltip-align="start"]:hover::after,
+[data-tooltip][data-tooltip-align="start"]:focus-visible::after,
+[data-tooltip][data-tooltip-align="end"]:hover::after,
+[data-tooltip][data-tooltip-align="end"]:focus-visible::after {
+  transform: translateX(0) translateY(0);
+}
+
+/* Cap tooltip width so very long labels don't run off-screen. Short
+   labels stay on one line; long ones wrap. */
+[data-tooltip]::after {
+  max-width: min(80vw, 280px);
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-align: center;
+}
+html.light [data-tooltip]::after {
+  /* LIGHT — frosted-glass pill, deep slate text matching the body. */
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+          backdrop-filter: blur(18px) saturate(180%);
+  color: #334155;
+  border-color: rgba(139,92,246,0.30);
+  box-shadow:
+    0 10px 24px -14px rgba(139,92,246,0.30),
+    0 3px 8px -6px rgba(244,114,182,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
 
 /* ── Chips & badges ───────────────────────────────────────── */
 .badge-pill {
@@ -317,15 +1225,33 @@ body {
   backdrop-filter: blur(12px);
 }
 .badge-neon {
-  background: rgba(34,211,238,0.10);
-  border-color: rgba(34,211,238,0.35);
-  color: #67E8F9;
+  background: rgba(167,139,250,0.10);
+  border-color: rgba(167,139,250,0.35);
+  color: #DDD6FE;
 }
 .badge-brand {
-  background: rgba(168,85,247,0.12);
-  border-color: rgba(168,85,247,0.40);
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.40);
   color: #D8B4FE;
 }
+.badge-mint {
+  background: rgba(52,211,153,0.12);
+  border-color: rgba(52,211,153,0.40);
+  color: #6EE7B7;
+}
+.badge-honey {
+  background: rgba(252,211,77,0.12);
+  border-color: rgba(252,211,77,0.45);
+  color: #FCD34D;
+}
+.badge-peach {
+  background: rgba(251,146,60,0.12);
+  border-color: rgba(251,146,60,0.40);
+  color: #FED7AA;
+}
+html.light .badge-mint   { background: #D1FAE5; border-color: rgba(20,184,166,0.35); color: #047857; }
+html.light .badge-honey  { background: #FEF3C7; border-color: rgba(245,158,11,0.40); color: #92400E; }
+html.light .badge-peach  { background: #FFEDD5; border-color: rgba(249,115,22,0.40); color: #9A3412; }
 
 .chip {
   display: inline-flex;
@@ -335,7 +1261,7 @@ body {
   padding: 0.5rem 1rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  transition: all 220ms ease;
+  transition: transform 220ms ease, background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
@@ -346,24 +1272,51 @@ body {
   color: #C8CCDA;
 }
 .chip-default:hover {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.20);
+  background: rgba(139,92,246,0.12);
+  border-color: rgba(139,92,246,0.40);
   color: #FFFFFF;
   transform: translateY(-1px);
+  box-shadow: 0 6px 14px -8px rgba(139,92,246,0.40);
 }
 .chip-active {
-  background-image: linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%);
+  background-image: linear-gradient(120deg, #C4B5FD 0%, #A78BFA 50%, #F9A8D4 100%);
   color: #FFFFFF;
-  border: 1px solid rgba(255,255,255,0.15);
-  box-shadow: 0 14px 40px -18px rgba(168,85,247,0.65), inset 0 1px 0 rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 22px -14px rgba(167,139,250,0.42), inset 0 1px 0 rgba(255,255,255,0.28);
 }
+.chip-active:hover {
+  /* No transform — the gradient pill stays put; only the shadow deepens
+     so cursor-on-border doesn't trigger a "bubble" lift. */
+  box-shadow: 0 14px 28px -14px rgba(167,139,250,0.55), inset 0 1px 0 rgba(255,255,255,0.36);
+}
+
+/* Cute "lift on hover" utility — drop this class on any card to get a
+   gentle bounce + soft halo. Pairs nicely with card-glass / glass. */
+.hover-lift {
+  transition: transform 320ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 320ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+.hover-lift-glow:hover {
+  box-shadow:
+    0 24px 56px -22px rgba(139,92,246,0.40),
+    0 8px 18px -10px rgba(236,72,153,0.25);
+}
+
+/* Sparkle keyframe — for "✨" elements that should twinkle on hover. */
+@keyframes sparkle {
+  0%, 100% { transform: scale(1) rotate(0deg);   opacity: 1; }
+  50%      { transform: scale(1.25) rotate(15deg); opacity: 0.6; }
+}
+.hover-sparkle:hover { animation: sparkle 700ms ease-in-out; }
 
 /* Story-ring (Instagram-style) for avatars */
 .story-ring {
   position: relative;
   padding: 3px;
   border-radius: 9999px;
-  background: conic-gradient(from 210deg, #22D3EE, #A855F7, #F472B6, #FBBF24, #22D3EE);
+  background: conic-gradient(from 210deg, #A78BFA, #8B5CF6, #EC4899, #A78BFA, #A78BFA);
 }
 .story-ring > * {
   background: #0B0F19;
@@ -392,8 +1345,8 @@ body {
   align-items: center;
   gap: 0.5rem;
   border-radius: 9999px;
-  background: rgba(168,85,247,0.10);
-  border: 1px solid rgba(168,85,247,0.28);
+  background: rgba(139,92,246,0.10);
+  border: 1px solid rgba(139,92,246,0.28);
   padding: 0.4rem 0.85rem;
   font-size: 0.6875rem;
   font-weight: 700;
@@ -404,11 +1357,34 @@ body {
 }
 .eyebrow::before {
   content: '';
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 9999px;
-  background: #22D3EE;
-  box-shadow: 0 0 12px #22D3EE;
+  background: radial-gradient(circle, #A7F3D0 0%, #34D399 55%, #10B981 100%);
+  box-shadow:
+    0 0 10px rgba(52,211,153,0.85),
+    0 0 18px rgba(16,185,129,0.55),
+    inset 0 0 2px rgba(255,255,255,0.85);
+  animation: eyebrowPulse 2.4s ease-in-out infinite;
+}
+@keyframes eyebrowPulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%      { transform: scale(1.30); opacity: 0.85; }
+}
+
+/* Reusable "live" status dot — same glowy green orb as the eyebrow dot
+   but standalone so any inline label can wear it. */
+.glow-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #A7F3D0 0%, #34D399 55%, #10B981 100%);
+  box-shadow:
+    0 0 10px rgba(52,211,153,0.85),
+    0 0 18px rgba(16,185,129,0.55),
+    inset 0 0 2px rgba(255,255,255,0.85);
+  animation: eyebrowPulse 2.4s ease-in-out infinite;
 }
 
 /* ── Hero panels ──────────────────────────────────────────── */
@@ -451,13 +1427,13 @@ body {
 .aurora-bg::after {
   bottom: -20%;
   right: -10%;
-  background: radial-gradient(circle, #06B6D4, transparent 60%);
+  background: radial-gradient(circle, #7C3AED, transparent 60%);
   animation-direction: reverse;
 }
 
 /* ── Floating ring orb (decorative) ──────────────────────── */
 .floating-ring {
-  background: radial-gradient(circle, rgba(168,85,247,0.30), transparent 50%);
+  background: radial-gradient(circle, rgba(139,92,246,0.30), transparent 50%);
   filter: blur(40px);
 }
 
@@ -478,6 +1454,30 @@ body {
     linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+html.light .bg-grid-soft {
+  background-image:
+    linear-gradient(rgba(167,139,250,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167,139,250,0.07) 1px, transparent 1px);
+}
+
+/* Dotted pastel pattern — cute decorative bg for hero callouts. */
+.bg-dots-soft {
+  background-image: radial-gradient(rgba(139,92,246,0.16) 1px, transparent 1.4px);
+  background-size: 18px 18px;
+}
+html.light .bg-dots-soft {
+  background-image: radial-gradient(rgba(139,92,246,0.18) 1px, transparent 1.4px);
+}
+
+/* Confetti micro-pattern — pairs nicely with celebration cards. */
+.bg-confetti {
+  background-image:
+    radial-gradient(rgba(167,139,250,0.20) 2px, transparent 2.4px),
+    radial-gradient(rgba(236,72,153,0.18) 1.5px, transparent 1.9px),
+    radial-gradient(rgba(20,184,166,0.16) 1px, transparent 1.4px);
+  background-size: 56px 56px, 42px 42px, 30px 30px;
+  background-position: 0 0, 18px 22px, 30px 6px;
 }
 
 /* ── Noise overlay (premium texture) ─────────────────────── */
@@ -554,28 +1554,119 @@ html.light .tpl-nav-backdrop-bottom {
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { scrollbar-width: none; }
 
+/* Tiny fade-in for icon-rail flyout panels — kept short and subtle
+   so opening a panel feels responsive, not animated. */
+@keyframes adminFlyoutIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-fade-in { animation: adminFlyoutIn 140ms ease-out both; }
+
+/* ── Alignment grid (admin editor, during drag) ─────────────────
+ * Four stacked background layers, top to bottom in the cascade:
+ *   1. Vertical center axis (50% horizontally) — bright pink, 0.6px wide
+ *   2. Horizontal center axis (50% vertically) — same
+ *   3. Repeating vertical grid at every 8.333% (12 columns)
+ *   4. Repeating horizontal grid at every 12.5%  (8 rows)
+ *
+ * Percentages mean the grid scales with the deck — switching
+ * mobile (390×844) → desktop (1280×720) keeps the same 12-col×8-row
+ * proportions, so admins get consistent alignment hints in either
+ * viewport. Layered z-index 5 so it sits above the deck content but
+ * below the selection chrome (z-10+). */
+.tpl-align-grid {
+  background-image:
+    linear-gradient(to right,
+      transparent 0%, transparent calc(50% - 0.5px),
+      rgba(236, 72, 153, 0.55) calc(50% - 0.5px), rgba(236, 72, 153, 0.55) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px), transparent 100%),
+    linear-gradient(to bottom,
+      transparent 0%, transparent calc(50% - 0.5px),
+      rgba(236, 72, 153, 0.55) calc(50% - 0.5px), rgba(236, 72, 153, 0.55) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px), transparent 100%),
+    repeating-linear-gradient(to right,
+      rgba(255, 255, 255, 0.08) 0 1px,
+      transparent 1px 8.3333%),
+    repeating-linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.08) 0 1px,
+      transparent 1px 12.5%);
+  z-index: 5;
+  /* Default state — dimmer so the grid is a soft reference. While
+     dragging the `.is-dragging` modifier bumps to full opacity for
+     pinpoint alignment. */
+  opacity: 0.55;
+  transition: opacity 140ms ease-out;
+}
+.tpl-align-grid.is-dragging {
+  opacity: 1;
+  background-image:
+    linear-gradient(to right,
+      transparent 0%, transparent calc(50% - 0.5px),
+      rgba(236, 72, 153, 0.85) calc(50% - 0.5px), rgba(236, 72, 153, 0.85) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px), transparent 100%),
+    linear-gradient(to bottom,
+      transparent 0%, transparent calc(50% - 0.5px),
+      rgba(236, 72, 153, 0.85) calc(50% - 0.5px), rgba(236, 72, 153, 0.85) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px), transparent 100%),
+    repeating-linear-gradient(to right,
+      rgba(255, 255, 255, 0.16) 0 1px,
+      transparent 1px 8.3333%),
+    repeating-linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.16) 0 1px,
+      transparent 1px 12.5%);
+}
+
+/* Editor tools row — keep a slim, clearly-visible horizontal scrollbar so it's
+   obvious there are more tools to scroll to on narrow screens. */
+.tpl-tools-row { scrollbar-width: thin; scrollbar-color: rgba(167,139,250,0.6) transparent; scroll-behavior: smooth; overflow-y: hidden; }
+/* Only the slim horizontal bar — no vertical bar, no up/down arrow buttons.
+   The bar shows only when the tools actually overflow (overflow-x: auto). */
+.tpl-tools-row::-webkit-scrollbar { height: 6px; width: 0; }
+.tpl-tools-row::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+.tpl-tools-row::-webkit-scrollbar-track { background: transparent; }
+.tpl-tools-row::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(167,139,250,0.7), rgba(236,72,153,0.7));
+  border-radius: 999px;
+}
+.tpl-tools-row::-webkit-scrollbar-thumb:hover { background: linear-gradient(90deg, rgba(167,139,250,0.95), rgba(236,72,153,0.95)); }
+
+/* Cute, theme-matched inputs/selects inside editor popups. */
+.tpl-cute-select,
+.tpl-cute-input {
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+.tpl-cute-select:hover,
+.tpl-cute-input:hover { border-color: rgba(196,181,253,0.55); }
+.tpl-cute-select:focus,
+.tpl-cute-input:focus {
+  outline: none;
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 3px rgba(167,139,250,0.28);
+  background-color: rgba(15,23,42,0.95);
+}
+
 /* ── Canvas selection chrome (Canva-style — editor) ─────── */
 .tpl-sel-frame {
   position: absolute;
   pointer-events: none;
-  border: 2px solid #A855F7;
+  border: 2px solid #8B5CF6;
   box-shadow:
     0 0 0 1px rgba(0,0,0,0.4),
-    0 0 0 4px rgba(168,85,247,0.18),
-    0 6px 22px -4px rgba(168,85,247,0.55);
+    0 0 0 4px rgba(139,92,246,0.18),
+    0 6px 22px -4px rgba(139,92,246,0.55);
   border-radius: 6px;
   z-index: 30;
   animation: tplSelPulse 2.2s ease-in-out infinite;
 }
 @keyframes tplSelPulse {
-  0%,100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 4px rgba(168,85,247,0.18), 0 6px 22px -4px rgba(168,85,247,0.55); }
-  50%     { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 6px rgba(168,85,247,0.30), 0 6px 26px -4px rgba(168,85,247,0.75); }
+  0%,100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 4px rgba(139,92,246,0.18), 0 6px 22px -4px rgba(139,92,246,0.55); }
+  50%     { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 0 6px rgba(139,92,246,0.30), 0 6px 26px -4px rgba(139,92,246,0.75); }
 }
 .tpl-sel-handle {
   position: absolute;
   width: 22px; height: 22px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #22D3EE, #A855F7 50%, #F472B6);
+  background: linear-gradient(135deg, #A78BFA, #8B5CF6 50%, #EC4899);
   border: 2px solid #FFFFFF;
   color: #FFFFFF;
   font-size: 12px;
@@ -594,7 +1685,7 @@ html.light .tpl-nav-backdrop-bottom {
 .tpl-sel-handle.tpl-sel-resize-h { bottom: -11px; left: 50%; transform: translateX(-50%); cursor: ns-resize; }
 .tpl-sel-handle.tpl-sel-delete {
   top: -36px; right: -11px;
-  background: linear-gradient(135deg, #EF4444, #F472B6);
+  background: linear-gradient(135deg, #EF4444, #EC4899);
   cursor: pointer;
 }
 .tpl-sel-tooltip {
@@ -612,7 +1703,7 @@ html.light .tpl-nav-backdrop-bottom {
   pointer-events: none;
   white-space: nowrap;
   box-shadow: 0 6px 16px -4px rgba(0,0,0,0.7);
-  border: 1px solid rgba(168,85,247,0.30);
+  border: 1px solid rgba(139,92,246,0.30);
 }
 
 /* ── Inputs (defaults to dark on dark surfaces) ─────────── */
@@ -649,8 +1740,8 @@ input::placeholder, textarea::placeholder {
 .panel-surface input:focus,
 .panel-surface textarea:focus,
 .panel-surface select:focus {
-  border-color: rgba(168,85,247,0.55);
-  box-shadow: 0 0 0 3px rgba(168,85,247,0.18), 0 0 28px -4px rgba(168,85,247,0.30);
+  border-color: rgba(139,92,246,0.55);
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.18), 0 0 28px -4px rgba(139,92,246,0.30);
   outline: none;
 }
 
@@ -662,74 +1753,151 @@ html.light {
   color-scheme: light;
 }
 html.light body {
-  background-color: #FAFAFB;
+  /* Slightly dimmer cream-lavender so cards (mostly white) actually pop
+     instead of disappearing into a near-white background. */
+  background-color: #E9E3F4;
+  /* Six candy washes — alphas turned up since the new base is more muted
+     and can carry richer color without washing out. */
   background-image:
-    radial-gradient(60rem 40rem at 90% -10%, rgba(168,85,247,0.18), transparent 60%),
-    radial-gradient(50rem 35rem at -10% 30%, rgba(6,182,212,0.16), transparent 60%),
-    radial-gradient(70rem 50rem at 50% 120%, rgba(244,114,182,0.14), transparent 60%);
-  color: #0B0F19;
-}
-html.light ::selection { background: rgba(168,85,247,0.30); color: #0B0F19; }
-
-html.light .glass {
-  background: rgba(255,255,255,0.78);
-  border-color: rgba(15,23,42,0.08);
-  box-shadow: 0 30px 80px -30px rgba(124,58,237,0.30), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-html.light .glass-strong {
-  background: rgba(255,255,255,0.92);
-  border-color: rgba(15,23,42,0.10);
-}
-html.light .card-glass {
-  background: rgba(255,255,255,0.85);
-  border-color: rgba(15,23,42,0.06);
-  box-shadow: 0 16px 50px -28px rgba(124,58,237,0.30), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-html.light .panel-surface {
-  background: rgba(255,255,255,0.82);
-  border-color: rgba(15,23,42,0.08);
-}
-html.light .hero-panel {
-  background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.74));
-  border-color: rgba(15,23,42,0.08);
-  box-shadow: 0 40px 120px -50px rgba(124,58,237,0.30);
-}
-html.light .badge-pill {
-  background: rgba(15,23,42,0.05);
-  border-color: rgba(15,23,42,0.08);
-  color: #1E293B;
-}
-html.light .chip-default {
-  background: rgba(255,255,255,0.7);
-  border-color: rgba(15,23,42,0.08);
+    radial-gradient(55rem 40rem at 88% -8%, rgba(196,181,253,0.30), transparent 60%),
+    radial-gradient(50rem 36rem at -8% 28%, rgba(249,168,212,0.22), transparent 60%),
+    radial-gradient(48rem 34rem at 95% 78%, rgba(253,186,116,0.18), transparent 60%),
+    radial-gradient(50rem 36rem at 5% 95%,  rgba(167,243,208,0.22), transparent 60%),
+    radial-gradient(42rem 30rem at 65% 50%, rgba(253,230,138,0.18), transparent 60%),
+    radial-gradient(38rem 28rem at 35% 15%, rgba(110,231,183,0.16), transparent 60%);
   color: #334155;
 }
-html.light .chip-default:hover {
+html.light ::selection { background: rgba(139,92,246,0.22); color: #334155; }
+html.light::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139,92,246,0.40), rgba(167,139,250,0.36));
+}
+html.light::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(139,92,246,0.60), rgba(167,139,250,0.56));
+}
+
+html.light .glass {
+  background: rgba(255,255,255,0.92);
+  border-color: rgba(139,92,246,0.20);
+  box-shadow:
+    0 22px 50px -22px rgba(139,92,246,0.32),
+    0 6px 16px -8px rgba(244,114,182,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.80);
+}
+html.light .glass-strong {
   background: #FFFFFF;
-  border-color: rgba(15,23,42,0.15);
-  color: #0B0F19;
+  border-color: rgba(139,92,246,0.22);
+  box-shadow:
+    0 28px 60px -22px rgba(139,92,246,0.35),
+    0 10px 22px -8px rgba(244,114,182,0.22),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+/* ── Auth card (Sign in / Sign up) ──────────────────────────────
+ * Opt-in modifier on the GlassCard used for the auth screens. We
+ * want the card to feel like floating glass — see-through enough
+ * that the candy background shows through, but blurred so form
+ * controls remain legible. Applies cleanly in both themes. */
+.glass-strong.auth-card,
+.glass.auth-card {
+  background: rgba(20, 14, 50, 0.35);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border-color: rgba(167, 139, 250, 0.30);
+  box-shadow:
+    0 30px 70px -20px rgba(124,58,237,0.45),
+    0 10px 22px -8px rgba(236,72,153,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
+html.light .glass-strong.auth-card,
+html.light .glass.auth-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border-color: rgba(139, 92, 246, 0.30);
+  box-shadow:
+    0 30px 70px -20px rgba(139,92,246,0.30),
+    0 10px 22px -8px rgba(244,114,182,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
+html.light .card-glass {
+  background: #FFFFFF;
+  border-color: rgba(139,92,246,0.20);
+  box-shadow:
+    0 16px 34px -16px rgba(139,92,246,0.30),
+    0 4px 12px -6px rgba(244,114,182,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+}
+html.light .panel-surface {
+  background: rgba(255,255,255,0.95);
+  border-color: rgba(139,92,246,0.20);
+  box-shadow: 0 12px 26px -14px rgba(139,92,246,0.28);
+}
+html.light .hero-panel {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F5F3FF 100%);
+  border-color: rgba(139,92,246,0.22);
+  box-shadow:
+    0 36px 80px -36px rgba(139,92,246,0.45),
+    0 16px 32px -12px rgba(244,114,182,0.25);
+}
+html.light .badge-pill {
+  background: #F5F3FF;
+  border-color: rgba(167,139,250,0.18);
+  color: #334155;
+}
+html.light .chip-default {
+  background: #FFFFFF;
+  border-color: rgba(167,139,250,0.12);
+  color: #334155;
+  box-shadow: 0 2px 6px -2px rgba(167,139,250,0.10);
+}
+html.light .chip-default:hover {
+  background: #F5F3FF;
+  border-color: rgba(139,92,246,0.30);
+  color: #334155;
+  box-shadow: 0 6px 14px -4px rgba(139,92,246,0.22);
+  transform: translateY(-1px);
 }
 html.light .btn-ghost {
-  background: rgba(255,255,255,0.7);
-  border-color: rgba(15,23,42,0.10);
-  color: #1E293B;
+  background: #FFFFFF;
+  border-color: rgba(167,139,250,0.16);
+  color: #334155;
+  box-shadow: 0 4px 12px -6px rgba(167,139,250,0.18);
 }
 html.light .btn-ghost:hover {
-  background: #FFFFFF;
-  border-color: rgba(15,23,42,0.20);
-  color: #0B0F19;
+  background: linear-gradient(120deg, #F5F3FF 0%, #FDF2F8 100%);
+  border-color: rgba(139,92,246,0.40);
+  color: #334155;
+  box-shadow: 0 12px 26px -10px rgba(139,92,246,0.30);
 }
 html.light .btn-pill-dark {
-  background: #0B0F19;
+  background: #334155;
   color: #FFFFFF;
   border-color: transparent;
+  box-shadow: 0 6px 16px -8px rgba(51,65,85,0.40);
 }
-html.light .btn-pill-dark:hover { background: #161B2C; }
+html.light .btn-pill-dark:hover {
+  background: #1E293B;
+  box-shadow: 0 14px 28px -10px rgba(51,65,85,0.55);
+}
+html.light .btn-pill-soft {
+  background: #F5F3FF;
+  border-color: rgba(139,92,246,0.25);
+  color: #6D28D9;
+}
+html.light .btn-pill-soft:hover {
+  background: #EDE9FE;
+  border-color: rgba(139,92,246,0.45);
+  color: #5B21B6;
+  box-shadow: 0 10px 24px -10px rgba(139,92,246,0.30);
+}
 html.light .section-title { color: #0B0F19; }
 html.light .eyebrow {
-  background: rgba(168,85,247,0.08);
-  border-color: rgba(168,85,247,0.25);
-  color: #7C3AED;
+  /* Stronger contrast — the previous 8%/25% combination was nearly
+     invisible on lilac/purple page backgrounds. Bump the fill + text
+     to darker violet so the chip reads at a glance. */
+  background: rgba(139,92,246,0.18);
+  border-color: rgba(139,92,246,0.45);
+  color: #4C1D95;
 }
 html.light .story-ring > * { background: #FFFFFF; }
 html.light input::placeholder, html.light textarea::placeholder {
@@ -784,17 +1952,20 @@ html:not(.light) .bg-slate-100     { background-color: rgba(255,255,255,0.04); }
 html:not(.light) .bg-rose-50       { background-color: rgba(244,63,94,0.08); }
 html:not(.light) .border-rose-200  { border-color: rgba(244,63,94,0.30); }
 html:not(.light) .text-rose-700    { color: #FCA5A5; }
-html:not(.light) .bg-emerald-100   { background-color: rgba(16,185,129,0.10); }
-html:not(.light) .border-emerald-200 { border-color: rgba(16,185,129,0.30); }
-html:not(.light) .text-emerald-700 { color: #6EE7B7; }
-html:not(.light) .bg-amber-100     { background-color: rgba(251,191,36,0.10); }
-html:not(.light) .border-amber-200 { border-color: rgba(251,191,36,0.30); }
-html:not(.light) .text-amber-700   { color: #FCD34D; }
-html:not(.light) .bg-brand-100     { background-color: rgba(168,85,247,0.16); }
+html:not(.light) .bg-emerald-100   { background-color: rgba(20,184,166,0.10); }
+html:not(.light) .border-emerald-200 { border-color: rgba(20,184,166,0.30); }
+html:not(.light) .text-emerald-700 { color: #5EEAD4; }
+html:not(.light) .bg-teal-100      { background-color: rgba(20,184,166,0.12); }
+html:not(.light) .border-teal-200  { border-color: rgba(20,184,166,0.30); }
+html:not(.light) .text-teal-700    { color: #5EEAD4; }
+html:not(.light) .bg-amber-100     { background-color: rgba(167,139,250,0.10); }
+html:not(.light) .border-amber-200 { border-color: rgba(167,139,250,0.30); }
+html:not(.light) .text-amber-700   { color: #DDD6FE; }
+html:not(.light) .bg-brand-100     { background-color: rgba(139,92,246,0.16); }
 html:not(.light) .text-brand-700   { color: #D8B4FE; }
-html:not(.light) .bg-brand-500\/10 { background-color: rgba(168,85,247,0.15); }
+html:not(.light) .bg-brand-500\/10 { background-color: rgba(139,92,246,0.15); }
 html:not(.light) .from-brand-50\/40,
-html:not(.light) .to-peach-100\/30 { --tw-gradient-from: rgba(168,85,247,0.06); --tw-gradient-to: rgba(244,114,182,0.06); }
+html:not(.light) .to-peach-100\/30 { --tw-gradient-from: rgba(139,92,246,0.06); --tw-gradient-to: rgba(236,72,153,0.06); }
 
 /* ─────────────────────────────────────────────────────────────
    Tailwind utility flips for light mode (keeps JSX working).
@@ -816,6 +1987,27 @@ html.light .text-zinc-400  { color: #64748B; }
 html.light .text-zinc-500  { color: #64748B; }
 html.light .text-zinc-600  { color: #475569; }
 html.light .text-zinc-700  { color: #334155; }
+
+/* Accent text colors used in alert/status pills — keep readable in light. */
+html.light .text-rose-200    { color: #9F1239; }
+html.light .text-rose-300    { color: #BE123C; }
+html.light .text-rose-400    { color: #E11D48; }
+html.light .text-teal-200    { color: #0F766E; }
+html.light .text-teal-300    { color: #0D9488; }
+html.light .text-teal-400    { color: #0D9488; }
+html.light .text-fuchsia-200 { color: #86198F; }
+html.light .text-fuchsia-300 { color: #A21CAF; }
+html.light .text-brand-200,
+html.light .text-brand-300   { color: #6D28D9; }
+
+/* And their bg/border partners — make alert pills crisper. */
+html.light .bg-rose-500\/10  { background-color: #FFE4E6; }
+html.light .bg-rose-500\/15  { background-color: #FECDD3; }
+html.light .border-rose-400\/30,
+html.light .border-rose-500\/30,
+html.light .border-rose-500\/40 { border-color: rgba(225,29,72,0.30); }
+html.light .bg-teal-500\/10  { background-color: #CCFBF1; }
+html.light .border-teal-400\/30 { border-color: rgba(20,184,166,0.35); }
 
 /* Surfaces */
 html.light .bg-white       { background-color: #FFFFFF; }
@@ -853,20 +2045,27 @@ html.light .glass        { color: #0B0F19; }
 html.light .card-glass   { color: #0B0F19; }
 
 /* Eyebrow neon dot stays cyan; the surrounding chip already flipped */
-html.light .eyebrow::before { background: #7C3AED; box-shadow: 0 0 12px #7C3AED; }
+html.light .eyebrow::before,
+html.light .glow-dot {
+  background: radial-gradient(circle, #6EE7B7 0%, #10B981 55%, #047857 100%);
+  box-shadow:
+    0 0 10px rgba(16,185,129,0.65),
+    0 0 18px rgba(5,150,105,0.40),
+    inset 0 0 2px rgba(255,255,255,0.85);
+}
 
 /* Section-display uses inline text-white — flip via class */
 html.light .section-display { color: #0B0F19; }
 
 /* badge-pill light flip text */
 html.light .badge-pill.badge-neon {
-  background: rgba(6,182,212,0.10);
-  border-color: rgba(6,182,212,0.30);
+  background: rgba(124,58,237,0.10);
+  border-color: rgba(124,58,237,0.30);
   color: #0E7490;
 }
 html.light .badge-pill.badge-brand {
-  background: rgba(168,85,247,0.10);
-  border-color: rgba(168,85,247,0.30);
+  background: rgba(139,92,246,0.10);
+  border-color: rgba(139,92,246,0.30);
   color: #6B21A8;
 }
 
@@ -944,9 +2143,42 @@ html.light .keep-dark .text-slate-400 { color: rgba(255,255,255,0.7) !important;
 html.light .keep-dark .text-slate-500 { color: rgba(255,255,255,0.55) !important; }
 
 /* 3. Primary CTA button is a gradient — white text must persist. */
+/* DARK btn-glow → slightly-dulled cream-white text on the violet bubble.
+   LIGHT btn-glow → near-black slate text on the pastel sunset. */
+.btn-glow,
+.btn-glow *,
+.btn-glow .text-white { color: #F1F5F9 !important; }
+
+html.light .btn-glow {
+  /* Mesh gradient — two radial pools + a base linear so the button reads
+     as a painterly candy disc instead of a simple corner-to-corner fade.
+     Peach pools at bottom-left, violet pools at top-right, pink↔lavender
+     fills the middle. */
+  background-image:
+    radial-gradient(70% 90% at 0% 100%, #FED7AA 0%, rgba(254,215,170,0) 60%),
+    radial-gradient(75% 95% at 100% 0%, #C4B5FD 0%, rgba(196,181,253,0) 60%),
+    linear-gradient(115deg, #FBCFE8 0%, #EDE9FE 50%, #DDD6FE 100%) !important;
+  background-size: 100% 100%, 100% 100%, 200% 200% !important;
+  background-position: 0% 0%, 100% 0%, 0% 50% !important;
+  border: 1px solid rgba(139,92,246,0.30) !important;
+  box-shadow:
+    0 0 0 1px rgba(139,92,246,0.18),
+    0 12px 28px -14px rgba(139,92,246,0.35),
+    0 4px 10px -6px rgba(244,114,182,0.30),
+    inset 0 1px 0 rgba(255,255,255,0.90) !important;
+}
+html.light .btn-glow:hover {
+  filter: brightness(1.04);
+  background-position: 0% 0%, 100% 0%, 100% 50% !important;
+  box-shadow:
+    0 0 0 1px rgba(139,92,246,0.32),
+    0 16px 36px -14px rgba(139,92,246,0.48),
+    0 8px 18px -8px rgba(244,114,182,0.42),
+    inset 0 1px 0 rgba(255,255,255,0.95) !important;
+}
 html.light .btn-glow,
 html.light .btn-glow *,
-html.light .btn-glow .text-white { color: #FFFFFF !important; }
+html.light .btn-glow .text-white { color: #0F172A !important; }
 
 /* 4. Story-progress bars + decorative white/semi-white shapes
       stay white inside light mode too — these are usually inside
@@ -1023,12 +2255,38 @@ html.light .hover\:bg-slate-700:hover { background-color: #334155 !important; co
    STORYLY brand wordmark + tagline (consistent across themes)
    ───────────────────────────────────────────────────────────── */
 .storyly-wordmark {
-  color: #F5F7FB;
-  -webkit-text-fill-color: #F5F7FB;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  /* DARK mode — lighter pink → violet so the wordmark glows against
+     the deep ink background. */
+  background: linear-gradient(120deg, #F9A8D4 0%, #C4B5FD 55%, #A78BFA 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+          color: transparent;
 }
 html.light .storyly-wordmark {
-  color: #0B0F19;
-  -webkit-text-fill-color: #0B0F19;
+  /* LIGHT mode — push the gradient endpoints to deeper shades + add a
+     subtle drop-shadow under the text so the wordmark survives the
+     lilac/purple page backgrounds the auth pages use. The previous
+     pink→violet was washing out against the page bg. */
+  background: linear-gradient(120deg, #BE185D 0%, #6D28D9 50%, #4C1D95 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  filter: drop-shadow(0 1px 0 rgba(255,255,255,0.6));
+  -webkit-text-fill-color: transparent;
+          color: transparent;
+}
+
+/* StorylyMark animations — one subtle sparkle twinkle in the corner and
+   a very slow ring rotation so the badge feels alive but not noisy. */
+.storyly-mark .storyly-mark-sparkle {
+  animation: storylyMarkSparkle 2.4s ease-in-out infinite;
+}
+@keyframes storylyMarkSparkle {
+  0%, 100% { transform: scale(0.85) rotate(0deg);   opacity: 0.85; }
+  50%      { transform: scale(1.18) rotate(20deg);  opacity: 1;    }
 }
 .storyly-tagline { color: #8A90A2; }
 html.light .storyly-tagline { color: #64748B; }
@@ -1057,8 +2315,50 @@ html.light .storyly-tagline { color: #64748B; }
 .tpl-modal-card.tpl-modal-scroll {
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
+  /* No `scrollbar-gutter: stable` — that was reserving a visible strip
+     even when content didn't overflow, which read as an out-of-place
+     line clipping the card's rounded corner. */
 }
+/* Thin, themed scrollbar for inside modal cards. Sits inside the rounded
+   border instead of fighting with it. Falls back gracefully on Firefox. */
+.tpl-modal-card.tpl-modal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139,92,246,0.45) transparent;
+}
+.tpl-modal-card.tpl-modal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.tpl-modal-card.tpl-modal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 12px 0;
+}
+.tpl-modal-card.tpl-modal-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139,92,246,0.55), rgba(236,72,153,0.45));
+  border-radius: 9999px;
+}
+.tpl-modal-card.tpl-modal-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(139,92,246,0.75), rgba(236,72,153,0.65));
+}
+html.light .tpl-modal-card.tpl-modal-scroll {
+  scrollbar-color: rgba(139,92,246,0.45) transparent;
+}
+html.light .tpl-modal-card.tpl-modal-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139,92,246,0.45), rgba(236,72,153,0.40));
+}
+
+/* Any child scroll region inside a modal card (Admin's editor body,
+   FeedbackModal's inner list, etc.) shares the same thin themed bar so
+   the whole modal family feels consistent. */
+.tpl-modal-card *::-webkit-scrollbar { width: 6px; height: 6px; }
+.tpl-modal-card *::-webkit-scrollbar-track { background: transparent; }
+.tpl-modal-card *::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139,92,246,0.45), rgba(236,72,153,0.35));
+  border-radius: 9999px;
+}
+.tpl-modal-card *::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(139,92,246,0.70), rgba(236,72,153,0.55));
+}
+.tpl-modal-card * { scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.45) transparent; }
 html.light .tpl-modal-card {
   background: rgba(255,255,255,0.96);
   border-color: rgba(15,23,42,0.10);
@@ -1094,19 +2394,27 @@ html.light .tpl-modal-label { color: #64748B; }
 }
 .tpl-modal-chip:hover { background: rgba(255,255,255,0.12); }
 .tpl-modal-chip.is-active {
-  background: linear-gradient(120deg, #22D3EE, #A855F7 50%, #F472B6);
+  background: linear-gradient(120deg, #C4B5FD, #A78BFA 50%, #F9A8D4);
   color: #FFFFFF;
   border-color: rgba(255,255,255,0.20);
-  box-shadow: 0 10px 24px -8px rgba(168,85,247,0.55);
+  box-shadow: 0 8px 20px -10px rgba(167,139,250,0.45);
 }
 html.light .tpl-modal-chip {
   background: #F1F5F9;
-  color: #1E293B;
-  border-color: rgba(15,23,42,0.08);
+  color: #334155;
+  border-color: rgba(167,139,250,0.10);
 }
-html.light .tpl-modal-chip:hover { background: #E2E8F0; }
+html.light .tpl-modal-chip:hover {
+  background: #F5F3FF;
+  border-color: rgba(139,92,246,0.30);
+}
+/* Active chip in light mode — explicit gradient + white text so it
+   doesn't fall back to the base light-chip slate fill. */
 html.light .tpl-modal-chip.is-active {
-  color: #FFFFFF;
+  background: linear-gradient(120deg, #C4B5FD 0%, #A78BFA 50%, #F9A8D4 100%) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,0.40) !important;
+  box-shadow: 0 10px 22px -10px rgba(167,139,250,0.40);
 }
 
 .tpl-modal-input {
@@ -1114,7 +2422,7 @@ html.light .tpl-modal-chip.is-active {
   color: #F5F7FB;
   -webkit-text-fill-color: #F5F7FB;
   border: 1px solid rgba(255,255,255,0.14);
-  caret-color: #A855F7;
+  caret-color: #8B5CF6;
 }
 .tpl-modal-input::placeholder {
   color: rgba(200,204,218,0.45);
@@ -1122,8 +2430,8 @@ html.light .tpl-modal-chip.is-active {
   opacity: 1;
 }
 .tpl-modal-input:focus {
-  border-color: #A855F7;
-  box-shadow: 0 0 0 3px rgba(168,85,247,0.22), 0 0 28px -4px rgba(168,85,247,0.30);
+  border-color: #8B5CF6;
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.22), 0 0 28px -4px rgba(139,92,246,0.30);
   outline: none;
 }
 html.light .tpl-modal-input {
@@ -1300,7 +2608,7 @@ html.light .tpl-builder-drawer .border-white\/70 { border-color: rgba(255,255,25
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), rgba(168,85,247,0.18), transparent 50%);
+  background: radial-gradient(400px circle at var(--x, 50%) var(--y, 50%), rgba(139,92,246,0.18), transparent 50%);
   opacity: 0;
   transition: opacity 300ms ease;
   z-index: 0;
@@ -1356,7 +2664,7 @@ html.light .tpl-builder-drawer .border-white\/70 { border-color: rgba(255,255,25
 
 /* Beam — animated highlight that sweeps across a banner */
 .beam-line {
-  background: linear-gradient(90deg, transparent, rgba(168,85,247,0.45), rgba(34,211,238,0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(139,92,246,0.45), rgba(167,139,250,0.45), transparent);
   animation: beam 4s ease-in-out infinite;
 }
 @keyframes beam {
@@ -1415,7 +2723,7 @@ html.light .tpl-builder-drawer .border-white\/70 { border-color: rgba(255,255,25
   margin: 1.6em 0;
 }
 .prose-card blockquote {
-  border-left: 3px solid #A855F7;
+  border-left: 3px solid #8B5CF6;
   padding-left: 1em;
   font-style: italic;
   color: #E7E9F0;

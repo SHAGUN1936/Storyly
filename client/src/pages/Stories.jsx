@@ -1,8 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import InfoPage from '../components/InfoPage';
 import GradientText from '../ui/GradientText';
+import Button from '../ui/Button';
 import FeedbackModal, { FeedbackForm } from '../components/FeedbackModal';
 
 const STORIES = [
@@ -172,20 +173,17 @@ export default function Stories() {
     <>
       <InfoPage config={CONFIG} />
 
-      {/* Floating "Share your story" CTA — always available no matter which sub-tab */}
-      <motion.button
-        type="button"
-        onClick={() => setFeedbackOpen(true)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full pl-4 pr-5 py-3 text-sm font-bold text-white border border-white/15 shadow-[0_18px_50px_-16px_rgba(168,85,247,0.7),inset_0_1px_0_rgba(255,255,255,0.25)]"
-        style={{
-          backgroundImage: 'linear-gradient(120deg, #22D3EE 0%, #A855F7 50%, #F472B6 100%)',
-        }}
-      >
-        <Sparkles size={16} strokeWidth={2.2} />
-        <span>Share your story</span>
-      </motion.button>
+      {/* Floating "Share your story" CTA — always available no matter
+          which sub-tab. Uses the unified <Button /> so it shares the
+          same gradient + magnetic shell as every other CTA on the site. */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <Button
+          onClick={() => setFeedbackOpen(true)}
+          icon={<Sparkles size={16} strokeWidth={2.2} />}
+        >
+          Share your story
+        </Button>
+      </div>
 
       <FeedbackModal
         open={feedbackOpen}

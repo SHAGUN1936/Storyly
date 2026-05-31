@@ -1,10 +1,26 @@
 /**
- * Starter templates: preset builderState snapshots that load into the Admin builder
- * (or anywhere normalizeBuilderState is used). Designed to be ready-to-publish with
- * minimal editing — just swap text & photos.
+ * Starter templates — preset builderState snapshots that load into the
+ * Admin builder. Each starter pairs with one of the user-facing
+ * categories (Birthday / Love / Wedding / Friendship / Memories) so the
+ * picker → category → editor flow is consistent.
+ *
+ * Design rules for new starters:
+ *   • Each page = a small focused stack (eyebrow → heading → support
+ *     text → optional media → CTA). The .page-inner flex layout in
+ *     visualTemplateBuilder is `justify-content: center; gap: 14px` so
+ *     stack blocks render vertically centered on the canvas with
+ *     consistent spacing — no per-block `marginTop` jitter required.
+ *   • Use only block fields the renderer + editor both understand:
+ *     `type`, `text`, `align`, `enterAnimation`, `enterDelayMs`,
+ *     `textEffect`, `textGradientFrom/To`, `emoji`, `size`,
+ *     `label`, `navPage`, `buttonStyle`, `slotPrefix`, `count`,
+ *     `columns`, `gap`, `radius`. NO custom marginTop / marginBottom.
+ *   • `accent` is the always-on fallback gradient if the Unsplash
+ *     `image` thumb fails to load (the Admin card uses an onError
+ *     handler to hide the broken <img>).
  */
 
-import { defaultScheduledReveal, defaultTheme } from './visualTemplateBuilder.js';
+import { defaultScheduledReveal, defaultTheme, defaultResponsiveConfig } from './visualTemplateBuilder.js';
 
 function theme(overrides) {
   return { ...defaultTheme(), ...overrides };
@@ -20,15 +36,16 @@ function page(id, title, pageOverrides, blocks) {
   };
 }
 
-export const STARTER_TEMPLATES = [
-  /* ── 1. Birthday vibe ────────────────────────────────────── */
+const RAW_STARTERS = [
+  /* ── Birthday ─────────────────────────────────────────────── */
   {
     id: 'starter-birthday',
     name: 'Birthday Bash',
     category: 'Birthday',
     emoji: '🎂',
-    description: 'A 4-page birthday story with countdown, photo memories and wishes.',
+    description: 'A 4-page birthday story — countdown, photo memories, wishes.',
     accent: 'linear-gradient(135deg,#f43f5e,#d946ef)',
+    image: 'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=500&q=70&auto=format&fit=crop',
     builderState: {
       version: 2,
       siteTitle: 'Happy Birthday 🎂',
@@ -44,292 +61,285 @@ export const STARTER_TEMPLATES = [
         gradientAngle: 145,
         fontFamily: '"Fredoka", system-ui, sans-serif',
         pageAnimation: 'fade',
-        audioUrl: 'https://cdn.pixabay.com/audio/2022/03/19/audio_270f49b83a.mp3',
       }),
       scheduledReveal: defaultScheduledReveal(),
       pages: [
         page('bd1', 'Cover', {}, [
-          { type: 'heading', text: 'Happy Birthday! 🎂', textEffect: 'gradient', textGradientFrom: '#ffd166', textGradientTo: '#fb7185', enterAnimation: 'pop' },
-          { type: 'text', text: 'A tiny surprise inside ✨', enterAnimation: 'fadeIn', enterDelayMs: 400 },
+          { type: 'text', text: 'A LITTLE SURPRISE INSIDE', align: 'center' },
+          { type: 'heading', text: 'Happy Birthday', align: 'center', textEffect: 'gradient', textGradientFrom: '#ffd166', textGradientTo: '#fb7185', enterAnimation: 'pop' },
           { type: 'sticker', emoji: '🎉', size: 88, enterAnimation: 'bounce' },
-          { type: 'button', label: 'Tap to begin →', navPage: 2, buttonStyle: 'float' },
+          { type: 'text', text: 'Made just for you — open it slowly.', align: 'center', enterAnimation: 'fadeIn', enterDelayMs: 350 },
+          { type: 'button', label: 'Tap to begin →', navPage: 2, buttonStyle: 'float', align: 'center' },
         ]),
-        page('bd2', 'Photos', {}, [
-          { type: 'heading', text: 'Our memories', textEffect: 'glow', enterAnimation: 'slideUp' },
-          { type: 'gallery', count: 6, slotPrefix: 'bd', galleryAnimation: 'slideshow', photoDurationMs: 1500 },
-          { type: 'button', label: 'Next ➡️', navPage: 3, buttonStyle: 'stable', showAfterGallery: true },
+        page('bd2', 'Memories', {}, [
+          { type: 'heading', text: 'Our favorite moments', align: 'center', textEffect: 'glow', enterAnimation: 'slideUp' },
+          { type: 'gallery', count: 4, slotPrefix: 'bd', columns: 2, gap: 10, radius: 16 },
+          { type: 'button', label: 'Make a wish →', navPage: 3, buttonStyle: 'stable', align: 'center' },
         ]),
-        page('bd3', 'Wishes', {}, [
-          { type: 'heading', text: 'Make a wish 🌟', textEffect: 'neon', enterAnimation: 'zoom' },
-          { type: 'text', text: 'Eyes closed. Big smile. Blow out the candle.', enterAnimation: 'fadeIn' },
-          { type: 'sticker', emoji: '🕯', size: 96, enterAnimation: 'bounce', enterDelayMs: 300 },
-          { type: 'button', label: 'Open the message 💌', navPage: 4, buttonStyle: 'float' },
+        page('bd3', 'Wish', {}, [
+          { type: 'sticker', emoji: '🕯️', size: 92, enterAnimation: 'bounce' },
+          { type: 'heading', text: 'Make a wish', align: 'center', textEffect: 'neon', enterAnimation: 'zoom' },
+          { type: 'text', text: 'Eyes closed. Big smile. Blow it out.', align: 'center', enterAnimation: 'fadeIn' },
+          { type: 'button', label: 'Read the message →', navPage: 4, buttonStyle: 'float', align: 'center' },
         ]),
         page('bd4', 'Message', {}, [
-          { type: 'heading', text: 'From me to you 💖', textEffect: 'gradient', textGradientFrom: '#fb7185', textGradientTo: '#d946ef', enterAnimation: 'pop' },
-          { type: 'text', text: 'Type your message here. Make it long. Make it real. They deserve every word.', enterAnimation: 'slideUp' },
-          { type: 'sticker', emoji: '🥳', size: 80, enterAnimation: 'bounce' },
+          { type: 'sticker', emoji: '💌', size: 80, enterAnimation: 'pop' },
+          { type: 'heading', text: 'From me to you', align: 'center', textEffect: 'gradient', textGradientFrom: '#fb7185', textGradientTo: '#d946ef', enterAnimation: 'pop' },
+          { type: 'text', text: 'Type your message here. Make it real. They deserve every word.', align: 'center', enterAnimation: 'slideUp' },
         ]),
       ],
     },
   },
 
-  /* ── 2. Wedding ────────────────────────────────────────── */
+  /* ── Love ─────────────────────────────────────────────────── */
   {
-    id: 'starter-wedding',
-    name: 'Wedding Invite',
-    category: 'Wedding',
-    emoji: '💍',
-    description: 'Elegant 4-page wedding invite with date countdown, venue, dress code.',
-    accent: 'linear-gradient(135deg,#fbcfe8,#a78bfa)',
+    id: 'starter-love',
+    name: 'For You',
+    category: 'Love',
+    emoji: '💖',
+    description: 'A heartfelt 3-page love note — eyebrow, message, share.',
+    accent: 'linear-gradient(135deg,#fb7185,#a78bfa)',
+    image: 'https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=500&q=70&auto=format&fit=crop',
     builderState: {
       version: 2,
-      siteTitle: 'Save the date 💍',
+      siteTitle: 'For You 💖',
       theme: theme({
-        pageBackground: '#fff7f3',
-        textColor: '#3b1d2e',
-        headingColor: '#7c2d6f',
-        buttonBackground: '#3b1d2e',
-        buttonText: '#fff7f3',
+        pageBackground: '#1a0820',
+        textColor: '#fdf2f8',
+        headingColor: '#fbcfe8',
+        buttonBackground: '#fbcfe8',
+        buttonText: '#1a0820',
         backgroundKind: 'gradient',
-        gradientFrom: '#fff7f3',
-        gradientTo: '#fbcfe8',
-        gradientAngle: 160,
-        fontFamily: '"Cormorant Garamond", serif',
-        pageAnimation: 'drift',
-      }),
-      scheduledReveal: defaultScheduledReveal(),
-      pages: [
-        page('wd1', 'Save the date', {}, [
-          { type: 'heading', text: 'Riya & Arjun', textEffect: 'shadow', enterAnimation: 'zoom', fontFamily: '"Great Vibes", cursive' },
-          { type: 'text', text: 'together with our families', letterSpacingEm: 0.18, enterAnimation: 'fadeIn', enterDelayMs: 300 },
-          { type: 'text', text: 'invite you to celebrate our wedding', enterAnimation: 'fadeIn', enterDelayMs: 600 },
-          { type: 'button', label: 'See the details →', navPage: 2, buttonStyle: 'stable' },
-        ]),
-        page('wd2', 'When & where', {}, [
-          { type: 'heading', text: 'When & Where', enterAnimation: 'slideUp', fontFamily: '"Cinzel", serif' },
-          { type: 'text', text: 'Saturday · 14 February 2026', letterSpacingEm: 0.1 },
-          { type: 'text', text: 'The Leela Palace · Bengaluru', letterSpacingEm: 0.05 },
-          { type: 'sticker', emoji: '🌸', size: 64, enterAnimation: 'pop' },
-          { type: 'button', label: 'Continue', navPage: 3, buttonStyle: 'stable' },
-        ]),
-        page('wd3', 'Dress code', {}, [
-          { type: 'heading', text: 'Dress code', enterAnimation: 'fadeIn' },
-          { type: 'text', text: 'Pastels & gold tones 🌷', enterAnimation: 'slideUp' },
-          { type: 'sticker', emoji: '💐', size: 88, enterAnimation: 'bounce' },
-          { type: 'button', label: 'RSVP →', navPage: 4, buttonStyle: 'float' },
-        ]),
-        page('wd4', 'RSVP', {}, [
-          { type: 'heading', text: 'Will you be there? 💌', textEffect: 'gradient', textGradientFrom: '#a78bfa', textGradientTo: '#d946ef' },
-          { type: 'text', text: 'Reply by 1 February with a yes or no. We hope you can make it.' },
-          { type: 'sticker', emoji: '💍', size: 96, enterAnimation: 'pop' },
-        ]),
-      ],
-    },
-  },
-
-  /* ── 3. Portfolio ────────────────────────────────────── */
-  {
-    id: 'starter-portfolio',
-    name: 'Portfolio',
-    category: 'Memories',
-    emoji: '🎨',
-    description: 'Personal portfolio: hello → projects → about → contact.',
-    accent: 'linear-gradient(135deg,#0f172a,#7c3aed)',
-    builderState: {
-      version: 2,
-      siteTitle: 'My Portfolio',
-      theme: theme({
-        pageBackground: '#0b0f1a',
-        textColor: '#e2e8f0',
-        headingColor: '#ffffff',
-        buttonBackground: '#d946ef',
-        buttonText: '#0b0f1a',
-        backgroundKind: 'gradient',
-        gradientFrom: '#0b0f1a',
-        gradientTo: '#1e1b4b',
-        gradientAngle: 135,
-        fontFamily: '"Space Grotesk", system-ui, sans-serif',
-        pageAnimation: 'slideUp',
-      }),
-      scheduledReveal: defaultScheduledReveal(),
-      pages: [
-        page('pf1', 'Hello', {}, [
-          { type: 'text', text: 'Hi, I\'m', letterSpacingEm: 0.2 },
-          { type: 'heading', text: 'Your Name', textEffect: 'gradient', textGradientFrom: '#d946ef', textGradientTo: '#06b6d4', enterAnimation: 'zoom', fontWeight: 800 },
-          { type: 'text', text: 'Designer · Developer · Maker', enterAnimation: 'fadeIn', enterDelayMs: 400 },
-          { type: 'button', label: 'See my work →', navPage: 2, buttonStyle: 'stable' },
-        ]),
-        page('pf2', 'Work', {}, [
-          { type: 'heading', text: 'Recent work', enterAnimation: 'slideUp' },
-          { type: 'gallery', count: 4, slotPrefix: 'pf', galleryAnimation: 'fade' },
-          { type: 'button', label: 'About me →', navPage: 3, buttonStyle: 'stable' },
-        ]),
-        page('pf3', 'About', {}, [
-          { type: 'heading', text: 'About', enterAnimation: 'slideLeft' },
-          { type: 'text', text: 'Short bio. Two sentences max. What you do and why it matters.', lineHeight: 1.6 },
-          { type: 'button', label: 'Get in touch →', navPage: 4, buttonStyle: 'float' },
-        ]),
-        page('pf4', 'Contact', {}, [
-          { type: 'heading', text: 'Let\'s talk 💬', textEffect: 'neon', textGradientFrom: '#06b6d4', textGradientTo: '#d946ef' },
-          { type: 'text', text: 'you@example.com' },
-          { type: 'sticker', emoji: '✨', size: 64, enterAnimation: 'pop' },
-        ]),
-      ],
-    },
-  },
-
-  /* ── 4. Restaurant menu ────────────────────────────── */
-  {
-    id: 'starter-restaurant',
-    name: 'Restaurant Menu',
-    category: 'Memories',
-    emoji: '🍽',
-    description: 'Restaurant story: hero → menu highlights → location → reserve.',
-    accent: 'linear-gradient(135deg,#fbbf24,#dc2626)',
-    builderState: {
-      version: 2,
-      siteTitle: 'Our Menu 🍽',
-      theme: theme({
-        pageBackground: '#1a1208',
-        textColor: '#fef3c7',
-        headingColor: '#fbbf24',
-        buttonBackground: '#dc2626',
-        buttonText: '#fff7ed',
-        backgroundKind: 'gradient',
-        gradientFrom: '#1a1208',
-        gradientTo: '#7c2d12',
+        gradientFrom: '#1a0820',
+        gradientTo: '#9d174d',
         gradientAngle: 155,
         fontFamily: '"Playfair Display", Georgia, serif',
         pageAnimation: 'fade',
       }),
       scheduledReveal: defaultScheduledReveal(),
       pages: [
-        page('rs1', 'Welcome', {}, [
-          { type: 'heading', text: 'Bella Tavola', textEffect: 'gradient', textGradientFrom: '#fbbf24', textGradientTo: '#fb7185', enterAnimation: 'zoom' },
-          { type: 'text', text: 'Modern Italian · Bengaluru', letterSpacingEm: 0.25 },
-          { type: 'sticker', emoji: '🍝', size: 80, enterAnimation: 'bounce' },
-          { type: 'button', label: 'See the menu →', navPage: 2, buttonStyle: 'stable' },
+        page('lv1', 'Cover', {}, [
+          { type: 'text', text: 'FOR THE ONE WHO HOLDS MY HEART', align: 'center' },
+          { type: 'heading', text: 'Just you.', align: 'center', textEffect: 'gradient', textGradientFrom: '#fbcfe8', textGradientTo: '#fb7185', enterAnimation: 'fadeIn' },
+          { type: 'sticker', emoji: '💖', size: 80, enterAnimation: 'pop' },
+          { type: 'button', label: 'Open the letter →', navPage: 2, buttonStyle: 'float', align: 'center' },
         ]),
-        page('rs2', 'Highlights', {}, [
-          { type: 'heading', text: 'Tonight\'s favourites', enterAnimation: 'slideUp' },
-          { type: 'gallery', count: 6, slotPrefix: 'menu', galleryAnimation: 'lanes' },
-          { type: 'button', label: 'Find us →', navPage: 3, buttonStyle: 'stable' },
+        page('lv2', 'Letter', {}, [
+          { type: 'heading', text: 'Some things I want you to know', align: 'center', textEffect: 'glow', enterAnimation: 'slideUp' },
+          { type: 'text', text: 'Write the letter that you keep meaning to write. The little things. The big things. All of it.', align: 'center', enterAnimation: 'fadeIn' },
+          { type: 'sticker', emoji: '🌹', size: 64, enterAnimation: 'bounce', enterDelayMs: 300 },
+          { type: 'button', label: 'Almost done →', navPage: 3, buttonStyle: 'stable', align: 'center' },
         ]),
-        page('rs3', 'Visit', {}, [
-          { type: 'heading', text: 'Visit us', enterAnimation: 'fadeIn' },
-          { type: 'text', text: '123 Indiranagar · Open daily 6–11 pm' },
-          { type: 'sticker', emoji: '📍', size: 72, enterAnimation: 'pop' },
-          { type: 'button', label: 'Reserve a table', navPage: 4, buttonStyle: 'float' },
-        ]),
-        page('rs4', 'Reserve', {}, [
-          { type: 'heading', text: 'See you soon 🍷', textEffect: 'glow' },
-          { type: 'text', text: 'WhatsApp +91 98765 43210 to book your table.' },
+        page('lv3', 'Forever', {}, [
+          { type: 'heading', text: 'Forever and a day', align: 'center', textEffect: 'gradient', textGradientFrom: '#fbcfe8', textGradientTo: '#a78bfa', enterAnimation: 'pop' },
+          { type: 'text', text: 'Wherever you go, this is here. Read it again whenever you need to.', align: 'center', enterAnimation: 'slideUp' },
+          { type: 'sticker', emoji: '🌙', size: 72, enterAnimation: 'bounce' },
         ]),
       ],
     },
   },
 
-  /* ── 5. Influencer link-in-bio ─────────────────────────── */
+  /* ── Wedding ──────────────────────────────────────────────── */
   {
-    id: 'starter-influencer',
-    name: 'Link in Bio',
-    category: 'Friendship',
-    emoji: '🪩',
-    description: 'Influencer link-in-bio: hero → 4 link buttons → contact.',
-    accent: 'linear-gradient(135deg,#f97316,#d946ef)',
+    id: 'starter-wedding',
+    name: 'Wedding Invite',
+    category: 'Wedding',
+    emoji: '💍',
+    description: 'A 4-page invitation — save the date, ceremony, RSVP.',
+    accent: 'linear-gradient(135deg,#fbcfe8,#a78bfa)',
+    image: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=500&q=70&auto=format&fit=crop',
     builderState: {
       version: 2,
-      siteTitle: 'Links 🔗',
+      siteTitle: 'Save the Date 💍',
       theme: theme({
-        pageBackground: '#0f0517',
-        textColor: '#fae8ff',
-        headingColor: '#ffffff',
-        buttonBackground: '#ffffff',
-        buttonText: '#0f0517',
-        buttonRadius: 999,
+        pageBackground: '#fdf2f8',
+        textColor: '#3b0764',
+        headingColor: '#7c2d70',
+        buttonBackground: '#a78bfa',
+        buttonText: '#fdf2f8',
         backgroundKind: 'gradient',
-        gradientFrom: '#0f0517',
-        gradientTo: '#7c3aed',
-        gradientAngle: 200,
-        fontFamily: '"Outfit", system-ui, sans-serif',
+        gradientFrom: '#fdf2f8',
+        gradientTo: '#e9d5ff',
+        gradientAngle: 160,
+        fontFamily: '"Cormorant Garamond", Georgia, serif',
         pageAnimation: 'fade',
       }),
       scheduledReveal: defaultScheduledReveal(),
       pages: [
-        page('in1', 'Hero', {}, [
-          { type: 'heading', text: '@yourhandle', textEffect: 'gradient', textGradientFrom: '#f97316', textGradientTo: '#d946ef', enterAnimation: 'zoom', fontWeight: 800 },
-          { type: 'text', text: 'Creator · Storyteller · Vibes' },
-          { type: 'sticker', emoji: '🪩', size: 88, enterAnimation: 'bounce' },
-          { type: 'button', label: '✨ My links', navPage: 2, buttonStyle: 'stable' },
+        page('wd1', 'Save the date', {}, [
+          { type: 'text', text: 'SAVE THE DATE', align: 'center' },
+          { type: 'heading', text: 'Ananya & Rohan', align: 'center', textEffect: 'glow', enterAnimation: 'fadeIn' },
+          { type: 'sticker', emoji: '💐', size: 72, enterAnimation: 'pop' },
+          { type: 'text', text: 'We\'re getting married — and we\'d love for you to be there.', align: 'center', enterAnimation: 'fadeIn', enterDelayMs: 300 },
+          { type: 'button', label: 'See the details →', navPage: 2, buttonStyle: 'stable', align: 'center' },
         ]),
-        page('in2', 'Links', {}, [
-          { type: 'heading', text: 'My world 🌍', enterAnimation: 'slideUp' },
-          { type: 'button', label: '📸 Instagram', navPage: 1, buttonStyle: 'stable' },
-          { type: 'button', label: '🎬 YouTube', navPage: 1, buttonStyle: 'stable' },
-          { type: 'button', label: '🛍 Shop', navPage: 1, buttonStyle: 'stable' },
-          { type: 'button', label: '💌 Email me', navPage: 3, buttonStyle: 'float' },
+        page('wd2', 'Ceremony', {}, [
+          { type: 'heading', text: 'The ceremony', align: 'center', enterAnimation: 'slideUp' },
+          { type: 'text', text: 'Saturday, the twenty-fifth of October.', align: 'center', enterAnimation: 'fadeIn' },
+          { type: 'text', text: '4:00 PM · The Banyan Garden, Goa', align: 'center', enterAnimation: 'fadeIn', enterDelayMs: 200 },
+          { type: 'sticker', emoji: '💍', size: 64, enterAnimation: 'bounce' },
+          { type: 'button', label: 'How to reach →', navPage: 3, buttonStyle: 'stable', align: 'center' },
         ]),
-        page('in3', 'Contact', {}, [
-          { type: 'heading', text: 'Let\'s collab 💖', textEffect: 'neon' },
-          { type: 'text', text: 'Drop a line: hi@yourhandle.com' },
+        page('wd3', 'Reception', {}, [
+          { type: 'heading', text: 'And then we dance', align: 'center', textEffect: 'gradient', textGradientFrom: '#7c2d70', textGradientTo: '#a78bfa', enterAnimation: 'pop' },
+          { type: 'text', text: 'Sit-down dinner, live music, and the longest hugs of our lives.', align: 'center', enterAnimation: 'fadeIn' },
+          { type: 'sticker', emoji: '🥂', size: 64, enterAnimation: 'bounce' },
+          { type: 'button', label: 'RSVP →', navPage: 4, buttonStyle: 'float', align: 'center' },
+        ]),
+        page('wd4', 'RSVP', {}, [
+          { type: 'heading', text: 'Will you be there?', align: 'center', enterAnimation: 'zoom' },
+          { type: 'text', text: 'Tap below to let us know. We can\'t wait to see you.', align: 'center', enterAnimation: 'fadeIn' },
+          { type: 'sticker', emoji: '💌', size: 72, enterAnimation: 'pop' },
+          { type: 'button', label: 'Yes, I\'ll be there', buttonStyle: 'float', align: 'center' },
         ]),
       ],
     },
   },
 
-  /* ── 6. Product launch ─────────────────────────────── */
+  /* ── Friendship ───────────────────────────────────────────── */
   {
-    id: 'starter-launch',
-    name: 'Product Launch',
-    category: 'Memories',
-    emoji: '🚀',
-    description: 'Startup launch: teaser → features → CTA.',
-    accent: 'linear-gradient(135deg,#06b6d4,#7c3aed)',
+    id: 'starter-friendship',
+    name: 'Squad Goals',
+    category: 'Friendship',
+    emoji: '🫶',
+    description: 'A playful 4-page tribute for your best friends — inside jokes, photos, feels.',
+    accent: 'linear-gradient(135deg,#fde68a,#fb7185,#a78bfa)',
+    image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=500&q=70&auto=format&fit=crop',
     builderState: {
       version: 2,
-      siteTitle: 'Launching soon 🚀',
+      siteTitle: 'Squad Goals 🫶',
       theme: theme({
-        pageBackground: '#020617',
-        textColor: '#e2e8f0',
-        headingColor: '#ffffff',
-        buttonBackground: '#06b6d4',
-        buttonText: '#020617',
+        pageBackground: '#0f172a',
+        textColor: '#fffbeb',
+        headingColor: '#fde68a',
+        buttonBackground: '#fde68a',
+        buttonText: '#0f172a',
         backgroundKind: 'gradient',
-        gradientFrom: '#020617',
-        gradientTo: '#0e7490',
-        gradientAngle: 145,
-        fontFamily: '"Space Grotesk", system-ui, sans-serif',
+        gradientFrom: '#0f172a',
+        gradientTo: '#7c3aed',
+        gradientAngle: 150,
+        fontFamily: '"Fredoka", system-ui, sans-serif',
         pageAnimation: 'slideUp',
       }),
-      scheduledReveal: {
-        ...defaultScheduledReveal(),
-        enabled: false,
-        title: 'Launching in',
-        subtitleBefore: 'Something new is about to drop',
-        messageAfter: '🚀 It\'s live!',
-        effectAfter: 'confetti',
-      },
+      scheduledReveal: defaultScheduledReveal(),
       pages: [
-        page('ln1', 'Teaser', {}, [
-          { type: 'text', text: 'Coming this season', letterSpacingEm: 0.3, fontWeight: 600 },
-          { type: 'heading', text: 'Something new is coming.', textEffect: 'gradient', textGradientFrom: '#06b6d4', textGradientTo: '#d946ef', enterAnimation: 'zoom' },
-          { type: 'text', text: 'Quietly built. Loudly launched.', enterAnimation: 'fadeIn', enterDelayMs: 300 },
-          { type: 'button', label: 'Tell me more →', navPage: 2, buttonStyle: 'stable' },
+        page('fr1', 'Cover', {}, [
+          { type: 'text', text: 'THE OFFICIAL SQUAD PAGE', align: 'center' },
+          { type: 'heading', text: 'My favorite humans', align: 'center', textEffect: 'gradient', textGradientFrom: '#fde68a', textGradientTo: '#fb7185', enterAnimation: 'pop' },
+          { type: 'sticker', emoji: '🫶', size: 92, enterAnimation: 'bounce' },
+          { type: 'text', text: 'Six chaotic angels. One ridiculous group chat.', align: 'center', enterAnimation: 'fadeIn', enterDelayMs: 350 },
+          { type: 'button', label: 'Meet them →', navPage: 2, buttonStyle: 'float', align: 'center' },
         ]),
-        page('ln2', 'Why', {}, [
-          { type: 'heading', text: 'Why you\'ll love it', enterAnimation: 'slideUp' },
-          { type: 'text', text: '⚡ 10× faster than what you use today' },
-          { type: 'text', text: '🎨 Designed for the way you actually work' },
-          { type: 'text', text: '🪄 Zero learning curve' },
-          { type: 'button', label: 'Get early access →', navPage: 3, buttonStyle: 'float' },
+        page('fr2', 'Roll call', {}, [
+          { type: 'heading', text: 'The roll call', align: 'center', textEffect: 'glow', enterAnimation: 'slideUp' },
+          { type: 'gallery', count: 6, slotPrefix: 'fr', columns: 3, gap: 8, radius: 14 },
+          { type: 'button', label: 'Greatest hits →', navPage: 3, buttonStyle: 'stable', align: 'center' },
         ]),
-        page('ln3', 'Signup', {}, [
-          { type: 'heading', text: 'Be first in line', textEffect: 'glow', enterAnimation: 'pop' },
-          { type: 'text', text: 'Drop your email and we\'ll send you the link the moment it goes live.' },
-          { type: 'sticker', emoji: '🚀', size: 96, enterAnimation: 'bounce' },
+        page('fr3', 'Highlights', {}, [
+          { type: 'heading', text: 'Greatest hits', align: 'center', textEffect: 'neon', enterAnimation: 'zoom' },
+          { type: 'text', text: '🎤 The karaoke night nobody remembers', align: 'center' },
+          { type: 'text', text: '🏖️ The beach trip we said would be chill', align: 'center' },
+          { type: 'text', text: '🍕 The 3am pizza tradition', align: 'center' },
+          { type: 'button', label: 'Wrap it up →', navPage: 4, buttonStyle: 'float', align: 'center' },
+        ]),
+        page('fr4', 'Forever', {}, [
+          { type: 'sticker', emoji: '🥹', size: 88, enterAnimation: 'bounce' },
+          { type: 'heading', text: 'You\'re stuck with me', align: 'center', textEffect: 'gradient', textGradientFrom: '#fde68a', textGradientTo: '#fb7185', enterAnimation: 'pop' },
+          { type: 'text', text: 'Through every mood, every move, every chapter. Always.', align: 'center', enterAnimation: 'slideUp' },
+        ]),
+      ],
+    },
+  },
+
+  /* ── Memories ─────────────────────────────────────────────── */
+  {
+    id: 'starter-memories',
+    name: 'Our Memories',
+    category: 'Memories',
+    emoji: '📸',
+    description: 'A nostalgic 4-page memory book — photos, captions, a closing letter.',
+    accent: 'linear-gradient(135deg,#fda4af,#a78bfa,#60a5fa)',
+    image: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=500&q=70&auto=format&fit=crop',
+    builderState: {
+      version: 2,
+      siteTitle: 'Our Memories 📸',
+      theme: theme({
+        pageBackground: '#1e1b4b',
+        textColor: '#fdf2f8',
+        headingColor: '#fbcfe8',
+        buttonBackground: '#fbcfe8',
+        buttonText: '#1e1b4b',
+        backgroundKind: 'gradient',
+        gradientFrom: '#1e1b4b',
+        gradientTo: '#831843',
+        gradientAngle: 160,
+        fontFamily: '"Playfair Display", Georgia, serif',
+        pageAnimation: 'fade',
+      }),
+      scheduledReveal: defaultScheduledReveal(),
+      pages: [
+        page('mm1', 'Cover', {}, [
+          { type: 'text', text: 'ONCE UPON A TIME', align: 'center' },
+          { type: 'heading', text: 'Our story so far', align: 'center', textEffect: 'gradient', textGradientFrom: '#fbcfe8', textGradientTo: '#a78bfa', enterAnimation: 'fadeIn' },
+          { type: 'sticker', emoji: '✨', size: 72, enterAnimation: 'pop' },
+          { type: 'text', text: 'A little scrapbook for the moments that matter.', align: 'center', enterAnimation: 'fadeIn', enterDelayMs: 400 },
+          { type: 'button', label: 'Open the book →', navPage: 2, buttonStyle: 'float', align: 'center' },
+        ]),
+        page('mm2', 'Adventures', {}, [
+          { type: 'heading', text: 'The adventures', align: 'center', textEffect: 'glow', enterAnimation: 'slideUp' },
+          { type: 'gallery', count: 4, slotPrefix: 'mm', columns: 2, gap: 12, radius: 18 },
+          { type: 'button', label: 'Next chapter →', navPage: 3, buttonStyle: 'stable', align: 'center' },
+        ]),
+        page('mm3', 'Letter', {}, [
+          { type: 'sticker', emoji: '💌', size: 80, enterAnimation: 'pop' },
+          { type: 'heading', text: 'A letter to you', align: 'center', textEffect: 'gradient', textGradientFrom: '#fbcfe8', textGradientTo: '#fda4af', enterAnimation: 'zoom' },
+          { type: 'text', text: 'Write the words you never quite found the time to say. The little ones, the big ones — all of them.', align: 'center', enterAnimation: 'fadeIn' },
+          { type: 'button', label: 'See the closing →', navPage: 4, buttonStyle: 'float', align: 'center' },
+        ]),
+        page('mm4', 'Forever', {}, [
+          { type: 'sticker', emoji: '🌙', size: 88, enterAnimation: 'bounce' },
+          { type: 'heading', text: 'To be continued…', align: 'center', textEffect: 'neon', enterAnimation: 'pop' },
+          { type: 'text', text: 'Here\'s to the next chapter, and every page after that.', align: 'center', enterAnimation: 'slideUp' },
         ]),
       ],
     },
   },
 ];
+
+/* Give each block a polished type hierarchy so a starter loads looking
+   like a finished, designed page — not a flat stack of same-size text.
+   Eyebrows (the all-caps line) become small letter-spaced caps, headings
+   get a big bold display size, body copy gets a comfy reading size +
+   measure. Existing fields on a block always win (spread last). */
+function styleBlock(b) {
+  if (!b || typeof b !== 'object') return b;
+  if (b.type === 'heading') {
+    return { fontSize: 36, fontWeight: 800, lineHeight: 1.14, ...b };
+  }
+  if (b.type === 'text') {
+    const t = typeof b.text === 'string' ? b.text : '';
+    const isEyebrow = t.length > 0 && t === t.toUpperCase() && /[A-Z]/.test(t);
+    return isEyebrow
+      ? { fontSize: 12.5, textTransform: 'uppercase', letterSpacingEm: 0.22, fontWeight: 700, ...b }
+      : { fontSize: 16.5, lineHeight: 1.7, maxWidth: 300, ...b };
+  }
+  return b;
+}
+
+/* Ship every starter mobile-first and responsive-ready so it loads as a
+   polished, centred portrait story by default (these are invitation/story
+   designs — portrait is their natural shape). Content uses flow layout, so
+   it stays beautifully aligned on EVERY device automatically; the admin can
+   then switch device + tweak per-device from there. */
+export const STARTER_TEMPLATES = RAW_STARTERS.map((t) => ({
+  ...t,
+  builderState: {
+    viewport: 'mobile',
+    responsive: defaultResponsiveConfig('mobile'),
+    ...t.builderState,
+    pages: (t.builderState.pages || []).map((p) => ({
+      ...p,
+      blocks: (p.blocks || []).map(styleBlock),
+    })),
+  },
+}));

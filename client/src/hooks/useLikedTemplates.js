@@ -26,6 +26,38 @@ function saveLiked(list) {
   }
 }
 
+/* Keep a lean copy of the template's structure with the like, so a liked
+   template stays fully usable even after the admin deletes or unpublishes
+   it. We drop the bulky pre-rendered `html` (the renderer rebuilds it from
+   `builderState`) to stay well under the localStorage quota. */
+function snapshotStructure(structure) {
+  if (!structure || typeof structure !== 'object' || Array.isArray(structure)) {
+    return structure || null;
+  }
+  const { html, ...rest } = structure;
+  return rest;
+}
+
+/**
+ * Read a liked template's stored snapshot by id. Used by the customizer to
+ * fall back to the user's own copy when the live admin template is gone
+ * (deleted / unpublished). Returns null if not liked or not snapshotted.
+ */
+export function getLikedTemplateSnapshot(id) {
+  if (!id) return null;
+  const entry = loadLiked().find((t) => (t._id || t.id) === id);
+  if (!entry || !entry.structure) return null;
+  return {
+    _id: entry._id,
+    name: entry.name,
+    category: entry.category,
+    description: entry.description,
+    thumbnailUrl: entry.thumbnailUrl,
+    sourceType: entry.sourceType || 'Template',
+    structure: entry.structure,
+  };
+}
+
 /**
  * Client-side liked-templates store. Backed by localStorage so likes
  * persist across reloads without any backend changes.
@@ -78,6 +110,12 @@ export default function useLikedTemplates() {
             thumbnailUrl: template.thumbnailUrl,
             previewVideoUrl: template.previewVideoUrl,
             duration: template.duration,
+            /* Track the source so the Liked page can show only admin
+               "basic" templates, never user/builder-made ones. */
+            sourceType: template.sourceType || 'Template',
+            /* Full structure snapshot (sans html) so the liked template
+               stays usable/editable even after the admin deletes it. */
+            structure: snapshotStructure(template.structure),
             likedAt: Date.now(),
           },
           ...liked,

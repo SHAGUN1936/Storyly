@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Visual template builder → HTML (data-slot, data-page, data-nav-page).
  * Stored copy: structure.builderState for re-opening in the admin UI.
  */
@@ -21,7 +21,7 @@ function escapeCss(val) {
 
 function placeholderDataUri(label) {
   const text = encodeURIComponent(String(label || 'Add media'));
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 360'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#374151'/><stop offset='100%' stop-color='#111827'/></linearGradient><filter id='b'><feGaussianBlur stdDeviation='16'/></filter></defs><rect width='600' height='360' fill='url(#g)'/><circle cx='120' cy='90' r='90' fill='#ffffff22' filter='url(#b)'/><circle cx='480' cy='280' r='120' fill='#a855f722' filter='url(#b)'/><text x='300' y='190' font-size='28' fill='#e5e7eb' text-anchor='middle' font-family='system-ui, sans-serif'>${text}</text></svg>`;
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 360'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#374151'/><stop offset='100%' stop-color='#111827'/></linearGradient><filter id='b'><feGaussianBlur stdDeviation='16'/></filter></defs><rect width='600' height='360' fill='url(#g)'/><circle cx='120' cy='90' r='90' fill='#ffffff22' filter='url(#b)'/><circle cx='480' cy='280' r='120' fill='#8B5CF622' filter='url(#b)'/><text x='300' y='190' font-size='28' fill='#e5e7eb' text-anchor='middle' font-family='system-ui, sans-serif'>${text}</text></svg>`;
   return `data:image/svg+xml;utf8,${svg}`;
 }
 
@@ -43,6 +43,8 @@ export function defaultTheme() {
     gradientFrom: '#1E1B4B',
     gradientTo: '#7C3AED',
     gradientAngle: 135,
+    /** When true (+ gradient bg), the background slowly flows — "motion theme". */
+    bgMotion: false,
     backgroundImageUrl: '',
     backgroundVideoUrl: '',
     /** none | fade | slideUp | zoom | drift */
@@ -100,6 +102,73 @@ export const ENTER_ANIM_PRESETS = [
   { value: 'tilt',       label: 'Tilt in' },
 ];
 
+/** Per-block LOOP animations (continuous). These animate the individual
+ *  `translate` / `scale` / `rotate` CSS properties (or box-shadow for glow)
+ *  — NOT the `transform` shorthand — so they compose cleanly with a block's
+ *  center-anchor + rotation (`transform`) AND its entrance animation. */
+export const LOOP_ANIM_PRESETS = [
+  { value: 'none',      label: 'None' },
+  { value: 'float',     label: 'Float' },
+  { value: 'pulse',     label: 'Pulse' },
+  { value: 'bounce',    label: 'Bounce' },
+  { value: 'shake',     label: 'Shake' },
+  { value: 'wiggle',    label: 'Wiggle' },
+  { value: 'heartbeat', label: 'Heartbeat' },
+  { value: 'spin',      label: 'Spin' },
+  { value: 'glow',      label: 'Glow' },
+  { value: 'drift',     label: 'Drift (roam screen)' },
+];
+
+/** Animated background-effect overlays — floating particle layers that drift
+ *  across the whole page (a "live wallpaper" on top of the gradient/photo). */
+export const PAGE_EFFECT_PRESETS = [
+  { value: 'none',     label: 'None',     emojis: [] },
+  { value: 'hearts',   label: 'Hearts',   emojis: ['💖','💕','💗','💞','🩷'] },
+  { value: 'confetti', label: 'Confetti', emojis: ['🎉','🎊','✨','🎈','⭐'] },
+  { value: 'sparkles', label: 'Sparkles', emojis: ['✨','💫','⭐','🌟','🪄'] },
+  { value: 'snow',     label: 'Snow',     emojis: ['❄','🌨','❅','✲','•'] },
+  { value: 'bubbles',  label: 'Bubbles',  emojis: ['🫧','○','◦','⚬','◯'] },
+  { value: 'petals',   label: 'Petals',   emojis: ['🌸','🌺','🌷','🌼','🍃'] },
+  { value: 'stars',    label: 'Stars',    emojis: ['⭐','🌟','✨','💫','🌠'] },
+  { value: 'music',    label: 'Music',    emojis: ['🎵','🎶','♪','♫','🎼'] },
+  { value: 'leaves',   label: 'Leaves',   emojis: ['🍂','🍁','🍃','🌿','🍀'] },
+  { value: 'rain',     label: 'Rain',     emojis: ['💧','🌧','〵','│','ʼ'] },
+  { value: 'fire',     label: 'Embers',   emojis: ['🔥','✨','🌟','💥','⚡'] },
+  { value: 'balloons', label: 'Balloons', emojis: ['🎈','🎈','🩷','💙','💛'] },
+];
+const PAGE_EFFECT_SET = new Set(PAGE_EFFECT_PRESETS.map((e) => e.value));
+
+/** Photo/video frame shapes — mask the media into a shape (like a sticker
+ *  frame). Percentage-based clip-paths so they scale on every device. */
+export const MEDIA_SHAPE_PRESETS = [
+  { value: 'none',     label: 'Square' },
+  { value: 'rounded',  label: 'Rounded' },
+  { value: 'squircle', label: 'Squircle' },
+  { value: 'circle',   label: 'Circle' },
+  { value: 'heart',    label: 'Heart' },
+  { value: 'star',     label: 'Star' },
+  { value: 'hexagon',  label: 'Hexagon' },
+  { value: 'diamond',  label: 'Diamond' },
+  { value: 'triangle', label: 'Triangle' },
+];
+const MEDIA_SHAPE_SET = new Set(MEDIA_SHAPE_PRESETS.map((s) => s.value));
+
+/** CSS for a media frame shape. Returns '' for 'none'. The heart uses a shared
+ *  SVG clipPath (objectBoundingBox units) injected once into the document. */
+function mediaShapeCss(shape) {
+  switch (shape) {
+    case 'rounded':  return 'border-radius:18%;';
+    case 'squircle': return 'border-radius:42%;';
+    case 'circle':   return 'border-radius:50%;';
+    case 'diamond':  return 'clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);';
+    case 'hexagon':  return 'clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);';
+    case 'triangle': return 'clip-path:polygon(50% 0,100% 100%,0 100%);';
+    case 'star':     return 'clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);';
+    case 'heart':    return 'clip-path:url(#tpl-clip-heart);';
+    default:         return '';
+  }
+}
+
 /** Curated emoji sticker presets used in the picker. */
 export const STICKER_PRESETS = [
   '🎉','🎂','💖','💕','✨','🪩','💫','⭐','🌟','🥳','💌','💍','🌸','🌷','🌺','🌈','🎈','🎁',
@@ -129,7 +198,9 @@ export const MUSIC_LIBRARY = [
 /** https URL only, for CSS url() */
 export function escapeCssUrl(val) {
   const s = String(val ?? '').trim();
-  if (!s || /[;{}<>]/.test(s)) return '';
+  // Reject anything that could break out of a CSS url('…') inside an HTML
+  // attribute — quotes especially (they were silently corrupting the style).
+  if (!s || /[;{}<>"']/.test(s)) return '';
   if (!/^https:\/\//i.test(s)) return '';
   return s.slice(0, 900);
 }
@@ -183,6 +254,9 @@ export function googleFontLinksForBuilderState(normalized) {
   add(g.fontFamily);
   (normalized?.pages || []).forEach((p) => {
     add(effectivePageTheme(p, g).fontFamily);
+    // Per-block fonts must be loaded too, else a font picked on a single
+    // text element never actually applies (silently falls back).
+    (p.blocks || []).forEach((b) => add(b?.fontFamily));
   });
   const hrefs = [...families].map((ff) => GOOGLE_FONT_LINKS[ff]).filter(Boolean);
   return [...new Set(hrefs)];
@@ -278,6 +352,31 @@ export function textEffectStyle(block) {
   if (Number.isFinite(ls)) css += `letter-spacing:${Math.max(-0.1, Math.min(0.5, ls))}em;`;
   if (Number.isFinite(lh)) css += `line-height:${Math.max(0.8, Math.min(2.4, lh))};`;
   if (Number.isFinite(fw)) css += `font-weight:${Math.max(100, Math.min(900, fw))};`;
+  /* Typography knobs the editor + starters set. These were previously
+     ignored, which is why headings rendered at the browser default and
+     "eyebrow" caps looked like body text — applying them gives a real
+     type hierarchy (small caps eyebrow → big heading → readable body). */
+  const fs = Number(block?.fontSize);
+  if (Number.isFinite(fs) && fs > 0) css += `font-size:${Math.max(8, Math.min(220, Math.round(fs)))}px;`;
+  const tt = block?.textTransform;
+  if (tt === 'uppercase' || tt === 'lowercase' || tt === 'capitalize') css += `text-transform:${tt};`;
+  const al = block?.align;
+  if (al === 'left' || al === 'center' || al === 'right') css += `text-align:${al};`;
+  const mw = Number(block?.maxWidth);
+  if (Number.isFinite(mw) && mw > 0) css += `max-width:${Math.round(mw)}px;margin-left:auto;margin-right:auto;`;
+  /* Per-block font family (panel sets it; was previously ignored). */
+  if (typeof block?.fontFamily === 'string' && block.fontFamily) css += `font-family:${escapeCss(block.fontFamily)};`;
+  /* Border + corner radius (curve ↔ square) — wrap with padding so a
+     border doesn't hug the glyphs. */
+  const bw = Number(block?.borderWidth);
+  if (Number.isFinite(bw) && bw > 0) {
+    css += `border:${Math.min(40, Math.round(bw))}px solid ${escapeCss(block?.borderColor || '#ffffff')};padding:6px 14px;`;
+  }
+  const cr = Number(block?.cornerRadius);
+  if (Number.isFinite(cr) && cr >= 0) css += `border-radius:${Math.min(400, Math.round(cr))}px;`;
+  /* Per-block colour comes BEFORE the effect switch so gradient/neon/
+     stroke can still override it with their own fill. */
+  if (typeof block?.color === 'string' && block.color) css += `color:${escapeCss(block.color)};`;
   switch (fx) {
     case 'gradient':
       css += `background-image:linear-gradient(120deg,${c1},${c2});-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;`;
@@ -339,10 +438,95 @@ export function defaultScheduledReveal() {
   };
 }
 
+/**
+ * Viewport presets — the design-time canvas dimensions a template is
+ * authored against. Block positions are absolute pixels relative to
+ * this size; the renderer uniformly scales the canvas to fit any user
+ * device while preserving layout.
+ */
+export const VIEWPORT_PRESETS = {
+  mobile:  { width: 390,  height: 844, label: 'Mobile',  emoji: '📱' },
+  desktop: { width: 1280, height: 720, label: 'Desktop', emoji: '🖥️' },
+};
+
+export function resolveViewport(viewport) {
+  if (viewport && VIEWPORT_PRESETS[viewport]) return { name: viewport, ...VIEWPORT_PRESETS[viewport] };
+  return { name: 'desktop', ...VIEWPORT_PRESETS.desktop };
+}
+
+/**
+ * Device breakpoints (responsive engine v3). Each breakpoint has its own
+ * artboard whose ASPECT matches the device class, so a design never
+ * letterboxes into a thin strip — a portrait phone gets a portrait
+ * artboard, a desktop a landscape one. `maxWidth`/`minWidth` are the CSS
+ * cut-points (#9: mobile <768, tablet 768–1024, desktop >1024); `width`/
+ * `height` are the design-canvas dimensions used when that breakpoint is
+ * active. The active breakpoint is chosen at render time (by the renderer
+ * component, via the `data-bp` attribute on `.visual-template-root`) so
+ * the same engine powers both the editor's forced preview and the
+ * published page's automatic, width-driven selection.
+ */
+export const BREAKPOINT_ORDER = ['mobile', 'tablet', 'desktop'];
+export const BREAKPOINT_PRESETS = {
+  mobile:  { maxWidth: 767,                width: 390,  height: 844,  label: 'Mobile',  emoji: '📱' },
+  tablet:  { minWidth: 768, maxWidth: 1024, width: 834,  height: 1112, label: 'Tablet',  emoji: '📲' },
+  desktop: { minWidth: 1025,               width: 1280, height: 720,  label: 'Desktop', emoji: '🖥️' },
+};
+
+/** Default responsive config — enabled, with each breakpoint seeded to its
+ *  preset artboard. `base` records which breakpoint the block base fields
+ *  represent (everything else is stored as deltas against it). */
+export function defaultResponsiveConfig(base = 'desktop') {
+  const safeBase = BREAKPOINT_ORDER.includes(base) ? base : 'desktop';
+  return {
+    enabled: true,
+    base: safeBase,
+    breakpoints: {
+      mobile:  { width: BREAKPOINT_PRESETS.mobile.width,  height: BREAKPOINT_PRESETS.mobile.height },
+      tablet:  { width: BREAKPOINT_PRESETS.tablet.width,  height: BREAKPOINT_PRESETS.tablet.height },
+      desktop: { width: BREAKPOINT_PRESETS.desktop.width, height: BREAKPOINT_PRESETS.desktop.height },
+    },
+  };
+}
+
+/** Normalize a persisted responsive config. Returns null when responsive
+ *  is disabled or absent (legacy v2 templates) so the renderer falls back
+ *  to the original single-artboard scaling — byte-for-byte unchanged. */
+export function normalizeResponsiveConfig(raw) {
+  if (!raw || typeof raw !== 'object' || raw.enabled !== true) return null;
+  const def = defaultResponsiveConfig(raw.base);
+  const breakpoints = {};
+  for (const k of BREAKPOINT_ORDER) {
+    const b = (raw.breakpoints && raw.breakpoints[k]) || def.breakpoints[k];
+    breakpoints[k] = {
+      width:  Math.max(120, Math.min(4000, Math.round(Number(b.width))  || def.breakpoints[k].width)),
+      height: Math.max(120, Math.min(4000, Math.round(Number(b.height)) || def.breakpoints[k].height)),
+    };
+  }
+  return { enabled: true, base: def.base, breakpoints };
+}
+
+/** Resolve which breakpoint a given display width falls into (#9). */
+export function breakpointForWidth(width) {
+  const w = Number(width) || 0;
+  if (w <= BREAKPOINT_PRESETS.mobile.maxWidth) return 'mobile';
+  if (w <= BREAKPOINT_PRESETS.tablet.maxWidth) return 'tablet';
+  return 'desktop';
+}
+
 export function defaultVisualBuilderState() {
   return {
     version: 2,
     siteTitle: 'Untitled Storyly page',
+    /* Design canvas — see VIEWPORT_PRESETS. New templates start on the
+       desktop (1280×720) canvas because that's the bigger working
+       surface; the admin can flip to mobile in the toolbar for stories. */
+    viewport: 'desktop',
+    /* Responsive engine v3: new designs are responsive by default — the
+       base fields describe the desktop artboard; mobile/tablet inherit it
+       until the author tweaks them. Legacy templates load without this
+       field and keep the original single-artboard behaviour. */
+    responsive: defaultResponsiveConfig('desktop'),
     theme: defaultTheme(),
     scheduledReveal: defaultScheduledReveal(),
     pages: [
@@ -465,7 +649,7 @@ export function defaultVisualBuilderState() {
             text: '♥',
             align: 'center',
             fontSize: 56,
-            color: '#F472B6',
+            color: '#EC4899',
             marginTop: 56,
             marginBottom: 12,
             lineHeight: 1,
@@ -510,6 +694,7 @@ function normalizeButtonStyle(s) {
 }
 
 const ENTER_ANIM_SET = new Set(['none','fadeIn','slideUp','slideDown','slideLeft','slideRight','zoom','pop','bounce','tilt']);
+const LOOP_ANIM_SET = new Set(['none','float','pulse','bounce','shake','wiggle','heartbeat','spin','glow','drift']);
 const FILTER_SET = new Set(['none','vivid','mono','warm','cool','vintage','dramatic','mute','sepia','noir','blur']);
 
 function migrateLayerStyle(block) {
@@ -538,7 +723,20 @@ function migrateLayerStyle(block) {
     laneDurationSec: Number.isFinite(Number(block?.laneDurationSec)) ? Math.max(4, Math.min(60, Number(block.laneDurationSec))) : 14,
     imageFilter: FILTER_SET.has(block?.imageFilter) ? block.imageFilter : 'none',
     enterAnimation: ENTER_ANIM_SET.has(block?.enterAnimation) ? block.enterAnimation : 'none',
+    loopAnimation: LOOP_ANIM_SET.has(block?.loopAnimation) ? block.loopAnimation : 'none',
+    /** Border + corner radius (curve ↔ square). Empty string = unset. */
+    borderWidth: Number.isFinite(Number(block?.borderWidth)) && block?.borderWidth !== '' ? Math.max(0, Math.min(40, Math.round(Number(block.borderWidth)))) : (block?.borderWidth === '' || block?.borderWidth == null ? '' : block.borderWidth),
+    borderColor: typeof block?.borderColor === 'string' ? block.borderColor : '',
+    cornerRadius: Number.isFinite(Number(block?.cornerRadius)) && block?.cornerRadius !== '' ? Math.max(0, Math.min(400, Math.round(Number(block.cornerRadius)))) : (block?.cornerRadius === '' || block?.cornerRadius == null ? '' : block.cornerRadius),
     enterDelayMs: Number.isFinite(enterDelay) ? Math.max(0, Math.min(3000, enterDelay)) : 0,
+    /** Per-element opacity (0–1). Default 1 (fully visible). */
+    opacity: Number.isFinite(Number(block?.opacity)) ? Math.max(0, Math.min(1, Number(block.opacity))) : 1,
+    /** Video playback: 'inline' (default) or 'lightbox' (tap → fullscreen). */
+    videoMode: block?.videoMode === 'lightbox' ? 'lightbox' : 'inline',
+    /** Photo/video frame shape (mask). Default 'none' (square). */
+    mediaShape: MEDIA_SHAPE_SET.has(block?.mediaShape) ? block.mediaShape : 'none',
+    /** Transient: true while a freshly uploaded media block is in flight. */
+    uploading: block?.uploading === true,
     /** Editor-only metadata: not rendered, controls UX. */
     locked: block?.locked === true,
     hidden: block?.hidden === true,
@@ -546,7 +744,38 @@ function migrateLayerStyle(block) {
     brightness: Number.isFinite(bright) ? Math.max(0, Math.min(300, bright)) : 100,
     contrast:   Number.isFinite(contrast) ? Math.max(0, Math.min(300, contrast)) : 100,
     saturation: Number.isFinite(sat) ? Math.max(0, Math.min(300, sat)) : 100,
+    /** Responsive v3: per-breakpoint position/size deltas vs the base. */
+    responsive: normalizeBlockResponsive(block?.responsive),
   };
+}
+
+/** Per-breakpoint block overrides. Each breakpoint stores only the fields
+ *  that differ from the base (deltas), so anything omitted falls back to
+ *  the base layout. Returns null when there are no overrides. */
+function normalizeBlockResponsive(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  for (const bp of BREAKPOINT_ORDER) {
+    const d = raw[bp];
+    if (!d || typeof d !== 'object') continue;
+    const o = {};
+    const xPct = Number(d.xPct);
+    const yPct = Number(d.yPct);
+    const w = Number(d.width);
+    const h = Number(d.height);
+    const deg = Number(d.rotateDeg);
+    const size = Number(d.size);
+    if (Number.isFinite(xPct)) o.xPct = +Math.max(0, Math.min(100, xPct)).toFixed(3);
+    if (Number.isFinite(yPct)) o.yPct = +Math.max(0, Math.min(100, yPct)).toFixed(3);
+    if (Number.isFinite(w) && w > 0) o.width = Math.max(8, Math.min(2000, Math.round(w)));
+    if (Number.isFinite(h) && h > 0) o.height = Math.max(8, Math.min(2000, Math.round(h)));
+    if (Number.isFinite(size) && size > 0) o.size = Math.max(20, Math.min(240, Math.round(size)));
+    if (Number.isFinite(deg)) o.rotateDeg = Math.max(-180, Math.min(180, Math.round(deg)));
+    if (d.anchor === 'center' || d.anchor === 'topLeft') o.anchor = d.anchor;
+    if (d.hidden === true) o.hidden = true;
+    if (Object.keys(o).length) out[bp] = o;
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 /** Inline width/height CSS for blocks with an explicit size set. */
@@ -607,8 +836,14 @@ export function normalizeBuilderState(raw) {
   });
   const scheduledReveal = normalizeScheduledReveal(raw.scheduledReveal);
   let pages = raw.pages;
+  /* Persist + normalize the viewport (defaults to 'desktop' for legacy
+     templates that pre-date this field). */
+  const viewport = raw.viewport && VIEWPORT_PRESETS[raw.viewport] ? raw.viewport : 'desktop';
+  /* Responsive config is null for legacy templates (engine stays in the
+     original single-artboard mode); a normalized object for v3 designs. */
+  const responsive = normalizeResponsiveConfig(raw.responsive);
   if (!Array.isArray(pages) || pages.length === 0) {
-    return { ...base, siteTitle: raw.siteTitle || base.siteTitle, theme, scheduledReveal };
+    return { ...base, siteTitle: raw.siteTitle || base.siteTitle, viewport, responsive, theme, scheduledReveal };
   }
 
   pages = pages.map((p) => ({
@@ -622,6 +857,8 @@ export function normalizeBuilderState(raw) {
     pageBackground: typeof p.pageBackground === 'string' ? p.pageBackground : '',
     pageImageUrl: typeof p.pageImageUrl === 'string' ? p.pageImageUrl : '',
     pageVideoUrl: typeof p.pageVideoUrl === 'string' ? p.pageVideoUrl : '',
+    /** Animated background effect overlay (floating particles). */
+    pageEffect: PAGE_EFFECT_SET.has(p.pageEffect) ? p.pageEffect : 'none',
     textColor: typeof p.textColor === 'string' ? p.textColor : '',
     headingColor: typeof p.headingColor === 'string' ? p.headingColor : '',
     buttonBackground: typeof p.buttonBackground === 'string' ? p.buttonBackground : '',
@@ -635,6 +872,8 @@ export function normalizeBuilderState(raw) {
   return {
     version: 2,
     siteTitle: raw.siteTitle || base.siteTitle,
+    viewport,
+    responsive,
     theme,
     scheduledReveal,
     pages,
@@ -661,15 +900,47 @@ function buttonInlineStyle(block, theme) {
 function layerStyle(block) {
   const deg = Number(block?.rotateDeg);
   const rotate = Number.isFinite(deg) ? Math.max(-180, Math.min(180, deg)) : 0;
-  const x = Number(block?.x);
-  const y = Number(block?.y);
-  const pos =
-    Number.isFinite(x) && Number.isFinite(y)
-      ? `position:absolute;left:${Math.round(x)}px;top:${Math.round(y)}px;`
-      : '';
+  /* Position is preferentially stored as percentages of the design
+     canvas (xPct/yPct, 0-100), so "centered on desktop" stays
+     "centered on mobile" when the admin flips the viewport — the
+     percent values don't move, the canvas pixel dimensions do.
+     Legacy templates that pre-date percent storage still render via
+     the px fallback (x/y) below. */
+  /* Detect a real stored position. Treat empty string / null as "no
+     position" — NOT 0. (normalizeBuilderState stores unset coords as '',
+     and Number('') === 0, which would otherwise pin every flow block to
+     the top-left corner instead of letting it centre in the flex stack.) */
+  const num = (v) => (v === '' || v == null ? NaN : Number(v));
+  const xPct = num(block?.xPct);
+  const yPct = num(block?.yPct);
+  let pos = '';
+  if (Number.isFinite(xPct) && Number.isFinite(yPct)) {
+    pos = `position:absolute;left:${xPct}%;top:${yPct}%;`;
+  } else {
+    const x = num(block?.x);
+    const y = num(block?.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      pos = `position:absolute;left:${Math.round(x)}px;top:${Math.round(y)}px;`;
+    }
+  }
+  /* New blocks store their CENTRE point as the position anchor (with
+     anchor:'center'), so a block centred on the grid stays centred in
+     BOTH viewports — its size relative to the canvas differs between
+     desktop/mobile, but its centre point doesn't. translate(-50%,-50%)
+     pulls the box back by half its own size onto that point. Legacy
+     blocks (no anchor flag) keep their original top-left anchoring.
+     Applies to both percentage (admin) and pixel (user-overlay) coords. */
+  const centerAnchored = pos !== '' && block?.anchor === 'center';
   const delay = Number(block?.enterDelayMs);
   const delayCss = Number.isFinite(delay) && delay > 0 ? `animation-delay:${Math.min(3000, Math.max(0, delay))}ms;` : '';
-  return `${rotate ? `transform:rotate(${rotate}deg);transform-origin:center;` : ''}${pos}${delayCss}${
+  const tf = `${centerAnchored ? 'translate(-50%,-50%)' : ''}${
+    rotate ? `${centerAnchored ? ' ' : ''}rotate(${rotate}deg)` : ''
+  }`.trim();
+  // Per-element opacity (0–1). Only emitted when reduced, so default blocks
+  // stay fully opaque. Applies to EVERY block type.
+  const op = Number(block?.opacity);
+  const opacityCss = Number.isFinite(op) && op >= 0 && op < 1 ? `opacity:${+op.toFixed(3)};` : '';
+  return `${tf ? `transform:${tf};transform-origin:center;` : ''}${pos}${delayCss}${opacityCss}${
     rotate || pos ? 'display:inline-block;' : ''
   }`;
 }
@@ -679,6 +950,15 @@ function enterAnimClass(block) {
   const a = block?.enterAnimation;
   if (!a || a === 'none' || !ENTER_ANIM_SET.has(a)) return '';
   return ` tpl-enter tpl-enter-${a}`;
+}
+
+/** CSS class for a per-block continuous loop animation (composes with the
+ *  block's transform + entrance because loops animate individual transform
+ *  properties / box-shadow, not the `transform` shorthand). */
+function loopAnimClass(block) {
+  const a = block?.loopAnimation;
+  if (!a || a === 'none' || !LOOP_ANIM_SET.has(a)) return '';
+  return ` tpl-loop tpl-loop-${a}`;
 }
 
 function mediaStyle(block, defaults) {
@@ -696,14 +976,46 @@ function mediaStyle(block, defaults) {
   if (Number.isFinite(b) && b !== 100) parts.push(`brightness(${Math.max(0, Math.min(300, b))}%)`);
   if (Number.isFinite(c) && c !== 100) parts.push(`contrast(${Math.max(0, Math.min(300, c))}%)`);
   if (Number.isFinite(s) && s !== 100) parts.push(`saturate(${Math.max(0, Math.min(300, s))}%)`);
+  /* Frame border/outline. For rectangular / rounded / circle frames a real CSS
+     border works; for clipped silhouettes (heart, star, …) a CSS border gets
+     clipped away, so we trace the shape with 4-direction drop-shadows instead. */
+  const shape = block?.mediaShape || 'none';
+  const isClip = shape === 'heart' || shape === 'star' || shape === 'hexagon' || shape === 'diamond' || shape === 'triangle';
+  const bw = Number(block?.borderWidth);
+  const hasBorder = Number.isFinite(bw) && bw > 0;
+  const bc = escapeCss(block?.borderColor || '#ffffff');
+  let borderCss = '';
+  if (hasBorder) {
+    if (isClip) {
+      const o = Math.max(1, Math.min(6, Math.round(bw)));
+      parts.push(`drop-shadow(${o}px 0 0 ${bc})`, `drop-shadow(-${o}px 0 0 ${bc})`, `drop-shadow(0 ${o}px 0 ${bc})`, `drop-shadow(0 -${o}px 0 ${bc})`);
+    } else {
+      borderCss = `border:${Math.min(40, Math.round(bw))}px solid ${bc};box-sizing:border-box;`;
+    }
+  }
   const filterCss = parts.length ? `filter:${parts.join(' ')};` : '';
-  return `${defaults};object-fit:${fit};border-radius:${radius}px;box-shadow:${shadow};${filterCss}${rotate}`;
+  // Frame shape (clip-path / strong radius) comes LAST so it wins over the
+  // default border-radius for masked frames.
+  const shapeCss = mediaShapeCss(shape);
+  return `${defaults};object-fit:${fit};border-radius:${radius}px;box-shadow:${shadow};${borderCss}${filterCss}${rotate}${shapeCss}`;
 }
 
 function renderBlock(block, pageIndex, blockIndex, theme) {
   const sid = (suffix) => slotId(pageIndex, suffix);
   const bslot = `p${pageIndex + 1}_b${blockIndex}`;
-  const eA = enterAnimClass(block);
+  /* A block uses EITHER a continuous loop OR a one-shot entrance (both
+     drive `animation`, so they can't share one element). Loop wins when
+     set. Combining both arrives with the Timeline phase (wrapper layers). */
+  const loopCls = loopAnimClass(block);
+  const eA = loopCls || enterAnimClass(block);
+
+  /* While a freshly added photo/video is still uploading, render a frosted
+     placeholder box with a spinner exactly where the media will land, so the
+     user can see something is coming. Replaced by the real media on upload. */
+  if (block.uploading && (block.type === 'image' || block.type === 'gif' || block.type === 'video')) {
+    const sz = sizeStyle(block) || 'width:240px;height:160px;';
+    return `<div data-block-slot="${bslot}" data-slot-label="Uploading"${eA ? ` class="tpl-uploading ${eA.trim()}"` : ' class="tpl-uploading"'} style="${layerStyle(block)}${sz}"><span class="tpl-uploading-spin"></span><span class="tpl-uploading-label">Uploading…</span></div>`;
+  }
 
   switch (block.type) {
     case 'heading': {
@@ -736,7 +1048,13 @@ function renderBlock(block, pageIndex, blockIndex, theme) {
     }
     case 'video': {
       const dflt = sizeStyle(block) ? `${sizeStyle(block)}margin:8px 0` : 'max-width:320px;margin:8px 0';
-      return `<video data-block-slot="${bslot}" data-slot="${sid(block.slotKey || `vid_${blockIndex}`)}" data-slot-label="${escapeHtml(block.label || 'Video')}"${eA ? ` class="${eA.trim()}"` : ''} src="${escapeHtml(block.defaultUrl || '')}" poster="${escapeHtml(placeholderDataUri('Add video'))}" controls style="${mediaStyle(block, dflt)}" playsinline></video>`;
+      const vurl = escapeHtml(block.defaultUrl || '');
+      /* 'lightbox' → show a tap-to-play card that opens the clip fullscreen;
+         'inline' (default) → a normal inline video with controls. */
+      if (block.videoMode === 'lightbox' && block.defaultUrl) {
+        return `<div data-block-slot="${bslot}" data-slot-label="${escapeHtml(block.label || 'Video')}" data-video-fullscreen${eA ? ` class="tpl-video-card ${eA.trim()}"` : ' class="tpl-video-card"'} style="${layerStyle(block)}${sizeStyle(block) || 'width:280px;height:170px;'}${mediaShapeCss(block.mediaShape)}"><video src="${vurl}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:${block.mediaFit === 'contain' ? 'contain' : 'cover'};border-radius:${Math.max(0, Math.min(80, Number(block.mediaRadius) || 14))}px;"></video><span class="tpl-video-play" aria-hidden="true">▶</span></div>`;
+      }
+      return `<video data-block-slot="${bslot}" data-slot="${sid(block.slotKey || `vid_${blockIndex}`)}" data-slot-label="${escapeHtml(block.label || 'Video')}"${eA ? ` class="${eA.trim()}"` : ''} src="${vurl}" poster="${escapeHtml(placeholderDataUri('Add video'))}" controls style="${mediaStyle(block, dflt)}" playsinline></video>`;
     }
     case 'sticker': {
       const size = Math.min(240, Math.max(20, Number(block.size) || 64));
@@ -870,8 +1188,12 @@ function buildRootBackground(theme) {
   const fb = escapeCss(theme.pageBackground || '#111827');
   if (kind === 'gradient') {
     const a = escapeCss(theme.gradientFrom || '#111827');
-    const b = escapeCss(theme.gradientTo || '#4f46e5');
+    const b = escapeCss(theme.gradientTo || '#7C3AED');
     const ang = Math.min(360, Math.max(0, Number(theme.gradientAngle) || 135));
+    if (theme.bgMotion) {
+      /* Motion theme — a slowly flowing gradient (Instagram-chat style). */
+      return `background:linear-gradient(${ang}deg, ${a}, ${b}, ${a});background-size:220% 220%;animation:tpl-bg-flow 16s ease infinite;`;
+    }
     return `background:linear-gradient(${ang}deg, ${a}, ${b});`;
   }
   if (kind === 'image') {
@@ -891,9 +1213,11 @@ function buildThemeCss(theme) {
   return `
 .visual-template-root {
   margin:0; ${rootBg}
-  overflow-x:hidden; overflow-y:auto; min-height:clamp(320px,65vh,720px); position:relative; box-sizing:border-box;
+  overflow:hidden; position:relative; box-sizing:border-box;
   font-family:system-ui,sans-serif; color:#e5e7eb;
+  width:100%;
 }
+@keyframes tpl-bg-flow { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
 .visual-template-root .page-inner { box-sizing:border-box; }
 .visual-template-root .page-inner h1,
 .visual-template-root .page-inner h2 { color: var(--tpl-h, inherit); }
@@ -905,7 +1229,35 @@ function buildThemeCss(theme) {
 }
 .visual-template-root .tpl-pages-stack {
   position:relative; z-index:1;
-  min-height:clamp(320px,65vh,720px);
+  width:100%; height:100%;
+}
+
+/* ── Viewport-fit shell ────────────────────────────────────────
+ * Block positions inside a template are absolute pixels relative
+ * to the design canvas (--design-w x --design-h). The fit shell
+ * scales the canvas uniformly to fill its container while
+ * preserving the design aspect — so a template authored at 390x844
+ * looks identical on a 320px phone, an 768px tablet, or a 1280px
+ * laptop. Uses container queries (widely supported in evergreen
+ * browsers) — no JS resize observer needed.
+ */
+.visual-template-root .tpl-viewport-fit {
+  position:relative; z-index:1;
+  width:100%; aspect-ratio: var(--design-aspect, 9/16);
+  margin:0 auto; container-type:size; container-name: vp;
+  overflow:hidden;
+}
+.visual-template-root .tpl-viewport-design {
+  position:absolute; top:50%; left:50%;
+  width: var(--design-w, 390px); height: var(--design-h, 844px);
+  /* Unitless scale derived from container size / design size — both
+     numerator and denominator are lengths, so the division collapses
+     to a unitless ratio. We take the smaller of the width-ratio and
+     height-ratio so the deck fits inside the container ("contain"
+     semantics) without overflow. */
+  transform: translate(-50%, -50%) scale(min(calc(100cqw / var(--design-w, 390px)), calc(100cqh / var(--design-h, 844px))));
+  transform-origin: center center;
+  will-change: transform;
 }
 .visual-template-root .page {
   position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:flex-start;
@@ -922,9 +1274,65 @@ function buildThemeCss(theme) {
 .visual-template-root .page-bg-media.page-bg-img {
   background-size:cover; background-position:center;
 }
+/* Background effect overlay — drifting emoji particles ("live wallpaper").
+   Sits above the gradient/photo but BEHIND the content. */
+.visual-template-root .tpl-fx {
+  position:absolute; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+}
+.visual-template-root .tpl-fx span {
+  position:absolute; top:-12%; line-height:1; will-change:transform,top,bottom,opacity;
+  animation-name: tpl-fx-fall; animation-timing-function: linear; animation-iteration-count: infinite;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));
+}
+.visual-template-root .tpl-fx.tpl-fx-rise span {
+  top:auto; bottom:-12%; animation-name: tpl-fx-rise;
+}
+@keyframes tpl-fx-fall {
+  0%   { top:-12%;  transform: translateX(0)     rotate(0deg);   opacity:0; }
+  10%  { opacity:0.9; }
+  90%  { opacity:0.9; }
+  100% { top:112%;  transform: translateX(28px)  rotate(180deg); opacity:0; }
+}
+@keyframes tpl-fx-rise {
+  0%   { bottom:-12%; transform: translateX(0)    scale(0.9); opacity:0; }
+  10%  { opacity:0.9; }
+  90%  { opacity:0.9; }
+  100% { bottom:112%; transform: translateX(-28px) scale(1.1); opacity:0; }
+}
+/* Uploading placeholder — frosted box + spinner where the media will appear. */
+.visual-template-root .tpl-uploading {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  background:rgba(255,255,255,0.14); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  border:1.5px dashed rgba(255,255,255,0.5); border-radius:16px; color:#fff;
+  min-width:140px; min-height:110px; box-sizing:border-box;
+}
+.visual-template-root .tpl-uploading-spin {
+  width:32px; height:32px; border-radius:50%;
+  border:3px solid rgba(255,255,255,0.35); border-top-color:#fff;
+  animation: tpl-spin 0.8s linear infinite;
+}
+.visual-template-root .tpl-uploading-label { font-size:12px; letter-spacing:0.06em; opacity:0.9; }
+@keyframes tpl-spin { to { transform: rotate(360deg); } }
+/* Tap-to-play video card (lightbox mode). */
+.visual-template-root .tpl-video-card {
+  position:relative; display:inline-block; cursor:pointer; overflow:hidden; border-radius:16px;
+  box-shadow:0 10px 26px rgba(0,0,0,0.28);
+}
+.visual-template-root .tpl-video-card .tpl-video-play {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.5); color:#fff; font-size:20px; padding-left:4px; backdrop-filter:blur(4px);
+  transition:transform 0.2s ease, background 0.2s ease;
+}
+.visual-template-root .tpl-video-card:hover .tpl-video-play { transform:translate(-50%,-50%) scale(1.08); background:rgba(0,0,0,0.65); }
 .visual-template-root .page-inner {
-  position:relative; z-index:1; width:100%; padding:24px 20px; box-sizing:border-box;
-  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  position:relative; z-index:1; width:100%; padding:32px 24px; box-sizing:border-box;
+  /* justify-content: center vertically centers the page content so a
+     fresh template doesn't pile every block at the top — gives it the
+     polished designed look out of the box. The author can still bias
+     toward the top by adding marginTop to the first block. */
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px;
   min-height:100%;
 }
 .visual-template-root .page.tpl-p-anim-fade.active .page-inner { animation: tpl-page-fade 0.65s ease forwards; }
@@ -1049,6 +1457,38 @@ function buildThemeCss(theme) {
   100% { opacity:1; transform: rotate(0) scale(1); }
 }
 
+/* Per-block LOOP animations. These animate the individual translate /
+   scale / rotate properties (or box-shadow for glow), which COMPOSE with
+   the block's own transform (center-anchor + tilt) instead of overriding it. */
+.visual-template-root .tpl-loop { animation-iteration-count: infinite; }
+.visual-template-root .tpl-loop-float     { animation: tpl-lp-float 3s ease-in-out infinite; }
+.visual-template-root .tpl-loop-pulse     { animation: tpl-lp-pulse 2s ease-in-out infinite; }
+.visual-template-root .tpl-loop-bounce    { animation: tpl-lp-bounce 1.6s cubic-bezier(.5,.05,.5,.95) infinite; }
+.visual-template-root .tpl-loop-shake     { animation: tpl-lp-shake 1.4s ease-in-out infinite; }
+.visual-template-root .tpl-loop-wiggle    { animation: tpl-lp-wiggle 1.4s ease-in-out infinite; }
+.visual-template-root .tpl-loop-heartbeat { animation: tpl-lp-heart 1.6s ease-in-out infinite; }
+.visual-template-root .tpl-loop-spin      { animation: tpl-lp-spin 6s linear infinite; }
+.visual-template-root .tpl-loop-glow      { animation: tpl-lp-glow 2.4s ease-in-out infinite; }
+.visual-template-root .tpl-loop-drift     { animation: tpl-lp-drift 16s ease-in-out infinite; }
+@keyframes tpl-lp-float { 0%,100% { translate: 0 0 } 50% { translate: 0 -10px } }
+@keyframes tpl-lp-pulse { 0%,100% { scale: 1 } 50% { scale: 1.06 } }
+@keyframes tpl-lp-bounce { 0%,100% { translate: 0 0 } 50% { translate: 0 -14px } }
+@keyframes tpl-lp-shake { 0%,100% { translate: 0 0 } 20% { translate: -4px 0 } 40% { translate: 4px 0 } 60% { translate: -3px 0 } 80% { translate: 3px 0 } }
+@keyframes tpl-lp-wiggle { 0%,100% { rotate: 0deg } 25% { rotate: -4deg } 75% { rotate: 4deg } }
+@keyframes tpl-lp-heart { 0%,100% { scale: 1 } 14% { scale: 1.12 } 28% { scale: 1 } 42% { scale: 1.12 } 70% { scale: 1 } }
+@keyframes tpl-lp-spin { to { rotate: 360deg } }
+@keyframes tpl-lp-glow { 0%,100% { box-shadow: 0 0 6px rgba(168,139,250,0.45) } 50% { box-shadow: 0 0 22px 4px rgba(168,139,250,0.9) } }
+/* Drift — element roams continuously around the canvas (like floating
+   background emojis), with a gentle tilt so the motion feels alive. */
+@keyframes tpl-lp-drift {
+  0%   { translate: 0 0;        rotate: 0deg; }
+  20%  { translate: 70px -40px; rotate: 6deg; }
+  40%  { translate: -50px 50px; rotate: -5deg; }
+  60%  { translate: 60px 60px;  rotate: 4deg; }
+  80%  { translate: -70px -30px;rotate: -6deg; }
+  100% { translate: 0 0;        rotate: 0deg; }
+}
+
 /* ── Stickers ─────────────────────────────────────────────────── */
 .visual-template-root .tpl-sticker {
   user-select: none; cursor: grab;
@@ -1104,6 +1544,32 @@ const ANIM_CLASS = {
   drift: 'tpl-anim-drift',
 };
 
+/* Effects that float UP from the bottom (vs. falling from the top). */
+const RISE_FX = new Set(['hearts', 'bubbles', 'sparkles', 'stars', 'music', 'fire', 'balloons']);
+
+/** Build the animated background-effect overlay for a page — a layer of
+ *  drifting emoji particles ("live wallpaper"). Positions/timings are
+ *  deterministic (derived from the index) so the markup is stable across
+ *  re-renders (no flicker while editing). */
+function renderPageEffect(page) {
+  const fx = page?.pageEffect;
+  if (!fx || fx === 'none' || !PAGE_EFFECT_SET.has(fx)) return '';
+  const preset = PAGE_EFFECT_PRESETS.find((e) => e.value === fx);
+  if (!preset || !preset.emojis.length) return '';
+  const N = 16;
+  const riseCls = RISE_FX.has(fx) ? ' tpl-fx-rise' : '';
+  let spans = '';
+  for (let i = 0; i < N; i++) {
+    const e = preset.emojis[i % preset.emojis.length];
+    const left = (i * 61) % 100;        // spread across the width
+    const size = 14 + ((i * 37) % 22);  // 14–35px
+    const dur = 9 + ((i * 53) % 12);    // 9–20s
+    const delay = (i * 29) % 14;        // staggered start (negative → mid-flight)
+    spans += `<span style="left:${left}%;font-size:${size}px;animation-duration:${dur}s;animation-delay:-${delay}s;">${escapeHtml(e)}</span>`;
+  }
+  return `<div class="tpl-fx${riseCls}" aria-hidden="true">${spans}</div>`;
+}
+
 function renderPageHtml(page, pi, globalTheme) {
   const pt = effectivePageTheme(page, globalTheme);
   const active = pi === 0 ? ' active' : '';
@@ -1118,7 +1584,7 @@ function renderPageHtml(page, pi, globalTheme) {
   if (vi) {
     media = `<div class="page-bg-media"><video src="${escapeHtml(page.pageVideoUrl)}" autoplay muted loop playsinline></video></div>`;
   } else if (im) {
-    media = `<div class="page-bg-media page-bg-img" style="background-image:url(${JSON.stringify(im)})"></div>`;
+    media = `<div class="page-bg-media page-bg-img" style="background-image:url('${im}')"></div>`;
   }
   const pb = page.pageBackground?.trim();
   const pageStyle =
@@ -1133,12 +1599,73 @@ function renderPageHtml(page, pi, globalTheme) {
   const durAttr =
     Number.isFinite(dur) && dur > 0 ? ` data-page-duration-ms="${Math.min(120000, Math.floor(dur))}"` : '';
 
+  const fxLayer = renderPageEffect(page);
   return `<div class="page${active}${animExtra}" id="page${pi + 1}" data-page data-page-title="${title}"${durAttr}${pageStyle}>
 ${media}
+${fxLayer}
 <div class="page-inner" style="${innerStyle}">
 ${blocksHtml}
 </div>
 </div>`;
+}
+
+/** CSS declarations for one block's per-breakpoint delta (position, size,
+ *  transform, visibility). `!important` so it wins over the base inline
+ *  style. Returns '' when the delta has nothing renderable. */
+function blockDeltaDecls(block, d) {
+  if (d.hidden === true) return 'display:none !important;';
+  const parts = [];
+  if (Number.isFinite(Number(d.xPct))) parts.push(`left:${Number(d.xPct)}%`);
+  if (Number.isFinite(Number(d.yPct))) parts.push(`top:${Number(d.yPct)}%`);
+  if (Number.isFinite(Number(d.width))  && Number(d.width)  > 0) parts.push(`width:${Math.round(Number(d.width))}px`);
+  if (Number.isFinite(Number(d.height)) && Number(d.height) > 0) parts.push(`height:${Math.round(Number(d.height))}px`);
+  // Stickers are sized by font-size, not width/height.
+  if (Number.isFinite(Number(d.size)) && Number(d.size) > 0) parts.push(`font-size:${Math.round(Number(d.size))}px`);
+  /* Rebuild the transform so the override keeps the block's anchor +
+     rotation. Falls back to the base block's anchor/rotation when the
+     delta doesn't specify them. */
+  const anchor = d.anchor || block.anchor;
+  const degRaw = Number.isFinite(Number(d.rotateDeg)) ? Number(d.rotateDeg) : Number(block.rotateDeg);
+  const center = anchor === 'center';
+  const deg = Number.isFinite(degRaw) ? degRaw : 0;
+  const tf = `${center ? 'translate(-50%,-50%)' : ''}${deg ? `${center ? ' ' : ''}rotate(${deg}deg)` : ''}`.trim();
+  if (tf) parts.push(`transform:${tf}`);
+  return parts.length ? parts.map((p) => `${p} !important`).join(';') + ';' : '';
+}
+
+/** Generate the responsive stylesheet: (1) reshape the artboard per
+ *  breakpoint so each device gets an aspect that matches it, and (2) apply
+ *  each block's per-breakpoint deltas. All rules are scoped to the active
+ *  breakpoint via `[data-bp="…"]` on the root (set by the renderer
+ *  component). Returns '' for legacy (non-responsive) templates, leaving
+ *  the original single-artboard output untouched. */
+function responsiveOverrideCss(normalized) {
+  const r = normalized.responsive;
+  if (!r || !r.enabled) return '';
+  const rules = [];
+  for (const bp of BREAKPOINT_ORDER) {
+    const d = r.breakpoints[bp];
+    /* `!important` is required: the root carries the base artboard vars as
+       an INLINE style (the no-JS fallback), and inline beats a stylesheet
+       rule unless the rule is important. Custom properties honour it. */
+    rules.push(
+      `.visual-template-root[data-bp="${bp}"]{--design-w:${d.width}px !important;--design-h:${d.height}px !important;--design-aspect:${d.width}/${d.height} !important;}`
+    );
+  }
+  normalized.pages.forEach((page, pi) => {
+    (page.blocks || []).forEach((block, bi) => {
+      const ov = block.responsive;
+      if (!ov || typeof ov !== 'object') return;
+      const slot = `p${pi + 1}_b${bi}`;
+      for (const bp of BREAKPOINT_ORDER) {
+        const d = ov[bp];
+        if (!d || typeof d !== 'object') continue;
+        const decls = blockDeltaDecls(block, d);
+        if (decls) rules.push(`.visual-template-root[data-bp="${bp}"] [data-block-slot="${slot}"]{${decls}}`);
+      }
+    });
+  });
+  return rules.join('\n');
 }
 
 export function visualBuilderToHtml(state) {
@@ -1146,8 +1673,11 @@ export function visualBuilderToHtml(state) {
   const pages = normalized.pages || [];
   const siteTitle = escapeHtml(normalized.siteTitle || 'Page');
   const theme = normalized.theme || defaultTheme();
+  const vp = resolveViewport(normalized.viewport);
+  const responsive = normalized.responsive;
 
   const baseCss = buildThemeCss(theme);
+  const responsiveCss = responsiveOverrideCss(normalized);
 
   const rootVid =
     theme.backgroundKind === 'video' && escapeCssUrl(theme.backgroundVideoUrl)
@@ -1172,15 +1702,20 @@ export function visualBuilderToHtml(state) {
   <meta charset="UTF-8" />
   <title>${siteTitle}</title>
   ${fontLink}
-  <style>${baseCss}</style>
+  <style>${baseCss}${responsiveCss ? `\n${responsiveCss}` : ''}</style>
 </head>
 <body data-deck-mode="pages">
-<div class="visual-template-root">
+<div class="visual-template-root" data-viewport="${vp.name}"${
+    responsive && responsive.enabled ? ` data-responsive="1" data-bp="${responsive.base}"` : ''
+  } style="--design-w:${vp.width}px;--design-h:${vp.height}px;--design-aspect:${vp.width}/${vp.height};">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><clipPath id="tpl-clip-heart" clipPathUnits="objectBoundingBox"><path d="M0.5,1 C0.5,1 0,0.72 0,0.3 C0,0.12 0.16,0 0.3,0 C0.41,0 0.5,0.09 0.5,0.2 C0.5,0.09 0.59,0 0.7,0 C0.84,0 1,0.12 1,0.3 C1,0.72 0.5,1 0.5,1 Z"/></clipPath></defs></svg>
 ${rootVid}
 ${rootAudio}
+<div class="tpl-viewport-fit"><div class="tpl-viewport-design">
 <div class="tpl-pages-stack">
 ${bodyInner}
 </div>
+</div></div>
 </div>
 </body>
 </html>`;
@@ -1237,8 +1772,16 @@ function mergePagePatches(pages, pagePatches) {
 
 /** Prefer regenerating from saved builder state + optional user-only theme tweaks. */
 export function resolveSlideshowHtml(structure, themeOverrides = {}) {
-  if (!structure || structure.mode !== 'html') return structure?.html || '';
-  if (structure.builderState && typeof structure.builderState === 'object') {
+  if (!structure) return '';
+  /* Accept either legacy html-mode templates OR the new JSON-mode
+     templates that carry only a `builderState` tree. The render
+     pipeline below works identically once builderState is in hand —
+     only the legacy `html` shortcut is mode-gated. */
+  const hasBuilderState = structure.builderState && typeof structure.builderState === 'object';
+  if (!hasBuilderState) {
+    return structure.mode === 'html' ? (structure.html || '') : '';
+  }
+  if (hasBuilderState) {
     const base = normalizeBuilderState(structure.builderState);
     const patch = pickThemeOverrides(themeOverrides);
     const mergedTheme = { ...base.theme, ...patch };
@@ -1305,8 +1848,224 @@ export function updateBuilderBlockPositionBySlot(state, blockSlotRaw, xRaw, yRaw
   if (!block) return normalized;
   const x = Number(xRaw);
   const y = Number(yRaw);
-  blocks[blockIndex] = { ...block, x: Number.isFinite(x) ? Math.round(x) : '', y: Number.isFinite(y) ? Math.round(y) : '' };
+  /* Convert the drop position to PERCENTAGES of the active design
+     canvas so the same block stays at the same relative position when
+     the admin toggles between mobile and desktop viewports. `x`/`y` are
+     the block's CENTRE point (the canvas drag handler commits the centre,
+     not the corner), stored alongside anchor:'center' so the renderer
+     pulls the box back onto that point with translate(-50%,-50%) — this
+     is what keeps "centred on the grid" identical across viewports.
+     Clear any legacy `x`/`y` px values so percentages are the only
+     source of truth going forward. */
+  const vp = resolveViewport(normalized.viewport);
+  let xPct = '';
+  let yPct = '';
+  if (Number.isFinite(x) && vp.width > 0) {
+    xPct = +Math.max(0, Math.min(100, (x / vp.width) * 100)).toFixed(3);
+  }
+  if (Number.isFinite(y) && vp.height > 0) {
+    yPct = +Math.max(0, Math.min(100, (y / vp.height) * 100)).toFixed(3);
+  }
+  blocks[blockIndex] = { ...block, xPct, yPct, x: '', y: '', anchor: 'center' };
   const pages = [...normalized.pages];
   pages[pageIndex] = { ...page, blocks };
   return { ...normalized, pages };
+}
+
+/* ── Per-device editing ────────────────────────────────────────────────
+ * The admin editor can design each device (mobile/tablet/desktop) on its
+ * own. Edits made while previewing the BASE device write to the block's
+ * base fields; edits on any other device write a per-breakpoint override
+ * into `block.responsive[device]`. The renderer applies those overrides
+ * via `[data-bp="…"]` rules, so the preview/published page shows exactly
+ * what was designed for each device. */
+function deviceArtboardDims(n, device) {
+  const r = n.responsive;
+  if (r?.enabled && device && r.breakpoints?.[device]) return r.breakpoints[device];
+  return resolveViewport(n.viewport);
+}
+function isBaseDevice(n, device) {
+  const r = n.responsive;
+  return !r?.enabled || !device || device === r.base;
+}
+function editBlockForDevice(state, blockSlotRaw, device, applyBase, applyDelta) {
+  const n = normalizeBuilderState(state);
+  const m = /^p(\d+)_b(\d+)$/.exec(String(blockSlotRaw || '').trim());
+  if (!m) return n;
+  const pageIndex = Number(m[1]) - 1;
+  const blockIndex = Number(m[2]);
+  const page = n.pages[pageIndex];
+  if (!page) return n;
+  const blocks = [...(page.blocks || [])];
+  const block = blocks[blockIndex];
+  if (!block) return n;
+  if (isBaseDevice(n, device)) {
+    blocks[blockIndex] = applyBase(block);
+  } else {
+    const responsive = { ...(block.responsive || {}) };
+    responsive[device] = { ...(responsive[device] || {}), ...applyDelta(block) };
+    blocks[blockIndex] = { ...block, responsive };
+  }
+  const pages = [...n.pages];
+  pages[pageIndex] = { ...page, blocks };
+  return { ...n, pages };
+}
+
+/** Move a block (centre x/y in the active device's artboard px) for a device. */
+export function updateBuilderBlockPositionForDevice(state, blockSlotRaw, xRaw, yRaw, device) {
+  const n = normalizeBuilderState(state);
+  const dims = deviceArtboardDims(n, device);
+  const x = Number(xRaw);
+  const y = Number(yRaw);
+  const xPct = Number.isFinite(x) && dims.width > 0 ? +Math.max(0, Math.min(100, (x / dims.width) * 100)).toFixed(3) : '';
+  const yPct = Number.isFinite(y) && dims.height > 0 ? +Math.max(0, Math.min(100, (y / dims.height) * 100)).toFixed(3) : '';
+  return editBlockForDevice(
+    state,
+    blockSlotRaw,
+    device,
+    (block) => ({ ...block, xPct, yPct, x: '', y: '', anchor: 'center' }),
+    () => ({ xPct, yPct, anchor: 'center' }),
+  );
+}
+
+/** Resize a block (w/h in device artboard px) for a device. Stickers store `size`. */
+export function updateBuilderBlockSizeForDevice(state, blockSlotRaw, wRaw, hRaw, device) {
+  const w = Number(wRaw);
+  const h = Number(hRaw);
+  const isSticker = (block) => block?.type === 'sticker';
+  const stickerSize = Math.max(20, Math.min(240, Math.round(Math.max(Number.isFinite(w) ? w : 0, Number.isFinite(h) ? h : 0))));
+  return editBlockForDevice(
+    state,
+    blockSlotRaw,
+    device,
+    (block) => (isSticker(block)
+      ? { ...block, size: stickerSize }
+      : { ...block, width: w, height: h }),
+    (block) => (isSticker(block)
+      ? { size: stickerSize }
+      : { width: w, height: h }),
+  );
+}
+
+/** Rotate a block (degrees) for a device. */
+export function updateBuilderBlockRotateForDevice(state, blockSlotRaw, degRaw, device) {
+  const deg = Math.max(-180, Math.min(180, Math.round(Number(degRaw) || 0)));
+  return editBlockForDevice(
+    state,
+    blockSlotRaw,
+    device,
+    (block) => ({ ...block, rotateDeg: deg }),
+    () => ({ rotateDeg: deg }),
+  );
+}
+
+/* ── Auto-sync editing (single responsive design) ──────────────────────
+ * Every edit writes the ONE base design and clears any per-device override,
+ * so a change made while previewing ANY device applies to ALL devices,
+ * adapted per screen. Position is stored as a relative % (centre stays
+ * centred on every aspect); sizes are scaled from the previewed device's
+ * artboard to the base artboard so an element keeps its relative size
+ * across devices. `dimsDevice` is the device currently being previewed. */
+function setBlockBase(state, blockSlotRaw, patch) {
+  const n = normalizeBuilderState(state);
+  const m = /^p(\d+)_b(\d+)$/.exec(String(blockSlotRaw || '').trim());
+  if (!m) return n;
+  const pageIndex = Number(m[1]) - 1;
+  const blockIndex = Number(m[2]);
+  const page = n.pages[pageIndex];
+  if (!page) return n;
+  const blocks = [...(page.blocks || [])];
+  const block = blocks[blockIndex];
+  if (!block) return n;
+  // Clear per-device overrides so the design is truly one synced layout.
+  blocks[blockIndex] = { ...block, ...patch, responsive: null };
+  const pages = [...n.pages];
+  pages[pageIndex] = { ...page, blocks };
+  return { ...n, pages };
+}
+
+/** Auto-align — arrange every element on a page into a clean, centered
+ *  vertical stack. Each block is horizontally centered (xPct 50) and the
+ *  blocks are spread evenly down the canvas, top to bottom, so nothing piles
+ *  in a corner. Rotation is reset and per-device overrides are cleared so the
+ *  layout is identical on mobile / tablet / desktop. Sizes the user set are
+ *  kept. Undoable like any other edit. */
+export function autoAlignBuilderPage(state, pageIndex) {
+  const n = normalizeBuilderState(state);
+  const pi = Number.isFinite(Number(pageIndex)) ? Number(pageIndex) : 0;
+  const page = n.pages[pi];
+  if (!page) return n;
+  const src = page.blocks || [];
+  const count = src.length;
+  // Centre band: leave a comfortable margin top & bottom, spread the rest.
+  const TOP = 15;
+  const BOTTOM = 85;
+  const blocks = src.map((b, i) => {
+    const yPct = count <= 1
+      ? 50
+      : +(TOP + ((BOTTOM - TOP) * i) / (count - 1)).toFixed(3);
+    return {
+      ...b,
+      xPct: 50,
+      yPct,
+      x: '',
+      y: '',
+      anchor: 'center',
+      rotateDeg: 0,
+      responsive: null,
+    };
+  });
+  const pages = [...n.pages];
+  pages[pi] = { ...page, blocks };
+  return { ...n, pages };
+}
+
+/** Commit a dragged position as an explicit centre PERCENTAGE (0–100) of the
+ *  element's actual containing box. The canvas measures the drop against the
+ *  same box the CSS uses to resolve `top/left` %, so the block lands exactly
+ *  where it was released — no vertical drift when the page content overflows
+ *  the artboard. Clears per-device overrides (one synced layout). */
+export function updateBuilderBlockPositionPctSynced(state, blockSlotRaw, xPctRaw, yPctRaw) {
+  const xp = Number(xPctRaw);
+  const yp = Number(yPctRaw);
+  const xPct = Number.isFinite(xp) ? +Math.max(0, Math.min(100, xp)).toFixed(3) : '';
+  const yPct = Number.isFinite(yp) ? +Math.max(0, Math.min(100, yp)).toFixed(3) : '';
+  return setBlockBase(state, blockSlotRaw, { xPct, yPct, x: '', y: '', anchor: 'center' });
+}
+
+export function updateBuilderBlockPositionSynced(state, blockSlotRaw, xRaw, yRaw, dimsDevice) {
+  const n = normalizeBuilderState(state);
+  const dims = deviceArtboardDims(n, dimsDevice);
+  const x = Number(xRaw);
+  const y = Number(yRaw);
+  const xPct = Number.isFinite(x) && dims.width > 0 ? +Math.max(0, Math.min(100, (x / dims.width) * 100)).toFixed(3) : '';
+  const yPct = Number.isFinite(y) && dims.height > 0 ? +Math.max(0, Math.min(100, (y / dims.height) * 100)).toFixed(3) : '';
+  return setBlockBase(state, blockSlotRaw, { xPct, yPct, x: '', y: '', anchor: 'center' });
+}
+
+export function updateBuilderBlockSizeSynced(state, blockSlotRaw, wRaw, hRaw, dimsDevice) {
+  const n = normalizeBuilderState(state);
+  const active = deviceArtboardDims(n, dimsDevice);
+  const base = deviceArtboardDims(n, n.responsive?.base);
+  // Scale the resize from the previewed artboard to the base artboard so the
+  // element holds its relative size on every device.
+  const factor = active.width > 0 ? base.width / active.width : 1;
+  const w = Number(wRaw) * factor;
+  const h = Number(hRaw) * factor;
+  const m = /^p(\d+)_b(\d+)$/.exec(String(blockSlotRaw || '').trim());
+  if (!m) return n;
+  const block = n.pages[Number(m[1]) - 1]?.blocks?.[Number(m[2])];
+  if (block?.type === 'sticker') {
+    const size = Math.max(20, Math.min(240, Math.round(Math.max(w, h))));
+    return setBlockBase(state, blockSlotRaw, { size });
+  }
+  return setBlockBase(state, blockSlotRaw, {
+    width: Math.max(8, Math.min(2000, Math.round(w))),
+    height: Math.max(8, Math.min(2000, Math.round(h))),
+  });
+}
+
+export function updateBuilderBlockRotateSynced(state, blockSlotRaw, degRaw) {
+  const deg = Math.max(-180, Math.min(180, Math.round(Number(degRaw) || 0)));
+  return setBlockBase(state, blockSlotRaw, { rotateDeg: deg });
 }

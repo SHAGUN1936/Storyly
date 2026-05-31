@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
+import PasswordField from '../components/PasswordField';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api/api';
 import { APP_INPUT_BIG } from '../lib/uiClasses';
@@ -32,9 +34,12 @@ export default function Login() {
     try {
       const { user } = await authAPI.login({ email, password });
       login(user);
+      toast.success(`Welcome back, ${user.name?.split(' ')[0] || 'friend'}`);
       navigate(user.role === 'admin' ? '/admin' : '/studio');
     } catch (err) {
-      setError(err.message || 'Login failed');
+      const msg = err.message || 'Login failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -80,7 +85,7 @@ export default function Login() {
     <div className="relative min-h-screen overflow-hidden">
       <CursorHalo />
       <AuroraBackground variant="cosmic" intensity={0.85} />
-      <ParticleField count={48} color="#A855F7" />
+      <ParticleField count={48} color="#8B5CF6" />
       <FloatingDecor density="normal" opacity={0.14} size={44} />
 
       <div className="absolute top-4 right-4 z-30">
@@ -95,7 +100,7 @@ export default function Login() {
           animate="visible"
           className="lg:w-1/2 flex flex-col justify-center px-6 py-12 lg:px-16 xl:px-24 relative"
         >
-          <NeonOrb color="#A855F7" size="22rem" style={{ top: '-3rem', left: '-3rem' }} />
+          <NeonOrb color="#8B5CF6" size="22rem" style={{ top: '-3rem', left: '-3rem' }} />
 
           <motion.div variants={fadeUp}>
             <Link to="/landing" className="inline-flex items-center gap-3 mb-12 w-max group">
@@ -148,7 +153,7 @@ export default function Login() {
 
         {/* Right form */}
         <div className="flex-1 flex items-center justify-center px-4 py-10 lg:p-12 relative">
-          <NeonOrb color="#06B6D4" size="20rem" style={{ bottom: '2rem', right: '-2rem' }} opacity={0.4} />
+          <NeonOrb color="#7C3AED" size="20rem" style={{ bottom: '2rem', right: '-2rem' }} opacity={0.4} />
 
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.97 }}
@@ -156,7 +161,7 @@ export default function Login() {
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-md"
           >
-            <GlassCard tone="strong" withBorder className="!rounded-[2rem] p-8 sm:p-10 relative overflow-hidden">
+            <GlassCard tone="strong" withBorder className="auth-card !rounded-[2rem] p-8 sm:p-10 relative overflow-hidden">
               <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
               <div className="mb-7">
                 <h2 className="font-display text-3xl font-extrabold tracking-tight text-white">Sign in</h2>
@@ -187,8 +192,7 @@ export default function Login() {
                 </div>
                 <div>
                   <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">Password</label>
-                  <input
-                    type="password"
+                  <PasswordField
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={APP_INPUT_BIG}

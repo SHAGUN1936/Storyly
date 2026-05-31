@@ -8,8 +8,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'Outfit', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'Inter', 'system-ui', 'sans-serif'],
+        // Inter for body (industry standard, crisp at every size) +
+        // Outfit for display headings (modern geometric with edge —
+        // pairs cleanly with the candy palette without going cute).
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       colors: {
@@ -22,29 +25,38 @@ export default {
           600: '#1F2540',
           500: '#262C46',
         },
-        // Primary brand — fuchsia/violet luminous
+        // Primary brand — soft violet (Soft Pastel palette)
         brand: {
-          50: '#FAF5FF',
-          100: '#F3E8FF',
-          200: '#E9D5FF',
-          300: '#D8B4FE',
-          400: '#C084FC',
-          500: '#A855F7',
-          600: '#9333EA',
-          700: '#7C3AED',
-          800: '#6B21A8',
-          900: '#581C87',
+          50: '#F5F3FF',
+          100: '#EDE9FE',
+          200: '#DDD6FE',
+          300: '#C4B5FD',
+          400: '#A78BFA',
+          500: '#8B5CF6',
+          600: '#7C3AED',
+          700: '#6D28D9',
+          800: '#5B21B6',
+          900: '#4C1D95',
         },
-        // Neon cyan accent
+        // Teal success accent — new in pastel palette.
+        teal2: {
+          400: '#2DD4BF',
+          500: '#14B8A6',
+          600: '#0D9488',
+        },
+        // `neon` token kept for backwards compatibility, but the values are
+        // now lavender/violet shades — the previous indigo readout too
+        // "blue + glowing" in dark mode. Lavender keeps the candy identity
+        // without the cool blue cast.
         neon: {
-          50: '#ECFEFF',
-          100: '#CFFAFE',
-          200: '#A5F3FC',
-          300: '#67E8F9',
-          400: '#22D3EE',
-          500: '#06B6D4',
-          600: '#0891B2',
-          700: '#0E7490',
+          50:  '#F5F3FF',
+          100: '#EDE9FE',
+          200: '#DDD6FE',
+          300: '#C4B5FD',
+          400: '#A78BFA',
+          500: '#8B5CF6',
+          600: '#7C3AED',
+          700: '#6D28D9',
         },
         // Aurora purples
         aurora: {
@@ -78,22 +90,23 @@ export default {
         },
       },
       backgroundImage: {
+        // Soft Pastel palette — indigo → violet → pink with teal sparkle.
         'aurora':
-          'conic-gradient(from 180deg at 50% 50%, #06B6D4 0deg, #7C3AED 120deg, #A855F7 240deg, #06B6D4 360deg)',
+          'conic-gradient(from 180deg at 50% 50%, #6366F1 0deg, #EC4899 120deg, #8B5CF6 240deg, #6366F1 360deg)',
         'aurora-soft':
-          'radial-gradient(60% 50% at 30% 20%, rgba(124,58,237,0.35) 0%, transparent 60%), radial-gradient(50% 50% at 80% 60%, rgba(6,182,212,0.30) 0%, transparent 60%), radial-gradient(40% 40% at 40% 90%, rgba(168,85,247,0.25) 0%, transparent 60%)',
+          'radial-gradient(60% 50% at 30% 20%, rgba(99,102,241,0.28) 0%, transparent 60%), radial-gradient(50% 50% at 80% 60%, rgba(236,72,153,0.22) 0%, transparent 60%), radial-gradient(40% 40% at 40% 90%, rgba(139,92,246,0.20) 0%, transparent 60%), radial-gradient(35% 35% at 10% 90%, rgba(20,184,166,0.10) 0%, transparent 60%)',
         'gz-grad':
-          'linear-gradient(120deg, #06B6D4 0%, #7C3AED 50%, #A855F7 100%)',
+          'linear-gradient(120deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%)',
         'gz-grad-warm':
-          'linear-gradient(120deg, #F472B6 0%, #A855F7 50%, #06B6D4 100%)',
+          'linear-gradient(120deg, #EC4899 0%, #8B5CF6 50%, #6366F1 100%)',
         'glass-shine':
           'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0) 50%)',
         'story-ring':
-          'conic-gradient(from 210deg, #06B6D4, #7C3AED, #A855F7, #F472B6, #06B6D4)',
+          'conic-gradient(from 210deg, #6366F1, #EC4899, #8B5CF6, #7C3AED, #6366F1)',
         'soft-grad':
           'linear-gradient(135deg, #1F2540 0%, #0B0F19 100%)',
         'mesh':
-          'radial-gradient(at 20% 10%, rgba(124,58,237,0.18) 0%, transparent 40%), radial-gradient(at 80% 0%, rgba(6,182,212,0.16) 0%, transparent 40%), radial-gradient(at 0% 90%, rgba(168,85,247,0.16) 0%, transparent 40%), radial-gradient(at 100% 100%, rgba(244,114,182,0.12) 0%, transparent 40%)',
+          'radial-gradient(at 20% 10%, rgba(99,102,241,0.18) 0%, transparent 40%), radial-gradient(at 80% 0%, rgba(236,72,153,0.16) 0%, transparent 40%), radial-gradient(at 0% 90%, rgba(139,92,246,0.16) 0%, transparent 40%), radial-gradient(at 100% 100%, rgba(20,184,166,0.10) 0%, transparent 40%)',
         'grid':
           'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
       },
@@ -102,12 +115,13 @@ export default {
         'shimmer': '200% 100%',
       },
       boxShadow: {
-        // Premium neon glows
-        'pop': '0 24px 70px -20px rgba(124,58,237,0.55), 0 0 0 1px rgba(168,85,247,0.20)',
+        // Soft pastel glows — gentler than the old neon spec.
+        'pop': '0 20px 60px -22px rgba(124,58,237,0.45), 0 0 0 1px rgba(139,92,246,0.18)',
         'popSoft': '0 16px 50px -20px rgba(0,0,0,0.55)',
-        'glow-brand': '0 0 40px -6px rgba(168,85,247,0.55)',
-        'glow-neon': '0 0 40px -6px rgba(6,182,212,0.55)',
-        'glow-warm': '0 0 40px -6px rgba(244,114,182,0.45)',
+        'glow-brand': '0 0 36px -6px rgba(139,92,246,0.45)',
+        'glow-neon': '0 0 36px -6px rgba(99,102,241,0.45)',
+        'glow-warm': '0 0 36px -6px rgba(236,72,153,0.40)',
+        'glow-mint': '0 0 36px -6px rgba(20,184,166,0.35)',
         'inner-glow': 'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(255,255,255,0.04)',
         'glass': '0 30px 80px -30px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
         'card': '0 16px 50px -28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)',

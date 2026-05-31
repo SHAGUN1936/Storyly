@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 
 /**
  * Lightweight canvas particle field — drifting dots with subtle parallax.
@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
  */
 export default function ParticleField({
   count = 56,
-  color = '#A855F7',
+  color = '#8B5CF6',
   className = '',
   speed = 0.18,
   size = 1.2,

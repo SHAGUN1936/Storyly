@@ -1,8 +1,11 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
+import PasswordField from '../components/PasswordField';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api/api';
+import celebrate from '../lib/celebrate';
 import { APP_INPUT_BIG } from '../lib/uiClasses';
 import { StorylyMark } from '../components/StorylyLogo';
 import ThemeToggle from '../components/ThemeToggle';
@@ -32,9 +35,13 @@ export default function Signup() {
     try {
       const { user } = await authAPI.signup({ name, email, password });
       login(user);
+      toast.success(`Welcome to Storyly, ${user.name?.split(' ')[0] || 'friend'} ✨`);
+      celebrate('cheer');
       navigate(user.role === 'admin' ? '/admin' : '/studio');
     } catch (err) {
-      setError(err.message || 'Signup failed');
+      const msg = err.message || 'Signup failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -44,9 +51,9 @@ export default function Signup() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <CursorHalo color="#F472B6" />
+      <CursorHalo color="#EC4899" />
       <AuroraBackground variant="warm" intensity={0.85} />
-      <ParticleField count={48} color="#F472B6" />
+      <ParticleField count={48} color="#EC4899" />
       <FloatingDecor density="normal" opacity={0.14} size={44} items={['🎉', '✨', '💍', '🎂', '💌', '🪩', '🎵', '💞']} />
 
       <div className="absolute top-4 right-4 z-30">
@@ -60,7 +67,7 @@ export default function Signup() {
           animate="visible"
           className="lg:w-1/2 flex flex-col justify-center px-6 py-12 lg:px-16 xl:px-24 relative"
         >
-          <NeonOrb color="#F472B6" size="22rem" style={{ top: '-3rem', left: '-3rem' }} />
+          <NeonOrb color="#EC4899" size="22rem" style={{ top: '-3rem', left: '-3rem' }} />
 
           <motion.div variants={fadeUp}>
             <Link to="/landing" className="inline-flex items-center gap-3 mb-12 w-max">
@@ -110,7 +117,7 @@ export default function Signup() {
         </motion.div>
 
         <div className="flex-1 flex items-center justify-center px-4 py-10 lg:p-12 relative">
-          <NeonOrb color="#A855F7" size="20rem" style={{ bottom: '2rem', right: '-2rem' }} opacity={0.4} />
+          <NeonOrb color="#8B5CF6" size="20rem" style={{ bottom: '2rem', right: '-2rem' }} opacity={0.4} />
 
           <motion.div
             initial={{ opacity: 0, y: 30, scale: 0.97 }}
@@ -118,7 +125,7 @@ export default function Signup() {
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-md"
           >
-            <GlassCard tone="strong" withBorder className="!rounded-[2rem] p-8 sm:p-10 relative overflow-hidden">
+            <GlassCard tone="strong" withBorder className="auth-card !rounded-[2rem] p-8 sm:p-10 relative overflow-hidden">
               <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
               <div className="mb-7">
                 <h2 className="font-display text-3xl font-extrabold tracking-tight text-white">Create account</h2>
@@ -160,8 +167,7 @@ export default function Signup() {
                 </div>
                 <div>
                   <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">Password</label>
-                  <input
-                    type="password"
+                  <PasswordField
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={APP_INPUT_BIG}

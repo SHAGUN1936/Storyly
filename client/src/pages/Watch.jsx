@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { publicAPI } from '../api/api';
@@ -77,7 +77,7 @@ export default function Watch() {
           animate={{ y: [0, -10, 0], rotate: [-6, 8, -6] }}
           transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <BalloonSticker size={64} color="#F472B6" />
+          <BalloonSticker size={64} color="#EC4899" />
         </motion.div>
         <motion.div
           className="hidden md:block absolute top-24 right-10 z-10"
@@ -103,6 +103,12 @@ export default function Watch() {
               <span className="text-white font-semibold">{video.templateId?.name}</span>
               {video.templateId?.category ? <span className="text-slate-500"> · {video.templateId.category}</span> : null}
             </p>
+            {video.recipientName && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold border" style={{ background: 'rgba(167,139,250,0.14)', borderColor: 'rgba(167,139,250,0.40)', color: '#DDD6FE' }}>
+                <span aria-hidden="true">💌</span>
+                For <span className="truncate max-w-[18ch]">{video.recipientName}</span>
+              </span>
+            )}
             <span className="badge-pill badge-neon hidden sm:inline-flex">
               <span>Live</span>
             </span>
@@ -117,7 +123,7 @@ export default function Watch() {
             className="w-full max-w-3xl"
           >
             <div className="relative">
-              <div className="absolute -inset-1 rounded-[2.5rem] bg-gradient-to-br from-brand-500/40 via-cyan-500/30 to-fuchsia-500/30 blur-2xl opacity-60" />
+              <div className="absolute -inset-1 rounded-[2.5rem] bg-gradient-to-br from-indigo-500/35 via-violet-500/30 to-pink-500/30 blur-2xl opacity-60" />
               <div className="relative rounded-[2rem] overflow-hidden border border-white/10 shadow-pop">
                 <SlideshowBuilder
                   structure={structure}
@@ -147,7 +153,7 @@ export default function Watch() {
           transition={{ duration: 0.7 }}
           className="relative w-full max-w-4xl"
         >
-          <div className="absolute -inset-2 rounded-[2.5rem] bg-gradient-to-br from-brand-500/30 to-cyan-500/30 blur-2xl opacity-60" />
+          <div className="absolute -inset-2 rounded-[2.5rem] bg-gradient-to-br from-indigo-500/30 to-violet-500/30 blur-2xl opacity-60" />
           <div className="relative rounded-[1.75rem] overflow-hidden border border-white/10 shadow-pop">
             <video src={video.videoUrl} controls autoPlay className="w-full" />
           </div>
@@ -155,6 +161,14 @@ export default function Watch() {
             <span className="text-white font-semibold">{video.templateId?.name}</span>
             <span className="text-slate-500"> · {video.templateId?.category}</span>
           </p>
+          {video.recipientName && (
+            <p className="text-center mt-3">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border" style={{ background: 'rgba(167,139,250,0.14)', borderColor: 'rgba(167,139,250,0.40)', color: '#DDD6FE' }}>
+                <span aria-hidden="true">💌</span>
+                Dedicated to {video.recipientName}
+              </span>
+            </p>
+          )}
         </motion.div>
       </div>
     );

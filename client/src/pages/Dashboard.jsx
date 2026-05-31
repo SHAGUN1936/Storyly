@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+﻿import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { templatesAPI } from '../api/api';
+import Button from '../ui/Button';
 import TemplateCard from '../components/TemplateCard';
 import GlassCard from '../ui/GlassCard';
 import GradientText from '../ui/GradientText';
@@ -25,6 +26,7 @@ const CATEGORIES = [
 const TRENDING_LABELS = ['Wedding ✨', 'Birthday 🎂', 'Invitation 💌', 'Save the date 📅', 'RSVP 🎟️', 'Couple 💞', 'Anniversary 💖'];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   // Pre-select the category from the URL if the user landed here from a
   // Landing-page category card (e.g. /studio?category=Wedding). Falls back
@@ -66,6 +68,40 @@ export default function Dashboard() {
     );
   }, [templates, query]);
 
+  /** Smoothly bring the templates section into view, with the floating
+   *  topbar and the chip row's hover-lift accounted for. We target the
+   *  search/chips wrapper (not just `#templates`) so the category pills
+   *  stay visible above the grid after the scroll lands. */
+  const scrollToTemplates = useCallback(() => {
+    const el = document.getElementById('templates-section');
+    if (!el) return;
+    // 96px floating navbar + a few px so the chip row isn't kissing the
+    // navbar edge (its hover-lift would otherwise be clipped).
+    const top = el.getBoundingClientRect().top + window.scrollY - 104;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }, []);
+
+  // Layout.jsx fires this on Create-button clicks when already on /studio.
+  useEffect(() => {
+    const onCreate = () => scrollToTemplates();
+    window.addEventListener('storyly:scroll-to-templates', onCreate);
+    return () => window.removeEventListener('storyly:scroll-to-templates', onCreate);
+  }, [scrollToTemplates]);
+
+  // Cross-page Create-button navigation (?scroll=templates) — wait one
+  // frame for the grid to mount, then scroll smoothly. Clears the param
+  // so refreshing the page doesn't re-trigger.
+  useEffect(() => {
+    if (searchParams.get('scroll') !== 'templates') return;
+    const t = setTimeout(() => {
+      scrollToTemplates();
+      const next = new URLSearchParams(searchParams);
+      next.delete('scroll');
+      setSearchParams(next, { replace: true });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [searchParams, setSearchParams, scrollToTemplates]);
+
   return (
     <div className="mx-auto max-w-7xl">
       {/* ─── Hero (compact) ─── */}
@@ -76,8 +112,8 @@ export default function Dashboard() {
         className="relative mb-8"
       >
         <GlassCard tone="strong" className="!rounded-[1.75rem] p-6 sm:p-8 relative overflow-hidden">
-          <NeonOrb color="#A855F7" size="18rem" style={{ top: '-5rem', right: '-5rem' }} />
-          <NeonOrb color="#06B6D4" size="15rem" style={{ bottom: '-3rem', left: '-3rem' }} opacity={0.4} />
+          <NeonOrb color="#8B5CF6" size="18rem" style={{ top: '-5rem', right: '-5rem' }} />
+          <NeonOrb color="#7C3AED" size="15rem" style={{ bottom: '-3rem', left: '-3rem' }} opacity={0.4} />
           <FloatingDecor density="subtle" opacity={0.14} size={30} />
           <div className="absolute inset-0 bg-grid-soft opacity-30 pointer-events-none" />
 
@@ -97,13 +133,25 @@ export default function Dashboard() {
                 Weddings, birthdays, invitations, glow-ups — pick a cinematic template, swap photos, hit publish. One link, one QR, all the vibes.
               </motion.p>
               <motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2.5">
-                <a href="#templates" className="btn-glow !py-2.5 !px-5 !text-xs">
-                  Browse templates →
-                </a>
-                <Link to="/my-videos" className="btn-ghost !py-2.5 !px-4 !text-xs">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+                <Button size="sm" onClick={scrollToTemplates} iconRight={<span>→</span>}>
+                  Browse templates
+                </Button>
+                <Button
+                  as="a"
+                  variant="ghost"
+                  size="sm"
+                  href="/my-videos"
+                  icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                    </svg>
+                  }
+                >
                   My pages
-                </Link>
+                </Button>
               </motion.div>
             </div>
 
@@ -115,7 +163,7 @@ export default function Dashboard() {
                 animate={{ y: [0, -8, 0], rotate: [-6, 6, -6] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <BalloonSticker size={48} color="#22D3EE" />
+                <BalloonSticker size={48} color="#A78BFA" />
               </motion.div>
               <motion.div
                 className="absolute top-1/3 -right-2 z-10"
@@ -132,10 +180,12 @@ export default function Dashboard() {
                 <StarSticker size={32} />
               </motion.div>
               {[
-                { emoji: '💖', bg: 'linear-gradient(135deg,#F472B6 0%,#E11D48 60%,#9F1239 100%)' },
-                { emoji: '🎂', bg: 'linear-gradient(135deg,#FBBF24 0%,#F472B6 55%,#A855F7 100%)' },
-                { emoji: '🫶', bg: 'linear-gradient(135deg,#FB923C 0%,#F97316 45%,#C2410C 100%)' },
-                { emoji: '📸', bg: 'linear-gradient(135deg,#A78BFA 0%,#7C3AED 50%,#4C1D95 100%)' },
+                // Baby pastel sticker gradients — match the trending-template
+                // marquee aesthetic instead of the old saturated brights.
+                { emoji: '💖', bg: 'linear-gradient(135deg,#FBCFE8 0%,#F9A8D4 55%,#DDD6FE 100%)' },
+                { emoji: '🎂', bg: 'linear-gradient(135deg,#FED7AA 0%,#FBCFE8 50%,#DDD6FE 100%)' },
+                { emoji: '🫶', bg: 'linear-gradient(135deg,#BAE6FD 0%,#DDD6FE 50%,#FBCFE8 100%)' },
+                { emoji: '📸', bg: 'linear-gradient(135deg,#DDD6FE 0%,#C4B5FD 50%,#FBCFE8 100%)' },
               ].map((s, i) => (
                 <motion.div
                   key={s.emoji}
@@ -155,19 +205,14 @@ export default function Dashboard() {
                     left: `${i * 56}px`,
                     zIndex: i,
                     background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))',
-                    boxShadow: '0 18px 40px -14px rgba(0,0,0,0.55), 0 6px 20px -6px rgba(168,85,247,0.45)',
+                    boxShadow: '0 18px 40px -14px rgba(0,0,0,0.55), 0 6px 20px -6px rgba(139,92,246,0.45)',
                   }}
                 >
                   <div
                     className="w-20 h-36 rounded-[1.1rem] flex items-center justify-center text-4xl relative overflow-hidden"
                     style={{ background: s.bg }}
                   >
-                    <div className="absolute inset-x-2 top-2 flex gap-1">
-                      <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-                      <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                      <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                    </div>
-                    <span className="drop-shadow-[0_8px_18px_rgba(0,0,0,0.45)]">{s.emoji}</span>
+                    <span className="drop-shadow-[0_8px_18px_rgba(0,0,0,0.18)]">{s.emoji}</span>
                   </div>
                 </motion.div>
               ))}
@@ -190,31 +235,48 @@ export default function Dashboard() {
         </div>
       </motion.section>
 
+      {/* Search + chips + grid live under one wrapper so the scroll helper
+          can land the user on a viewport that shows BOTH the category
+          pills and the template grid at once (instead of just the grid,
+          which left the chips clipped behind the floating navbar). */}
+      <section id="templates-section" style={{ scrollMarginTop: '104px' }}>
+
       {/* ─── Search ─── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-5 flex items-center gap-3 rounded-full bg-white/[0.04] border border-white/10 px-5 py-3 backdrop-blur max-w-xl"
+        className="search-shell mb-5 flex items-center gap-3 rounded-full px-5 py-3 backdrop-blur max-w-xl"
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon shrink-0">
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
         </svg>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search templates: birthday, wedding, glow up…"
-          className="flex-1 bg-transparent outline-none text-sm text-slate-100 placeholder:text-slate-500"
+          className="search-input flex-1 bg-transparent outline-none text-sm font-medium"
         />
         {query && (
-          <button onClick={() => setQuery('')} className="text-slate-500 hover:text-white">✕</button>
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            aria-label="Clear search"
+            className="search-clear w-6 h-6 rounded-full inline-flex items-center justify-center text-xs"
+          >
+            ✕
+          </button>
         )}
       </motion.div>
 
-      {/* ─── Category chips ─── */}
+      {/* ─── Category chips ───
+          pt-2 / pb-3 gives breathing room above & below so the hover-lift
+          (-3px translate + scale) is fully visible. Without it the chip
+          top was being clipped because `overflow-x-auto` implicitly forces
+          `overflow-y: auto` on the same element. */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex gap-2 sm:gap-3 mb-8 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pb-1"
+        className="flex gap-2 sm:gap-3 mb-8 overflow-x-auto hide-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pt-2 pb-3"
       >
         {CATEGORIES.map((c) => {
           const active = category === c.name;
@@ -229,10 +291,22 @@ export default function Dashboard() {
                 if (c.name === 'All') next.delete('category');
                 else next.set('category', c.name);
                 setSearchParams(next, { replace: true });
+                // Snap the templates grid into view so the filter result
+                // is visible without the user having to scroll manually.
+                scrollToTemplates();
               }}
               className={`${active ? 'chip chip-active' : 'chip chip-default'} whitespace-nowrap`}
             >
-              <span className="text-base">{c.emoji}</span>
+              <span
+                className={`inline-flex items-center justify-center text-base leading-none ${
+                  active
+                    ? 'w-6 h-6 rounded-full bg-white/95 text-[14px] shadow-[0_2px_6px_-2px_rgba(0,0,0,0.25)]'
+                    : ''
+                }`}
+                aria-hidden="true"
+              >
+                {c.emoji}
+              </span>
               <span>{c.name}</span>
             </button>
           );
@@ -279,9 +353,23 @@ export default function Dashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i * 0.03, 0.4), ease: [0.22, 1, 0.36, 1] }}
                   >
-                    <Link to={`/template/${t._id}`}>
+                    {/* Card click → template preview. The recipient
+                        prompt now lives inside the preview, fired by
+                        its Customize CTA, so users see the template
+                        first and only commit a name when they're ready. */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const qs = t.sourceType === 'BuilderTemplate'
+                          ? '?src=BuilderTemplate'
+                          : '';
+                        navigate(`/template/${t._id}${qs}`);
+                      }}
+                      className="block w-full text-left"
+                      aria-label={`Preview ${t.name || 'template'}`}
+                    >
                       <TemplateCard template={t} />
-                    </Link>
+                    </button>
                   </motion.div>
                 ))}
               </motion.div>
@@ -289,6 +377,9 @@ export default function Dashboard() {
           </AnimatePresence>
         )}
       </div>
+
+      </section>
+
     </div>
   );
 }

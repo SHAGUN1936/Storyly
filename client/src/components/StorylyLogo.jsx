@@ -8,49 +8,132 @@
  * (peach → coral → fuchsia → violet) on a rounded square, with a custom
  * "S" path so it doesn't depend on a webfont being loaded.
  */
+import { useEffect, useState } from 'react';
+
+/**
+ * Storyly mark — a polaroid sticker.
+ *
+ * In LIGHT mode the photo area is a sunset candy gradient (peach → pink
+ * → lavender → violet); in DARK mode it flips to the same violet badge
+ * gradient as the theme-toggle + primary CTA so the whole dark-mode
+ * brand reads as one coordinated violet identity. The "S" inverts to
+ * white on dark, deep violet on light.
+ */
 export function StorylyMark({ size = 40, className = '', idSuffix = '' }) {
-  // Unique gradient IDs prevent collisions when multiple marks render on one page.
-  const gradId = `storyly-grad-${idSuffix || Math.random().toString(36).slice(2, 8)}`;
-  const shineId = `storyly-shine-${idSuffix || Math.random().toString(36).slice(2, 8)}`;
+  const seed       = idSuffix || Math.random().toString(36).slice(2, 8);
+  const photoId    = `storyly-photo-${seed}`;
+  const heartId    = `storyly-heart-${seed}`;
+  const polaroidId = `storyly-polaroid-${seed}`;
+
+  // Track the active theme so the photo gradient can swap between the
+  // pastel sunset (light) and the violet badge (dark).
+  const [isLight, setIsLight] = useState(() => {
+    if (typeof document === 'undefined') return false;
+    return document.documentElement.classList.contains('light');
+  });
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const read = () => setIsLight(document.documentElement.classList.contains('light'));
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => obs.disconnect();
+  }, []);
+
+  // Both modes use deep indigo for the "S" — dark text reads on both the
+  // light pastel sunset AND the dulled dark lavender bubble, so the
+  // brand glyph is consistent across themes.
+  const sStrokeColor = '#1E1B4B';
+  const sShadow = isLight
+    ? 'drop-shadow(0 1px 1px rgba(255,255,255,0.65))'
+    : 'drop-shadow(0 1px 1px rgba(255,255,255,0.45))';
+
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 48 48"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
+      className={`storyly-mark ${className}`}
       aria-label="Storyly"
     >
       <defs>
-        <linearGradient id={gradId} x1="2" y1="2" x2="46" y2="46" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#fb923c" />
-          <stop offset="38%" stopColor="#f43f5e" />
-          <stop offset="72%" stopColor="#d946ef" />
-          <stop offset="100%" stopColor="#7c3aed" />
+        {isLight ? (
+          <linearGradient id={photoId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%"   stopColor="#FED7AA" />
+            <stop offset="35%"  stopColor="#FBCFE8" />
+            <stop offset="70%"  stopColor="#DDD6FE" />
+            <stop offset="100%" stopColor="#C4B5FD" />
+          </linearGradient>
+        ) : (
+          /* Dark mode photo — dulled lavender → deep violet radial
+             matching the buttons + theme-toggle. Deep indigo "S" sits
+             on it cleanly. */
+          <radialGradient id={photoId} cx="25%" cy="20%" r="110%">
+            <stop offset="0%"   stopColor="#C4B5FD" />
+            <stop offset="45%"  stopColor="#A78BFA" />
+            <stop offset="80%"  stopColor="#8B5CF6" />
+            <stop offset="100%" stopColor="#6D28D9" />
+          </radialGradient>
+        )}
+        <linearGradient id={heartId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%"  stopColor="#FBCFE8" />
+          <stop offset="100%" stopColor="#EC4899" />
         </linearGradient>
-        <linearGradient id={shineId} x1="0" y1="0" x2="0" y2="48" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.32" />
-          <stop offset="50%" stopColor="#ffffff" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        <linearGradient id={polaroidId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor="#FFFFFF" />
+          <stop offset="100%" stopColor="#F8FAFC" />
         </linearGradient>
       </defs>
 
-      {/* Rounded square with brand gradient */}
-      <rect width="48" height="48" rx="13" fill={`url(#${gradId})`} />
-      {/* Subtle top shine for depth */}
-      <rect width="48" height="48" rx="13" fill={`url(#${shineId})`} />
-      {/* Soft inner border ring */}
-      <rect x="0.75" y="0.75" width="46.5" height="46.5" rx="12.25" fill="none" stroke="#ffffff" strokeOpacity="0.22" strokeWidth="0.75" />
+      {/* Tilted polaroid stack — drop-shadow filter underneath for depth */}
+      <g transform="rotate(-5 24 24)" filter="drop-shadow(0 2px 4px rgba(91,33,182,0.18))">
+        {/* Polaroid backing (white card with rounded corners) */}
+        <rect x="6" y="4" width="36" height="40" rx="4" fill={`url(#${polaroidId})`} stroke="#E2E8F0" strokeWidth="0.5" />
 
-      {/* Bold "S" — handcrafted path, no webfont dependency */}
-      <path
-        d="M 33 17 C 31.6 14 28.1 12.2 23.8 12.2 C 18.3 12.2 14.2 15.2 14.2 19.6 C 14.2 24 17.6 25.5 22.8 26.4 C 26.7 27 28.5 27.7 28.5 29.5 C 28.5 31.3 26.6 32.2 23.7 32.2 C 20 32.2 16.9 30.6 15 28.2 L 12.6 31.2 C 15.2 34.2 19.1 35.8 23.8 35.8 C 29.9 35.8 33.7 33 33.7 28.4 C 33.7 23.7 30.2 22.3 24.9 21.5 C 21.1 20.9 19.3 20.2 19.3 18.8 C 19.3 17.1 21.1 16.3 23.7 16.3 C 26.5 16.3 28.7 17.4 30.3 19.3 L 33 17 Z"
-        fill="#ffffff"
-      />
+        {/* Photo area — candy gradient like a sunset capture */}
+        <rect x="9" y="7" width="30" height="26" rx="2.5" fill={`url(#${photoId})`} />
 
-      {/* Tiny Instagram-story-style indicator dot */}
-      <circle cx="40" cy="9" r="3.5" fill="#ffffff" />
-      <circle cx="40" cy="9" r="2" fill="#f43f5e" />
+        {/* Bold "S" — main brand mark, sitting prominently inside the
+            photo so the logo reads as "Storyly" at a glance. Deep violet
+            with a soft white drop-shadow so it pops on the pastel photo. */}
+        <text
+          x="24"
+          y="22"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontFamily="'Outfit', 'Inter', system-ui, sans-serif"
+          fontWeight="800"
+          fontSize="22"
+          fill={sStrokeColor}
+          style={{ letterSpacing: '-0.04em', filter: sShadow }}
+        >S</text>
+
+        {/* Mini heart sticker tucked into the bottom-right of the photo */}
+        <g transform="translate(33 28) scale(0.20) translate(-24 -22)">
+          <path
+            d="M24 38 L8 22 Q3 16 8 11 Q13 6 18 11 L24 17 L30 11 Q35 6 40 11 Q45 16 40 22 Z"
+            fill={`url(#${heartId})`}
+            stroke="#FFFFFF"
+            strokeWidth="3"
+          />
+        </g>
+
+        {/* Caption strip — three dots like a doodle signature */}
+        <circle cx="16" cy="39" r="0.9" fill="#CBD5E1" />
+        <circle cx="20" cy="39" r="0.9" fill="#CBD5E1" />
+        <circle cx="24" cy="39" r="0.9" fill="#CBD5E1" />
+      </g>
+
+      {/* Single sparkle popping out the top-right — playful corner accent */}
+      <g className="storyly-mark-sparkle" style={{ transformOrigin: '41px 7px' }}>
+        <path
+          d="M41 3 L42.4 6.6 L46 8 L42.4 9.4 L41 13 L39.6 9.4 L36 8 L39.6 6.6 Z"
+          fill="#FDE68A"
+          stroke="#FFFFFF"
+          strokeWidth="0.6"
+        />
+      </g>
     </svg>
   );
 }

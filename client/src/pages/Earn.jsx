@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,7 @@ import FloatingDecor from '../ui/FloatingDecor';
 import CursorHalo from '../ui/CursorHalo';
 import AnimatedCount from '../ui/AnimatedCount';
 import { StarSticker, GiftSticker, DiscoSticker } from '../ui/CartoonStickers';
-import { fadeUp, fadeUpSmall, stagger, blurUp } from '../motion/variants';
+import { fadeUp, fadeUpSmall, stagger, blurUp, pageTransition } from '../motion/variants';
 
 const PRICING = [
   {
@@ -139,7 +139,11 @@ export default function Earn() {
   }, [location.hash]);
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <motion.div
+      initial={pageTransition.initial}
+      animate={pageTransition.animate}
+      className="relative min-h-screen overflow-x-hidden"
+    >
       <CursorHalo />
       <div className="pointer-events-none fixed inset-x-0 top-24 bottom-0 z-0">
         <FloatingDecor density="normal" opacity={0.15} size={48} items={['💰', '✨', '🎨', '🚀', '💸', '🪩', '⭐', '🎁', '💎', '🤝']} />
@@ -176,7 +180,7 @@ export default function Earn() {
       {/* ─── HERO ─── */}
       <section className="relative pt-32 pb-20 sm:pt-44 sm:pb-28">
         <AuroraBackground variant="warm" intensity={0.7} />
-        <ParticleField count={50} color="#FBBF24" />
+        <ParticleField count={50} color="#A78BFA" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -208,7 +212,7 @@ export default function Earn() {
 
             {/* Right — floating earnings cards */}
             <div className="relative hidden md:block h-[440px]">
-              <NeonOrb color="#FBBF24" size="22rem" style={{ top: '-3rem', right: '-3rem' }} />
+              <NeonOrb color="#A78BFA" size="22rem" style={{ top: '-3rem', right: '-3rem' }} />
               <motion.div
                 className="absolute top-4 right-4 keep-dark"
                 animate={{ y: [0, -10, 0], rotate: [-4, 4, -4] }}
@@ -286,7 +290,7 @@ export default function Earn() {
           id={m.id}
           className="relative py-20 sm:py-28 scroll-mt-28"
         >
-          <NeonOrb color={i === 0 ? '#FBBF24' : i === 1 ? '#A855F7' : '#22D3EE'} size="32rem" style={i % 2 === 0 ? { top: '-10rem', left: '-10rem' } : { top: '-10rem', right: '-10rem' }} opacity={0.3} />
+          <NeonOrb color={i === 0 ? '#A78BFA' : i === 1 ? '#8B5CF6' : '#A78BFA'} size="32rem" style={i % 2 === 0 ? { top: '-10rem', left: '-10rem' } : { top: '-10rem', right: '-10rem' }} opacity={0.3} />
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -305,7 +309,7 @@ export default function Earn() {
                 <ul className="mt-7 space-y-3">
                   {m.bullets.map((b) => (
                     <li key={b} className="flex items-center gap-3 text-slate-200">
-                      <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-white"><Check size={12} strokeWidth={3} /></span>
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white"><Check size={12} strokeWidth={3} /></span>
                       {b}
                     </li>
                   ))}
@@ -320,7 +324,7 @@ export default function Earn() {
 
               <motion.div variants={fadeUp} className={i % 2 === 1 ? 'lg:[direction:ltr]' : ''}>
                 <GlassCard tone="strong" withBorder withSpotlight className="!rounded-[2rem] p-10 text-center relative overflow-hidden">
-                  <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/20 to-cyan-500/10 border border-white/10 drop-shadow-[0_10px_30px_rgba(168,85,247,0.4)]">
+                  <div className="mb-6 inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-violet-500/15 border border-white/10 drop-shadow-[0_10px_30px_rgba(139,92,246,0.4)]">
                     <m.Icon size={42} strokeWidth={1.6} className="text-brand-200" />
                   </div>
                   <p className="font-display text-2xl font-extrabold text-white">{m.title}</p>
@@ -382,7 +386,7 @@ export default function Earn() {
                   <ul className="mt-6 space-y-2.5">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5 text-sm text-slate-200">
-                        <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-white"><Check size={9} strokeWidth={3} /></span>
+                        <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white"><Check size={9} strokeWidth={3} /></span>
                         {f}
                       </li>
                     ))}
@@ -407,7 +411,7 @@ export default function Earn() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <GlassCard tone="strong" className="!rounded-[2.5rem] p-10 sm:p-14 text-center relative overflow-hidden">
             <AuroraBackground variant="warm" intensity={0.4} showGrid={false} />
-            <ParticleField count={28} color="#FBBF24" />
+            <ParticleField count={28} color="#A78BFA" />
             <div className="relative">
               <span className="eyebrow"><span>Get started in 2 minutes</span></span>
               <h2 className="mt-5 section-display">
@@ -430,6 +434,6 @@ export default function Earn() {
 
       <Footer variant="landing" />
       <div className="h-12" />
-    </div>
+    </motion.div>
   );
 }

@@ -78,7 +78,7 @@ const newBody = `  return (
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${t.published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${t.published ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-700'}`}>
                         {t.published ? 'Published' : 'Draft'}
                       </span>
                       <button
@@ -142,7 +142,7 @@ const newBody = `  return (
           ) : (
             <div className="space-y-6">
               {error && !nameRequiredError && <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
-              {success && <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>}
+              {success && <p className="rounded-2xl bg-teal-50 px-4 py-3 text-sm text-teal-700">{success}</p>}
 
               {!editing && createStep === 1 && (
                 <div className="space-y-6 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-6">

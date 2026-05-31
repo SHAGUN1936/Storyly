@@ -114,3 +114,67 @@ export const logout = (req, res) => {
   res.cookie('token', '', { ...cookieOptions, maxAge: 0 });
   res.json({ message: 'Logged out' });
 };
+
+/**
+ * PATCH /auth/me — update the signed-in user's editable profile fields.
+ * Currently allows: name, avatar.
+ * Email is NOT editable (unique identifier, used for billing/login).
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, avatar } = req.body || {};
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ message: 'Name is required' });
+    }
+    if (name.trim().length > 80) {
+      return res.status(400).json({ message: 'Name must be 80 characters or fewer' });
+    }
+    req.user.name = name.trim();
+    if (typeof avatar === 'string') req.user.avatar = avatar.trim();
+    await req.user.save();
+    res.json({
+      user: {
+        id: req.user._id,
+        email: req.user.email,
+        name: req.user.name,
+        avatar: req.user.avatar,
+        role: req.user.role,
+      }
+    });
+  } catch (err) {
+    console.error('[updateProfile]', err);
+    const fe = friendlyError(err, 'Could not update profile.');
+    res.status(fe.status).json({ message: fe.message });
+  }
+};
+
+/**
+ * POST /auth/password — change the signed-in user's password.
+ * Requires the current password for verification.
+ * Google-only accounts (no local password) can set one for the first time.
+ */
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+    if (req.user.password) {
+      // User has an existing password — must verify it.
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Current password is required' });
+      }
+      const match = await req.user.comparePassword(currentPassword);
+      if (!match) {
+        return res.status(401).json({ message: 'Current password is incorrect' });
+      }
+    }
+    req.user.password = newPassword; // pre-save hook re-hashes
+    await req.user.save();
+    res.json({ message: 'Password updated' });
+  } catch (err) {
+    console.error('[changePassword]', err);
+    const fe = friendlyError(err, 'Could not update password.');
+    res.status(fe.status).json({ message: fe.message });
+  }
+};

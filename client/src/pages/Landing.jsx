@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+﻿import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import gsap from 'gsap';
@@ -20,14 +20,18 @@ import {
   BalloonSticker, CakeSticker, HeartSticker, RingSticker,
   ConfettiSticker, StarSticker, DiscoSticker, GiftSticker,
 } from '../ui/CartoonStickers';
-import { fadeUp, fadeUpSmall, stagger, blurUp } from '../motion/variants';
+import { fadeUp, fadeUpSmall, stagger, blurUp, pageTransition } from '../motion/variants';
 
+// Baby pastel tile gradients — each card uses a CROSS-HUE candy pairing
+// (warm + cool together) so even the "yellow" and "green" cards still
+// have a violet/pink anchor to keep the text readable. Combined with
+// the `card-marquee-pan` animation, every tile slowly drifts its hue. */
 const HERO_TEMPLATES = [
-  { emoji: '💍', cat: 'Wedding',     grad: 'from-rose-400 via-fuchsia-500 to-violet-600' },
-  { emoji: '🎂', cat: 'Birthday',    grad: 'from-fuchsia-400 via-purple-500 to-indigo-600' },
-  { emoji: '✨', cat: 'Invitation',  grad: 'from-cyan-400 via-violet-500 to-fuchsia-600' },
-  { emoji: '💖', cat: 'Couple',      grad: 'from-pink-400 via-rose-500 to-fuchsia-600' },
-  { emoji: '🎉', cat: 'Celebration', grad: 'from-amber-400 via-fuchsia-500 to-cyan-500' },
+  { emoji: '💍', cat: 'Wedding',     grad: 'from-rose-200 via-pink-200 to-violet-200' },
+  { emoji: '🎂', cat: 'Birthday',    grad: 'from-orange-200 via-pink-200 to-violet-200' },
+  { emoji: '✨', cat: 'Invitation',  grad: 'from-sky-200 via-violet-200 to-pink-200' },
+  { emoji: '💖', cat: 'Couple',      grad: 'from-fuchsia-200 via-pink-200 to-rose-200' },
+  { emoji: '🎉', cat: 'Celebration', grad: 'from-violet-200 via-fuchsia-200 to-orange-200' },
 ];
 
 const FEATURE_TIMELINE = [
@@ -35,25 +39,25 @@ const FEATURE_TIMELINE = [
     step: '01',
     title: 'Pick a vibe',
     desc: 'Choose from cinematic templates curated by designers — weddings, birthdays, invitations, every moment.',
-    color: '#22D3EE',
+    color: '#A78BFA',
   },
   {
     step: '02',
     title: 'Drag, drop, edit',
     desc: 'Real-time visual editor. Text, photos, videos, music, stickers — change anything by tapping it.',
-    color: '#A855F7',
+    color: '#8B5CF6',
   },
   {
     step: '03',
     title: 'Animate the magic',
     desc: 'Add transitions, soundtracks, and motion. Your page feels like a movie, not a PDF.',
-    color: '#F472B6',
+    color: '#EC4899',
   },
   {
     step: '04',
     title: 'Share & celebrate',
     desc: 'One link, one QR. Mobile-first, instant-loading, shareable everywhere.',
-    color: '#FBBF24',
+    color: '#A78BFA',
   },
 ];
 
@@ -98,7 +102,11 @@ export default function Landing() {
   const ctaLabel = user ? 'Open studio' : 'Start free';
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <motion.div
+      initial={pageTransition.initial}
+      animate={pageTransition.animate}
+      className="relative min-h-screen overflow-x-hidden"
+    >
       <CursorHalo />
       {/* Sitewide floating decor — clipped so it never paints under the
           floating navbar at the top of the page. */}
@@ -121,7 +129,15 @@ export default function Landing() {
               <Link to="/marketplace" className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/5 transition">Marketplace</Link>
               <Link to="/builder" className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/5 transition inline-flex items-center gap-1.5">
                 <span>Builder</span>
-                <span className="rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 px-1.5 py-px text-[8px] font-bold text-white uppercase tracking-[0.16em]">New</span>
+                <span
+                  className="rounded-full px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-[0.14em] text-white"
+                  style={{
+                    background: 'linear-gradient(120deg, #DDD6FE 0%, #C4B5FD 55%, #F9A8D4 100%)',
+                    boxShadow: '0 2px 6px -3px rgba(167,139,250,0.40)',
+                  }}
+                >
+                  New
+                </span>
               </Link>
               <Link to="/stories" className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/5 transition">Stories</Link>
               <Link to="/about" className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/5 transition">About</Link>
@@ -192,11 +208,17 @@ export default function Landing() {
 
               <motion.div variants={fadeUp} className="mt-12 flex flex-wrap items-center gap-6 text-xs uppercase tracking-[0.22em] text-slate-500 font-semibold">
                 <span className="inline-flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="glow-dot" aria-hidden="true" />
                   Live in 60 seconds
                 </span>
-                <span>Free forever plan</span>
-                <span>No card required</span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="glow-dot dot-yellow" aria-hidden="true" />
+                  Free forever plan
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="glow-dot dot-pink" aria-hidden="true" />
+                  No card required
+                </span>
               </motion.div>
 
               {/* Mini sticker row — celebrates the moments Storyly is for */}
@@ -230,7 +252,7 @@ export default function Landing() {
                 animate={{ y: [0, -14, 4, 0], rotate: [-8, 6, -10, -8] }}
                 transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <BalloonSticker size={84} color="#F472B6" />
+                <BalloonSticker size={84} color="#EC4899" />
               </motion.div>
               <motion.div
                 className="absolute top-1/3 -right-4 z-10"
@@ -258,10 +280,11 @@ export default function Landing() {
                 {HERO_TEMPLATES.map((t, i) => {
                   const angles = [-12, -4, 4, 12, 20];
                   const offsets = [0, 60, 120, 180, 240];
+                  const isTopCard = i === HERO_TEMPLATES.length - 1;
                   return (
                     <div
                       key={t.cat}
-                      className="hero-card keep-dark absolute"
+                      className="hero-card absolute"
                       style={{
                         left: `${offsets[i]}px`,
                         top: `${i * 14}px`,
@@ -270,22 +293,22 @@ export default function Landing() {
                       }}
                     >
                       <div
-                        className="w-44 h-72 rounded-[2rem] p-1.5 shadow-pop border border-white/15"
-                        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04))' }}
+                        className="w-44 h-72 rounded-[2rem] p-1.5 shadow-pop border border-slate-900/[0.06]"
+                        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.55), rgba(255,255,255,0.18))' }}
                       >
                         <div className={`w-full h-full rounded-[1.7rem] bg-gradient-to-br ${t.grad} relative overflow-hidden flex flex-col`}>
-                          <div className="absolute inset-x-3 top-3 flex gap-1">
-                            <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-                            <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                            <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-                          </div>
-                          <div className="flex-1 flex items-center justify-center text-7xl drop-shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
+                          <div className="flex-1 flex items-center justify-center text-7xl drop-shadow-[0_8px_20px_rgba(0,0,0,0.18)]">
                             {t.emoji}
                           </div>
-                          <div className="p-4">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/80">{t.cat}</p>
-                            <p className="mt-1 font-display font-bold text-white text-lg leading-tight">Your moment, your way.</p>
-                          </div>
+                          {/* Caption renders only on the top (front-most) card so
+                              the stack reads as one focused phone instead of a
+                              row of repeated taglines. */}
+                          {isTopCard && (
+                            <div className="px-4 pb-5 text-center">
+                              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em]" style={{ color: '#5B21B6' }}>{t.cat}</p>
+                              <p className="mt-1 font-display font-extrabold text-lg leading-tight" style={{ color: '#1E1B4B' }}>Your moment, your way.</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -319,13 +342,14 @@ export default function Landing() {
             {[...HERO_TEMPLATES, ...HERO_TEMPLATES].map((t, i) => (
               <div
                 key={`row1-${i}`}
-                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-br ${t.grad} relative overflow-hidden p-1 border border-white/10 shadow-card shrink-0`}
+                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-br ${t.grad} card-marquee-pan relative overflow-hidden p-1 border border-slate-900/[0.06] shadow-card shrink-0 keep-light`}
+                style={{ animationDelay: `${(i % 5) * 0.7}s` }}
               >
                 <div className="absolute inset-1 rounded-[1.75rem] overflow-hidden flex flex-col justify-end p-4">
-                  <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-95">{t.emoji}</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-7xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.10)]">{t.emoji}</div>
                   <div className="relative">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/80">{t.cat}</p>
-                    <p className="mt-1 font-display font-bold text-white text-lg">Premium · 4K</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-700/80">{t.cat}</p>
+                    <p className="mt-1 font-display font-extrabold text-slate-900 text-lg">Premium · 4K</p>
                   </div>
                 </div>
               </div>
@@ -336,13 +360,14 @@ export default function Landing() {
             {[...HERO_TEMPLATES].reverse().concat(HERO_TEMPLATES).map((t, i) => (
               <div
                 key={`row2-${i}`}
-                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-tr ${t.grad} relative overflow-hidden p-1 border border-white/10 shadow-card shrink-0`}
+                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-tr ${t.grad} card-marquee-pan relative overflow-hidden p-1 border border-slate-900/[0.06] shadow-card shrink-0 keep-light`}
+                style={{ animationDelay: `${(i % 5) * 0.7 + 1.5}s` }}
               >
                 <div className="absolute inset-1 rounded-[1.75rem] overflow-hidden flex flex-col justify-end p-4">
-                  <div className="absolute inset-0 flex items-center justify-center text-7xl opacity-95">{t.emoji}</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-7xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.10)]">{t.emoji}</div>
                   <div className="relative">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/80">{t.cat}</p>
-                    <p className="mt-1 font-display font-bold text-white text-lg">Animated</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-700/80">{t.cat}</p>
+                    <p className="mt-1 font-display font-extrabold text-slate-900 text-lg">Animated</p>
                   </div>
                 </div>
               </div>
@@ -390,7 +415,7 @@ export default function Landing() {
                 <motion.div key={c.name} variants={fadeUpSmall}>
                   <Link to={to} className="block">
                     <GlassCard withSpotlight hover="lift" className="p-5 flex flex-col items-center text-center cursor-pointer">
-                      <div className="text-4xl mb-3 drop-shadow-[0_4px_12px_rgba(168,85,247,0.6)]">{c.icon}</div>
+                      <div className="text-4xl mb-3 drop-shadow-[0_4px_12px_rgba(139,92,246,0.6)]">{c.icon}</div>
                       <p className="font-display font-bold text-white text-sm">{c.name}</p>
                       <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400 mt-1">{c.count}</p>
                     </GlassCard>
@@ -405,7 +430,7 @@ export default function Landing() {
       {/* ─── Feature timeline ─── */}
       <section id="features" className="relative py-24 sm:py-32">
         <NeonOrb color="#7C3AED" size="36rem" style={{ top: '0%', left: '-12%' }} opacity={0.25} />
-        <NeonOrb color="#06B6D4" size="32rem" style={{ bottom: '-10%', right: '-12%' }} opacity={0.25} />
+        <NeonOrb color="#7C3AED" size="32rem" style={{ bottom: '-10%', right: '-12%' }} opacity={0.25} />
 
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -457,8 +482,8 @@ export default function Landing() {
       <section className="relative py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <GlassCard tone="strong" className="relative overflow-hidden p-8 sm:p-14 lg:p-20">
-            <NeonOrb color="#A855F7" size="28rem" style={{ top: '-6rem', right: '-6rem' }} />
-            <NeonOrb color="#06B6D4" size="24rem" style={{ bottom: '-6rem', left: '-4rem' }} opacity={0.35} />
+            <NeonOrb color="#8B5CF6" size="28rem" style={{ top: '-6rem', right: '-6rem' }} />
+            <NeonOrb color="#7C3AED" size="24rem" style={{ bottom: '-6rem', left: '-4rem' }} opacity={0.35} />
 
             <div className="relative grid lg:grid-cols-2 gap-12 items-center">
               <motion.div
@@ -481,7 +506,7 @@ export default function Landing() {
                     'One-click publish + share link',
                   ].map((b) => (
                     <li key={b} className="flex items-center gap-3 text-slate-200">
-                      <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[10px] font-extrabold text-white">✓</span>
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-[10px] font-extrabold text-white">✓</span>
                       {b}
                     </li>
                   ))}
@@ -491,37 +516,31 @@ export default function Landing() {
               {/* Mock editor preview */}
               <div className="relative">
                 <div
-                  className="relative mx-auto w-[280px] sm:w-[320px] rounded-[2.5rem] p-2 border border-white/15 shadow-pop"
-                  style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.4))' }}
+                  className="phone-mockup-frame relative mx-auto w-[280px] sm:w-[320px] rounded-[2.5rem] p-2 shadow-pop"
                 >
-                  <div className="aspect-[9/19] rounded-[2.2rem] overflow-hidden relative keep-dark" style={{ background: 'linear-gradient(135deg, #1E1B4B, #4C1D95 40%, #7C3AED 90%)' }}>
-                    <div className="absolute inset-x-3 top-3 flex gap-1">
-                      <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-                      <span className="h-0.5 flex-1 rounded-full bg-white/30" />
-                      <span className="h-0.5 flex-1 rounded-full bg-white/30" />
-                    </div>
+                  <div className="phone-mockup-screen aspect-[9/19] rounded-[2.2rem] overflow-hidden relative">
                     <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                      <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-300 font-bold">Save the date</p>
-                      <h4 className="mt-3 font-display font-extrabold text-white text-3xl leading-[1.05]">
+                      <p className="phone-mockup-eyebrow text-[10px] uppercase tracking-[0.32em] font-bold">Save the date</p>
+                      <h4 className="phone-mockup-title mt-3 font-display font-extrabold text-3xl leading-[1.05]">
                         Ananya & Rohan
                       </h4>
-                      <p className="mt-2 text-sm text-slate-200">12 · 02 · 2026</p>
-                      <div className="mt-5 h-px w-16 bg-white/40" />
-                      <p className="mt-4 text-xs text-slate-300/90">The Leela Palace · Udaipur</p>
-                      <div className="mt-6 inline-flex rounded-full bg-white/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-white border border-white/20">
+                      <p className="phone-mockup-meta mt-2 text-sm">12 · 02 · 2026</p>
+                      <div className="phone-mockup-divider mt-5 h-px w-16" />
+                      <p className="phone-mockup-meta mt-4 text-xs">The Leela Palace · Udaipur</p>
+                      <div className="phone-mockup-rsvp mt-6 inline-flex rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.22em]">
                         RSVP →
                       </div>
                     </div>
                     {/* Live selection chrome (cinematic touch) */}
-                    <div className="absolute inset-x-10 top-1/2 -translate-y-1/2 h-32 rounded-2xl border-2 border-cyan-300 pointer-events-none animate-pulse" />
-                    <div className="absolute top-1/2 -translate-y-[88px] left-1/2 -translate-x-[2px] w-1 h-1 rounded-full bg-cyan-300 shadow-[0_0_12px_4px_rgba(34,211,238,0.65)]" />
+                    <div className="phone-mockup-selection absolute inset-x-10 top-1/2 -translate-y-1/2 h-32 rounded-2xl border-2 pointer-events-none animate-pulse" />
+                    <div className="phone-mockup-cursor absolute top-1/2 -translate-y-[88px] left-1/2 -translate-x-[2px] w-1 h-1 rounded-full" />
                   </div>
                 </div>
 
                 {/* Floating UI chips around the phone */}
                 <div className="absolute -left-6 top-12 hidden sm:block animate-float">
                   <GlassCard tone="strong" className="!rounded-2xl px-4 py-2 flex items-center gap-2 text-xs">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="glow-dot" aria-hidden="true" />
                     <span className="font-semibold text-white">Auto-saved</span>
                   </GlassCard>
                 </div>
@@ -552,7 +571,7 @@ export default function Landing() {
           >
             <div className="order-2 lg:order-1 flex justify-center">
               <div className="relative">
-                <NeonOrb color="#06B6D4" size="20rem" style={{ top: '-3rem', left: '-3rem' }} />
+                <NeonOrb color="#7C3AED" size="20rem" style={{ top: '-3rem', left: '-3rem' }} />
                 <GlassCard tone="strong" className="!rounded-[2rem] p-8 relative">
                   <div className="story-ring p-[3px] w-fit mx-auto">
                     <div className="bg-ink-900 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.22em]">
@@ -673,7 +692,7 @@ export default function Landing() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <GlassCard tone="strong" className="!rounded-[2.5rem] p-10 sm:p-16 text-center relative overflow-hidden">
             <AuroraBackground variant="warm" intensity={0.4} showGrid={false} />
-            <ParticleField count={32} color="#F472B6" />
+            <ParticleField count={32} color="#EC4899" />
             <div className="relative">
               <span className="eyebrow"><span>Start free · upgrade anytime</span></span>
               <h2 className="mt-6 section-display">
@@ -698,6 +717,6 @@ export default function Landing() {
       {/* ─── Footer ─── */}
       <Footer variant="landing" />
       <div className="h-12" />
-    </div>
+    </motion.div>
   );
 }

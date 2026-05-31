@@ -21,7 +21,11 @@ import { STICKER_LIBRARY } from './CartoonStickers';
  * Animation style for each item is one of: drift, bobSpin, pulse, wiggle —
  * picked deterministically per item.
  */
-const DEFAULT_EMOJI = ['✨', '🪩', '💖', '🎂', '💍', '🎉', '💌', '🎵', '⭐', '💫', '🌟', '💞', '🎈', '🎀', '🥂', '🦋'];
+const DEFAULT_EMOJI = ['✨', '🪩', '💖', '🎂', '💍', '🎉', '💌', '🎵', '⭐', '💫', '🌟', '💞', '🎈', '🎀', '🥂', '🦋', '🍓', '🍋', '🍑', '🍒', '🌈', '🍦', '🌷', '🌸', '🥑', '🌻', '🌼', '🍀'];
+
+// Candy palette — cycled per sticker so the background reads as five
+// colors rather than a wash of violet/pink.
+const CANDY_COLORS = ['#F472B6', '#FB923C', '#FDE68A', '#34D399', '#A78BFA', '#38BDF8', '#FB7185'];
 
 export default function FloatingDecor({
   items,
@@ -61,6 +65,8 @@ export default function FloatingDecor({
         useSticker,
         StickerComp: STICKER_LIBRARY[Math.floor(r(5, STICKER_LIBRARY.length))],
         emoji: emojiPool[Math.floor(r(6, emojiPool.length))],
+        // Deterministic candy color so each sticker keeps its hue across renders.
+        color: CANDY_COLORS[Math.floor(r(13, CANDY_COLORS.length))],
         left: 4 + r(7, 92),
         top:  4 + r(8, 92),
         sizeMul,
@@ -116,7 +122,9 @@ export default function FloatingDecor({
               top: `${s.top}%`,
               fontSize: px,
               opacity,
-              filter: 'saturate(1.2)',
+              /* Slightly higher saturation so the candy colors of the
+                 stickers + native emojis really pop on the dark/light bg. */
+              filter: 'saturate(1.35)',
               lineHeight: 1,
             }}
             initial={{ y: 0, x: 0, rotate: s.baseRot, scale: 1 }}
@@ -129,7 +137,7 @@ export default function FloatingDecor({
             }}
           >
             {s.useSticker
-              ? <s.StickerComp size={px} />
+              ? <s.StickerComp size={px} color={s.color} />
               : s.emoji}
           </motion.span>
         );

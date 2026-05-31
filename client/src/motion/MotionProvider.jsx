@@ -9,11 +9,13 @@ const MotionContext = createContext({ lenis: null, prefersReducedMotion: false }
  *  internal scroll containers, so Lenis has nothing useful to do and
  *  its wheel hijacking breaks the editor's panels).
  *
- *  Other pages that contain an editor shell (e.g. /admin, when the
- *  inline editor opens) keep Lenis enabled for the page-level scroll,
- *  and the editor itself opts out with `data-lenis-prevent` on its
- *  root `.tpl-editor-shell` element. */
-const NO_LENIS_PREFIXES = ['/template/'];
+ *  Only the EDITOR sub-routes opt out (`/template/:id/edit` and
+ *  `/template/:id/customize`). The bare template PREVIEW (`/template/:id`)
+ *  is a normal scrolling page and keeps smooth scroll. Other pages that
+ *  contain an editor shell (e.g. /admin) keep Lenis on and let the editor
+ *  opt out with `data-lenis-prevent` on its `.tpl-editor-shell` root. */
+const NO_LENIS_PREFIXES = [];
+const EDITOR_ROUTE = /^\/template\/[^/]+\/(edit|customize)(\/|$)/;
 
 /**
  * Global motion provider — boots Lenis smooth scroll except on routes
@@ -24,7 +26,9 @@ export function MotionProvider({ children }) {
   const lenisRef = useRef(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const location = useLocation();
-  const skipLenis = NO_LENIS_PREFIXES.some((p) => location.pathname.startsWith(p));
+  const skipLenis =
+    NO_LENIS_PREFIXES.some((p) => location.pathname.startsWith(p)) ||
+    EDITOR_ROUTE.test(location.pathname);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

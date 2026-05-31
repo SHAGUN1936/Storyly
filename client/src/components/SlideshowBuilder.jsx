@@ -27,6 +27,13 @@ export default function SlideshowBuilder({
   onResizeCommit,
   onRotateCommit,
   canSelect,
+  /* Forwarded — when true, the inner deck/template renderer drops its
+     own scroll viewport so the outer page is the single scroller. */
+  embedded = false,
+  /* Responsive engine: force a breakpoint for the editor's device preview
+     (mobile|tablet|desktop). Omit on published pages so the breakpoint is
+     chosen automatically from the available width. */
+  previewBreakpoint = null,
 }) {
   const html = useMemo(
     () => resolveSlideshowHtml(structure, themeOverrides),
@@ -35,7 +42,11 @@ export default function SlideshowBuilder({
 
   const revealGate = useScheduledRevealGate(structure, alwaysShowStoryDuringCountdown);
 
-  if (structure?.mode === 'html' && typeof html === 'string' && html.trim()) {
+  /* Route to the HTML deck renderer whenever we have a non-empty html
+     string — that includes both legacy `mode: 'html'` templates AND
+     the new JSON-mode templates whose html was just produced from
+     `builderState` by resolveSlideshowHtml. */
+  if (typeof html === 'string' && html.trim()) {
     return (
       <div
         className={`relative ${revealGate.hideStory ? 'min-h-[min(68vh,520px)]' : ''} ${className}`}
@@ -58,6 +69,8 @@ export default function SlideshowBuilder({
             onResizeCommit={onResizeCommit}
             onRotateCommit={onRotateCommit}
             canSelect={canSelect}
+            embedded={embedded}
+            previewBreakpoint={previewBreakpoint}
           />
         )}
         {revealGate.hideStory && (

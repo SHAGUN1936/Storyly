@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useLikedTemplates from '../hooks/useLikedTemplates';
 import TemplateCard from '../components/TemplateCard';
@@ -11,15 +11,21 @@ import { HeartSticker, ConfettiSticker } from '../ui/CartoonStickers';
 import { fadeUp, blurUp, stagger } from '../motion/variants';
 
 export default function Liked() {
-  const { liked, count, clear } = useLikedTemplates();
+  const { liked, clear } = useLikedTemplates();
+  /* Liked shows only admin "basic" templates — never user/builder-made
+     ones. User-made designs live in My Pages (All + Drafts). Legacy likes
+     saved before source tracking have no sourceType and are treated as
+     admin templates. */
+  const adminLiked = liked.filter((t) => t.sourceType !== 'BuilderTemplate');
+  const count = adminLiked.length;
 
   return (
     <div className="mx-auto max-w-7xl">
       {/* Hero */}
       <motion.div variants={stagger()} initial="hidden" animate="visible" className="mb-10">
         <GlassCard tone="strong" className="!rounded-[2rem] p-7 sm:p-10 relative overflow-hidden">
-          <NeonOrb color="#F472B6" size="22rem" style={{ top: '-6rem', right: '-6rem' }} />
-          <NeonOrb color="#A855F7" size="18rem" style={{ bottom: '-4rem', left: '-3rem' }} opacity={0.4} />
+          <NeonOrb color="#EC4899" size="22rem" style={{ top: '-6rem', right: '-6rem' }} />
+          <NeonOrb color="#8B5CF6" size="18rem" style={{ bottom: '-4rem', left: '-3rem' }} opacity={0.4} />
           <FloatingDecor density="subtle" opacity={0.13} size={32} items={['💖', '♥', '✨', '🪩', '💞', '⭐']} />
           <div className="absolute inset-0 bg-grid-soft opacity-25 pointer-events-none" />
 
@@ -72,7 +78,7 @@ export default function Liked() {
       </motion.div>
 
       {/* Grid or empty state */}
-      {liked.length === 0 ? (
+      {adminLiked.length === 0 ? (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <GlassCard className="p-12 text-center">
             <div className="text-6xl mb-5">💔</div>
@@ -89,7 +95,7 @@ export default function Liked() {
         </motion.div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-          {liked.map((t, i) => (
+          {adminLiked.map((t, i) => (
             <motion.div
               key={t._id}
               initial={{ opacity: 0, y: 20 }}

@@ -7,7 +7,12 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   avatar: { type: String },
   googleId: { type: String },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  /* Roles:
+     - user    → regular customers (default). Customize admin/builder templates.
+     - admin   → publish official templates that appear in Browse Templates.
+     - builder → power-users who publish their own templates which also
+                 appear in Browse Templates alongside the admin ones. */
+  role: { type: String, enum: ['user', 'admin', 'builder'], default: 'user' },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

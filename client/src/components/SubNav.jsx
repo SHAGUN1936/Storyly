@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+﻿import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 /**
@@ -37,9 +37,9 @@ export default function SubNav({ base, items, layoutId = 'subnav-pill' }) {
                   className="absolute inset-0 rounded-full"
                   style={{
                     background:
-                      'linear-gradient(120deg, rgba(34,211,238,0.25), rgba(168,85,247,0.30) 60%, rgba(244,114,182,0.22))',
+                      'linear-gradient(120deg, rgba(167,139,250,0.25), rgba(139,92,246,0.30) 60%, rgba(236,72,153,0.22))',
                     boxShadow:
-                      '0 8px 24px -8px rgba(168,85,247,0.5), inset 0 1px 0 rgba(255,255,255,0.12)',
+                      '0 8px 24px -8px rgba(139,92,246,0.5), inset 0 1px 0 rgba(255,255,255,0.12)',
                   }}
                   transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                 />

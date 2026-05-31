@@ -84,7 +84,13 @@ function releaseLock() {
   // the old page's scrollY here would cause a visible "auto scroll" to
   // an unexpected position on the new page.
   if (currentPath() === savedPath) {
-    window.scrollTo(0, savedScrollY);
+    /* Force an instant jump — the global `html { scroll-behavior:
+       smooth }` would otherwise animate this restore and look like a
+       phantom auto-scroll when the modal closes. */
+    const savedSB = html.style.scrollBehavior;
+    html.style.scrollBehavior = 'auto';
+    window.scrollTo({ top: savedScrollY, left: 0, behavior: 'auto' });
+    html.style.scrollBehavior = savedSB;
   }
 }
 

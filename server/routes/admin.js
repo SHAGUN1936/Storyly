@@ -5,7 +5,8 @@ import {
   updateTemplate,
   getAllTemplates,
   deleteTemplate,
-  publishTemplate
+  publishTemplate,
+  unpublishTemplate
 } from '../controllers/adminController.js';
 import { upload } from '../utils/upload.js';
 import { envBool } from '../utils/envBool.js';
@@ -38,6 +39,7 @@ function runMulter(req, res, next) {
 router.get('/templates', getAllTemplates);
 router.post('/templates', runMulter, createTemplate);
 router.post('/templates/:id/publish', publishTemplate);
+router.post('/templates/:id/unpublish', unpublishTemplate);
 router.put('/templates/:id', runMulter, updateTemplate);
 router.post('/templates/:id', runMulter, updateTemplate);
 router.delete('/templates/:id', deleteTemplate);

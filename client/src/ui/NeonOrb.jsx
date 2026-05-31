@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+﻿import { motion } from 'framer-motion';
 import { useMemo } from 'react';
 
 /**
@@ -6,7 +6,7 @@ import { useMemo } from 'react';
  * When `drift` is on it slowly translates in a lazy loop (default ON).
  */
 export default function NeonOrb({
-  color = '#A855F7',
+  color = '#8B5CF6',
   size = '24rem',
   className = '',
   style = {},

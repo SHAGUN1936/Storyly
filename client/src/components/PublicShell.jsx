@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { StorylyMark } from './StorylyLogo';
 import ThemeToggle from './ThemeToggle';
 import Footer from './Footer';
 import FloatingDecor from '../ui/FloatingDecor';
 import CursorHalo from '../ui/CursorHalo';
+import { pageTransition } from '../motion/variants';
 
 /** Top-level navigation for public pages — kept minimal so the
  *  contextual SubNav inside each page can carry section-specific items. */
@@ -67,9 +69,13 @@ export default function PublicShell({ children }) {
         </div>
       </header>
 
-      <main className="relative z-10 pt-28 sm:pt-32">
+      <motion.main
+        initial={pageTransition.initial}
+        animate={pageTransition.animate}
+        className="relative z-10 pt-28 sm:pt-32"
+      >
         {children}
-      </main>
+      </motion.main>
 
       <Footer variant="landing" />
       <div className="h-12" />

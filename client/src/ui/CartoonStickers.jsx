@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cartoon-style animated SVG stickers. Each one is a small inline
  * illustration that self-animates (sway, pulse, spin, flicker, etc.).
  * Drop them anywhere as React components, set size via the `size` prop.
@@ -15,9 +15,9 @@ const baseProps = (size) => ({
 });
 
 // ── 1. Balloon ─────────────────────────────────────────────────
-export function BalloonSticker({ size = 56, color = '#F472B6' }) {
+export function BalloonSticker({ size = 56, color = '#EC4899' }) {
   return (
-    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 16px rgba(244,114,182,0.5))' }}>
+    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 16px rgba(236,72,153,0.5))' }}>
       <g style={{ transformOrigin: '32px 24px', animation: 'cartoonSway 5s ease-in-out infinite' }}>
         <ellipse cx="32" cy="24" rx="16" ry="20" fill={color} />
         <ellipse cx="26" cy="18" rx="4" ry="6" fill="#fff" opacity="0.45" />
@@ -31,14 +31,14 @@ export function BalloonSticker({ size = 56, color = '#F472B6' }) {
 // ── 2. Birthday cake ──────────────────────────────────────────
 export function CakeSticker({ size = 56 }) {
   return (
-    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 16px rgba(168,85,247,0.45))' }}>
+    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 16px rgba(139,92,246,0.45))' }}>
       <g style={{ transformOrigin: '32px 32px', animation: 'cartoonBob 4.5s ease-in-out infinite' }}>
-        <rect x="10" y="34" width="44" height="22" rx="4" fill="#A855F7" />
-        <rect x="10" y="34" width="44" height="6" fill="#F472B6" />
-        <circle cx="20" cy="34" r="3" fill="#FBBF24" />
-        <circle cx="32" cy="34" r="3" fill="#22D3EE" />
+        <rect x="10" y="34" width="44" height="22" rx="4" fill="#8B5CF6" />
+        <rect x="10" y="34" width="44" height="6" fill="#EC4899" />
+        <circle cx="20" cy="34" r="3" fill="#A78BFA" />
+        <circle cx="32" cy="34" r="3" fill="#A78BFA" />
         <circle cx="44" cy="34" r="3" fill="#34D399" />
-        <rect x="30" y="20" width="4" height="14" fill="#FBBF24" />
+        <rect x="30" y="20" width="4" height="14" fill="#A78BFA" />
         <path
           d="M32 8 Q28 14 32 20 Q36 14 32 8 Z"
           fill="#F97316"
@@ -65,12 +65,12 @@ export function HeartSticker({ size = 48, color = '#F43F5E' }) {
 }
 
 // ── 4. Diamond ring ────────────────────────────────────────────
-export function RingSticker({ size = 56 }) {
+export function RingSticker({ size = 56, color = '#A78BFA' }) {
   return (
-    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 18px rgba(34,211,238,0.55))' }}>
+    <svg {...baseProps(size)} style={{ filter: `drop-shadow(0 6px 18px ${color}88)` }}>
       <g style={{ transformOrigin: '32px 38px', animation: 'cartoonSway 6s ease-in-out infinite' }}>
-        <circle cx="32" cy="42" r="16" fill="none" stroke="#FBBF24" strokeWidth="3.5" />
-        <path d="M22 22 L32 6 L42 22 L32 30 Z" fill="#22D3EE" stroke="#FFFFFF" strokeWidth="1.5" />
+        <circle cx="32" cy="42" r="16" fill="none" stroke={color} strokeWidth="3.5" />
+        <path d="M22 22 L32 6 L42 22 L32 30 Z" fill={color} stroke="#FFFFFF" strokeWidth="1.5" />
         <path d="M32 6 L32 30" stroke="#FFFFFF" strokeWidth="0.8" opacity="0.6" />
       </g>
       <g style={{ transformOrigin: '32px 14px', animation: 'cartoonSparkle 2s ease-in-out infinite' }}>
@@ -82,7 +82,9 @@ export function RingSticker({ size = 56 }) {
 
 // ── 5. Confetti burst ──────────────────────────────────────────
 export function ConfettiSticker({ size = 56 }) {
-  const colors = ['#F472B6', '#A855F7', '#22D3EE', '#FBBF24', '#34D399'];
+  // 5-color confetti — intentionally varied: coral, violet, gold, orange,
+  // emerald. Keeps the burst feeling festive even with the warmer palette.
+  const colors = ['#EC4899', '#8B5CF6', '#A78BFA', '#F97316', '#34D399'];
   return (
     <svg {...baseProps(size)}>
       <g style={{ transformOrigin: '32px 32px', animation: 'cartoonSpin 8s linear infinite' }}>
@@ -107,13 +109,13 @@ export function ConfettiSticker({ size = 56 }) {
 }
 
 // ── 6. Sparkle star ────────────────────────────────────────────
-export function StarSticker({ size = 48 }) {
+export function StarSticker({ size = 48, color = '#FDE68A' }) {
   return (
-    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 0 18px rgba(251,191,36,0.7))' }}>
+    <svg {...baseProps(size)} style={{ filter: `drop-shadow(0 0 18px ${color}AA)` }}>
       <g style={{ transformOrigin: '32px 32px', animation: 'cartoonPulse 2.6s ease-in-out infinite' }}>
         <path
           d="M32 4 L40 24 L60 28 L46 42 L50 60 L32 50 L14 60 L18 42 L4 28 L24 24 Z"
-          fill="#FBBF24"
+          fill={color}
           stroke="#FFFFFF"
           strokeWidth="1.5"
         />
@@ -126,13 +128,13 @@ export function StarSticker({ size = 48 }) {
 // ── 7. Disco ball ──────────────────────────────────────────────
 export function DiscoSticker({ size = 56 }) {
   return (
-    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 18px rgba(168,85,247,0.55))' }}>
+    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 18px rgba(167,139,250,0.40))' }}>
       <g style={{ transformOrigin: '32px 34px', animation: 'cartoonSpin 5s linear infinite' }}>
         <circle cx="32" cy="34" r="20" fill="url(#discoGrad)" />
         <defs>
           <radialGradient id="discoGrad" cx="35%" cy="30%">
             <stop offset="0%" stopColor="#F0ABFC" />
-            <stop offset="50%" stopColor="#A855F7" />
+            <stop offset="50%" stopColor="#8B5CF6" />
             <stop offset="100%" stopColor="#4C1D95" />
           </radialGradient>
         </defs>
@@ -158,7 +160,7 @@ export function DiscoSticker({ size = 56 }) {
 }
 
 // ── 8. Music note ──────────────────────────────────────────────
-export function MusicSticker({ size = 48, color = '#22D3EE' }) {
+export function MusicSticker({ size = 48, color = '#A78BFA' }) {
   return (
     <svg {...baseProps(size)} style={{ filter: `drop-shadow(0 6px 18px ${color}80)` }}>
       <g style={{ transformOrigin: '32px 32px', animation: 'cartoonBob 3s ease-in-out infinite' }}>
@@ -173,21 +175,21 @@ export function MusicSticker({ size = 48, color = '#22D3EE' }) {
 // ── 9. Gift box ────────────────────────────────────────────────
 export function GiftSticker({ size = 56 }) {
   return (
-    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 18px rgba(244,114,182,0.55))' }}>
+    <svg {...baseProps(size)} style={{ filter: 'drop-shadow(0 6px 18px rgba(236,72,153,0.55))' }}>
       <g style={{ transformOrigin: '32px 36px', animation: 'cartoonBob 4s ease-in-out infinite' }}>
-        <rect x="8" y="26" width="48" height="30" rx="3" fill="#F472B6" />
-        <rect x="8" y="26" width="48" height="6" fill="#A855F7" />
-        <rect x="28" y="26" width="8" height="30" fill="#FBBF24" />
-        <path d="M28 26 Q22 16 14 18 Q18 22 28 26 Z" fill="#FBBF24" />
-        <path d="M36 26 Q42 16 50 18 Q46 22 36 26 Z" fill="#FBBF24" />
-        <circle cx="32" cy="24" r="3" fill="#FBBF24" />
+        <rect x="8" y="26" width="48" height="30" rx="3" fill="#EC4899" />
+        <rect x="8" y="26" width="48" height="6" fill="#8B5CF6" />
+        <rect x="28" y="26" width="8" height="30" fill="#A78BFA" />
+        <path d="M28 26 Q22 16 14 18 Q18 22 28 26 Z" fill="#A78BFA" />
+        <path d="M36 26 Q42 16 50 18 Q46 22 36 26 Z" fill="#A78BFA" />
+        <circle cx="32" cy="24" r="3" fill="#A78BFA" />
       </g>
     </svg>
   );
 }
 
 // ── 10. Speech bubble (chat / RSVP feel) ──────────────────────
-export function ChatSticker({ size = 52, color = '#22D3EE' }) {
+export function ChatSticker({ size = 52, color = '#A78BFA' }) {
   return (
     <svg {...baseProps(size)} style={{ filter: `drop-shadow(0 6px 18px ${color}55)` }}>
       <g style={{ transformOrigin: '32px 28px', animation: 'cartoonBob 3.5s ease-in-out infinite' }}>

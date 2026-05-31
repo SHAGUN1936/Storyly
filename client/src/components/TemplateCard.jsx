@@ -1,4 +1,6 @@
-import { motion } from 'framer-motion';
+﻿import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import Tilt from 'react-parallax-tilt';
 import useMouseGlow from '../motion/useMouseGlow';
 import useLikedTemplates from '../hooks/useLikedTemplates';
 import {
@@ -6,16 +8,19 @@ import {
   RingSticker, ConfettiSticker, GiftSticker, BalloonSticker, MusicSticker,
 } from '../ui/CartoonStickers';
 
+/* Soft pastel thumbnail backgrounds — light pink / lavender / peach within
+   the brand family, so a card without a photo looks clean and premium (not
+   a heavy saturated block). Dark text/sticker sit on top for contrast. */
 const CATEGORY_GRADIENT = {
-  Love:       'from-rose-400 via-fuchsia-500 to-violet-600',
-  Friendship: 'from-amber-400 via-fuchsia-500 to-rose-500',
-  Birthday:   'from-fuchsia-400 via-purple-500 to-indigo-600',
-  Memories:   'from-sky-400 via-indigo-500 to-violet-500',
-  Wedding:    'from-rose-300 via-fuchsia-500 to-violet-500',
-  Event:      'from-emerald-400 via-cyan-500 to-fuchsia-500',
-  Invitation: 'from-cyan-400 via-violet-500 to-fuchsia-600',
-  Couple:     'from-pink-400 via-rose-500 to-fuchsia-600',
-  Greeting:   'from-amber-300 via-rose-400 to-fuchsia-500',
+  Love:       'from-rose-200 via-pink-200 to-fuchsia-200',
+  Couple:     'from-pink-200 via-rose-200 to-fuchsia-200',
+  Friendship: 'from-violet-200 via-purple-200 to-indigo-200',
+  Birthday:   'from-pink-200 via-rose-100 to-amber-100',
+  Memories:   'from-violet-200 via-fuchsia-200 to-pink-200',
+  Wedding:    'from-fuchsia-100 via-pink-200 to-violet-200',
+  Event:      'from-fuchsia-200 via-violet-200 to-purple-200',
+  Invitation: 'from-indigo-200 via-violet-200 to-purple-200',
+  Greeting:   'from-pink-100 via-violet-100 to-indigo-100',
 };
 
 /** Each category renders as a cartoon SVG sticker instead of an emoji. */
@@ -37,12 +42,28 @@ export default function TemplateCard({ template }) {
   const cat = template.category || 'Event';
   const grad = CATEGORY_GRADIENT[cat] || CATEGORY_GRADIENT.Event;
   const CategorySticker = CATEGORY_STICKER[cat] || ConfettiSticker;
+  const hasMedia = Boolean(template.thumbnailUrl || template.previewVideoUrl);
   const ref = useMouseGlow();
 
   return (
+    <Tilt
+      tiltMaxAngleX={5}
+      tiltMaxAngleY={5}
+      perspective={1100}
+      transitionSpeed={1200}
+      glareEnable
+      glareMaxOpacity={0.18}
+      glareColor="#FFFFFF"
+      glarePosition="all"
+      glareBorderRadius="1rem"
+      scale={1.015}
+      tiltReverse
+      gyroscope={false}
+      className="will-change-transform"
+    >
     <motion.article
       ref={ref}
-      whileHover={{ y: -6 }}
+      whileHover={{ y: -4 }}
       whileTap={{ scale: 0.985 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
       className="card-glass spotlight overflow-hidden group cursor-pointer relative !rounded-2xl"
@@ -52,7 +73,7 @@ export default function TemplateCard({ template }) {
         className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition duration-500"
         style={{
           background:
-            'linear-gradient(135deg, rgba(168,85,247,0.55), rgba(6,182,212,0.55) 50%, rgba(244,114,182,0.55))',
+            'linear-gradient(135deg, rgba(167,139,250,0.40), rgba(124,58,237,0.55) 50%, rgba(236,72,153,0.55))',
           padding: '1px',
           WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
           WebkitMaskComposite: 'xor',
@@ -105,17 +126,18 @@ export default function TemplateCard({ template }) {
               <CategorySticker size={130} />
             </motion.div>
             {/* Category label under the sticker */}
-            <p className="relative mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-white/85 drop-shadow">
+            <p className="relative mt-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600/80">
               {cat}
             </p>
           </div>
         )}
 
-        {/* Story-progress style bars (top) */}
+        {/* Story-progress style bars (top) — dark-tinted so they read on the
+            light pastel background. */}
         <div className="absolute inset-x-2 top-2 flex gap-1">
-          <span className="h-0.5 flex-1 rounded-full bg-white/90" />
-          <span className="h-0.5 flex-1 rounded-full bg-white/40" />
-          <span className="h-0.5 flex-1 rounded-full bg-white/40" />
+          <span className="h-0.5 flex-1 rounded-full bg-slate-900/25" />
+          <span className="h-0.5 flex-1 rounded-full bg-slate-900/10" />
+          <span className="h-0.5 flex-1 rounded-full bg-slate-900/10" />
         </div>
 
         {/* Top overlays: category pill (with cartoon sticker logo) + like */}
@@ -128,21 +150,40 @@ export default function TemplateCard({ template }) {
           </span>
           <button
             type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(template); }}
-            className="w-7 h-7 rounded-full bg-black/40 backdrop-blur border border-white/15 flex items-center justify-center transition active:scale-90 hover:border-white/40"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggle(template);
+              toast.success(liked ? 'Removed from liked' : 'Saved to liked');
+            }}
+            className={`w-7 h-7 rounded-full backdrop-blur border flex items-center justify-center transition active:scale-90 ${
+              liked
+                ? 'bg-pink-500/90 border-pink-200 shadow-[0_2px_10px_-2px_rgba(236,72,153,0.7)]'
+                : 'bg-black/40 border-white/15 hover:border-white/40'
+            }`}
             aria-label={liked ? 'Remove from liked' : 'Save to liked'}
-            title={liked ? 'Remove from liked' : 'Save to liked'}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill={liked ? '#F472B6' : 'none'} stroke={liked ? '#F472B6' : '#FFFFFF'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
+            {liked ? (
+              /* Liked → solid white heart on a pink badge. */
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            ) : (
+              /* Not liked → outline heart on a dark glass badge. */
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            )}
           </button>
         </div>
 
-        {/* Bottom gradient + title */}
-        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none" />
-        <div className="absolute inset-x-2.5 bottom-2 text-white">
-          <h3 className="text-sm font-extrabold drop-shadow font-display leading-tight line-clamp-2">
+        {/* Bottom title — dark caption band + white text over a photo;
+            plain dark text on the light pastel placeholder. */}
+        {hasMedia && (
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none" />
+        )}
+        <div className={`absolute inset-x-2.5 bottom-2 ${hasMedia ? 'text-white drop-shadow' : 'text-slate-800'}`}>
+          <h3 className="text-sm font-extrabold font-display leading-tight line-clamp-2">
             {template.name}
           </h3>
         </div>
@@ -158,6 +199,7 @@ export default function TemplateCard({ template }) {
         </span>
       </div>
     </motion.article>
+    </Tilt>
   );
 }
 

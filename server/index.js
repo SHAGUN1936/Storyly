@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import templateRoutes from './routes/templates.js';
+import builderTemplateRoutes from './routes/builderTemplates.js';
 import videoRoutes from './routes/videos.js';
 import adminRoutes from './routes/admin.js';
 import publicRoutes from './routes/public.js';
@@ -31,6 +32,7 @@ app.use(express.static('uploads'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/builder-templates', builderTemplateRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);

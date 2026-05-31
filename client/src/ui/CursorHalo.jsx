@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
 /**
- * Global mouse-follow cursor halo. Renders a soft blurred radial glow that
- * trails the mouse with a spring. Skipped on touch devices and when the user
- * prefers reduced motion.
+ * Global mouse-follow cursor halo.
  *
- * Light mode uses `mix-blend-mode: multiply` (darkens) with a deeper magenta;
- * dark mode uses `mix-blend-mode: screen` (lightens) with a luminous purple.
+ * Disabled — the trailing blur was reading as a "bubble" attached to the
+ * cursor whenever it grazed an interactive element's edge. Kept as a
+ * harmless no-op so existing imports across pages don't need to be removed.
  */
-export default function CursorHalo({
-  darkColor = '#A855F7',
+export default function CursorHalo() {
+  return null;
+}
+
+// eslint-disable-next-line no-unused-vars
+function _CursorHaloDeprecated({
+  darkColor = '#8B5CF6',
   lightColor = '#7C3AED',
   size = 320,
 }) {
