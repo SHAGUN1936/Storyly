@@ -44,6 +44,7 @@ import { APP_INPUT_CLASS, APP_SELECT_CLASS, DARK_INPUT_CLASS, DARK_SELECT_CLASS 
 import ConfirmDialog from '../components/ConfirmDialog';
 import DeviceSelect from '../components/DeviceSelect';
 import SlideshowBuilder from '../components/SlideshowBuilder';
+import FabricEditorCanvas from '../components/FabricEditorCanvas';
 import { STARTER_TEMPLATES } from '../lib/starterTemplates';
 import { StarSticker, DiscoSticker, GiftSticker } from '../ui/CartoonStickers';
 import FloatingDecor from '../ui/FloatingDecor';
@@ -110,6 +111,12 @@ export default function Admin() {
   // user actually clicks it (so the contextual top bar stays hidden until then).
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
   const [dragMode, setDragMode] = useState(true);
+  /** Fabric.js control layer (opt-in). When ON, a Fabric canvas overlays the
+   *  HTML preview and provides the select/drag/resize/rotate handles; commits
+   *  flow through the SAME builderState mutators as the legacy DOM editor, so
+   *  the data + render path are unchanged. OFF = legacy editor, zero risk. */
+  const [fabricMode, setFabricMode] = useState(false);
+  const editorArtboardRef = useRef(null);
   /** Responsive engine: which device the canvas previews ('mobile' |
    *  'tablet' | 'desktop' | null). null = the design's base breakpoint.
    *  Editing is enabled only on the base; other devices are preview-only
@@ -1368,25 +1375,20 @@ export default function Admin() {
                           else setBuilderState((prev) => ({ ...prev, viewport: v }));
                         }}
                       />
+                      {/* Precision handles (Fabric) — the ONLY way to move /
+                          resize / rotate elements now. Touch-friendly. Replaces
+                          the old "Drag" (legacy DOM drag is disabled) and the
+                          inline delete (use Del / the Layers panel instead). */}
                       <button
                         type="button"
-                        onClick={() => setDragMode((d) => !d)}
+                        onClick={() => setFabricMode((v) => !v)}
                         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
-                          dragMode ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'
+                          fabricMode ? 'bg-brand-500 text-white' : 'bg-white/5 hover:bg-white/15 text-slate-200'
                         }`}
-                        data-tooltip="Drag mode — click to toggle"
+                        data-tooltip="Precision: drag, resize, rotate, multi-select, align & snap (works on touch). Del removes, Ctrl/Cmd+D duplicates."
                         data-tooltip-pos="bottom"
-                        aria-pressed={dragMode}
-                      ><MousePointer2 size={14} strokeWidth={2.2} /> Drag</button>
-                      <button
-                        type="button"
-                        disabled={!normalizedBuilder.pages[activePage]?.blocks?.length}
-                        onClick={removeSelectedBlock}
-                        className="w-9 h-9 rounded-lg bg-red-500/10 hover:bg-red-500/25 disabled:opacity-30 flex items-center justify-center text-red-300 transition"
-                        data-tooltip="Delete selected block"
-                        data-tooltip-pos="bottom"
-                        aria-label="Delete"
-                      ><Trash2 size={15} strokeWidth={2.2} /></button>
+                        aria-pressed={fabricMode}
+                      ><MousePointer2 size={14} strokeWidth={2.2} /> Precision</button>
 
                       <div className="w-px h-6 bg-white/10 mx-1" />
 
@@ -1804,7 +1806,7 @@ export default function Admin() {
 
                     {/* ── Left tool panel (floating overlay) ────────── */}
                     {leftPanel && (
-                      <div className="absolute top-2 left-3 z-30 w-64 lg:w-72 max-h-[calc(100%-1rem)] flex flex-col gap-3 overflow-y-auto hide-scrollbar rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)] px-3.5 py-3 animate-fade-in">
+                      <div className="absolute top-2 left-3 z-30 w-64 lg:w-72 max-w-[calc(100vw-1.5rem)] max-h-[calc(100%-1rem)] flex flex-col gap-3 overflow-y-auto hide-scrollbar rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)] px-3.5 py-3 animate-fade-in">
                         <div className="flex items-center justify-between sticky top-0 z-10 bg-slate-950/95 pb-2.5 -mt-1 pt-1 -mx-3.5 px-3.5 border-b border-white/10">
                           <h4 className="flex items-center gap-1.5 text-sm font-extrabold text-white">
                             {leftPanel === 'elements' && <>➕ <span>Add elements</span></>}
@@ -2139,7 +2141,7 @@ export default function Admin() {
                         in both dimensions. Result: switching mobile /
                         desktop / any device just reshapes the rectangle
                         in place without overflow. */}
-                    <div className="flex-1 flex flex-col gap-3 overflow-hidden">
+                    <div className="relative flex-1 flex flex-col gap-3 overflow-hidden">
                       <div
                         className="flex-1 min-h-0 p-3 relative overflow-auto"
                         style={{
@@ -2167,6 +2169,7 @@ export default function Admin() {
                           return (
                             <div className="min-h-full w-full flex justify-center" style={{ alignItems: 'safe center' }}>
                             <div
+                              ref={editorArtboardRef}
                               className="relative shrink-0 rounded-xl border border-white/10 bg-black overflow-hidden shadow-2xl"
                               style={{
                                 aspectRatio: `${vp.width} / ${vp.height}`,
@@ -2180,7 +2183,12 @@ export default function Admin() {
                                   structure={previewStructure}
                                   fills={{}}
                                   editable
-                                  dragMode={dragMode}
+                                  /* Legacy DOM drag-to-move is OFF here: moving /
+                                     resizing / rotating happens only via the
+                                     Precision (Fabric) layer, which is accurate
+                                     and touch-friendly. Clicking still selects and
+                                     double-click still edits text. */
+                                  dragMode={false}
                                   previewBreakpoint={activeBp}
                                   activeIndex={activePage}
                                   onActiveIndexChange={setActivePage}
@@ -2210,6 +2218,42 @@ export default function Admin() {
                                   }
                                   embedded
                                   className="!w-full !h-full [&_.html-deck-root]:!h-full [&_.html-deck-root]:!min-h-0 [&_.html-deck-root]:!border-0 [&_.html-deck-root]:!rounded-none"
+                                />
+                              )}
+                              {/* Fabric.js control layer — overlays the HTML
+                                  preview, provides handles, commits through the
+                                  same builderState mutators used above. */}
+                              {!builderPreviewError && (
+                                <FabricEditorCanvas
+                                  enabled={fabricMode}
+                                  previewRef={editorArtboardRef}
+                                  blocks={normalizedBuilder.pages[activePage]?.blocks || []}
+                                  pageIndex={activePage}
+                                  designW={vp.width}
+                                  designH={vp.height}
+                                  selectedIndex={selectedBlockIndex}
+                                  onSelect={setSelectedBlockIndex}
+                                  onMoveCommit={(slot, x, y, refW, refH) => {
+                                    const xPct = refW > 0 ? (x / refW) * 100 : null;
+                                    const yPct = refH > 0 ? (y / refH) * 100 : null;
+                                    setBuilderState((prev) => updateBuilderBlockPositionPctSynced(prev, slot, xPct, yPct));
+                                  }}
+                                  onResizeCommit={(slot, w, h) =>
+                                    setBuilderState((prev) => updateBuilderBlockSizeSynced(prev, slot, w, h, activeBp))
+                                  }
+                                  onRotateCommit={(slot, deg) =>
+                                    setBuilderState((prev) => updateBuilderBlockRotateSynced(prev, slot, deg))
+                                  }
+                                  onDuplicate={(idx) => duplicateBlockAt(activePage, idx)}
+                                  onDelete={(idx) => deleteBlockAt(activePage, idx)}
+                                  onReorder={(idx, dir) => {
+                                    const len = normalizedBuilder.pages[activePage]?.blocks?.length || 0;
+                                    const to = dir === 'forward' ? Math.min(len - 1, idx + 1)
+                                      : dir === 'back' ? Math.max(0, idx - 1)
+                                      : dir === 'front' ? len - 1
+                                      : 0; // backmost
+                                    if (to !== idx) reorderBlock(activePage, idx, to);
+                                  }}
                                 />
                               )}
                               {/* Background-upload feedback — blur the canvas
@@ -2247,7 +2291,7 @@ export default function Admin() {
 
                     {/* ── Right tool panel (floating overlay) ─────── */}
                     {rightPanel && (
-                    <div className="absolute top-2 right-3 z-30 w-60 lg:w-72 max-h-[calc(100%-1rem)] flex flex-col gap-4 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)] px-3 py-3 animate-fade-in">
+                    <div className="absolute top-2 right-3 z-30 w-60 lg:w-72 max-w-[calc(100vw-1.5rem)] max-h-[calc(100%-1rem)] flex flex-col gap-4 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.85)] px-3 py-3 animate-fade-in">
                       <div className="flex items-center justify-between sticky top-0 bg-slate-950/95 pb-2 -mt-1 pt-1 -mx-3 px-3 border-b border-white/10">
                         <h4 className="text-xs uppercase tracking-widest text-slate-300 font-bold">
                           ⚙️ {rightPanel === 'info' ? 'Campaign info' : 'Properties'}
