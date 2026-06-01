@@ -77,7 +77,11 @@ export default function Layout() {
       : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
+    {/* No `overflow-x-hidden` here: it would force overflow-y:auto and make
+        this wrapper a SECOND scroll container nested in the body scroller,
+        which causes laggy/competing touch scrolling on mobile. Horizontal
+        overflow is already clipped at <body> (see index.css). */}
+    <div className="min-h-screen relative">
       {/* Cursor halo (desktop only, respects reduced-motion) */}
       <CursorHalo />
 
