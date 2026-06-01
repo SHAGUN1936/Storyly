@@ -76,23 +76,30 @@ export default function Layout() {
       ? location.pathname === '/studio'
       : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
+  // NOTE: the root wrapper deliberately has NO `overflow-x-hidden`. That
+  // would force overflow-y:auto and make this wrapper a SECOND scroll
+  // container nested in the body scroller, causing laggy/competing touch
+  // scrolling on mobile. Horizontal overflow is already clipped at <body>.
   return (
-    {/* No `overflow-x-hidden` here: it would force overflow-y:auto and make
-        this wrapper a SECOND scroll container nested in the body scroller,
-        which causes laggy/competing touch scrolling on mobile. Horizontal
-        overflow is already clipped at <body> (see index.css). */}
     <div className="min-h-screen relative">
       {/* Cursor halo (desktop only, respects reduced-motion) */}
       <CursorHalo />
 
-      {/* Five candy orbs scattered around the viewport — lavender, pink,
-          peach, mint, yellow — at low alphas so the page reads colorful
-          without ever feeling chaotic. */}
-      <NeonOrb color="#C4B5FD" size="34rem" style={{ top: '-10rem', left: '-6rem' }} opacity={0.14} />
-      <NeonOrb color="#F9A8D4" size="28rem" style={{ top: '-4rem', right: '-6rem' }} opacity={0.12} />
-      <NeonOrb color="#FDBA74" size="24rem" style={{ top: '38%', right: '-8rem' }} opacity={0.08} />
-      <NeonOrb color="#A7F3D0" size="26rem" style={{ bottom: '-6rem', left: '22%' }} opacity={0.10} />
-      <NeonOrb color="#FDE68A" size="22rem" style={{ bottom: '22%', left: '-6rem' }} opacity={0.07} />
+      {/* Five candy orbs — lavender, pink, peach, mint, yellow — at low
+          alphas so the page reads colorful without feeling chaotic.
+          They live in a FIXED, composited layer (not absolute children of
+          the scrolling page). A 60px-blur orb scrolling inside the page
+          content forces the compositor to re-rasterize a huge blurred
+          surface as it moves — that was the studio-only scroll jank (the
+          Landing page has no in-flow orbs, which is why it stays smooth).
+          Fixed + GPU-layered = painted once, just composited on scroll. */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden>
+        <NeonOrb color="#C4B5FD" size="34rem" style={{ top: '-10rem', left: '-6rem' }} opacity={0.14} />
+        <NeonOrb color="#F9A8D4" size="28rem" style={{ top: '-4rem', right: '-6rem' }} opacity={0.12} />
+        <NeonOrb color="#FDBA74" size="24rem" style={{ top: '38%', right: '-8rem' }} opacity={0.08} />
+        <NeonOrb color="#A7F3D0" size="26rem" style={{ bottom: '-6rem', left: '22%' }} opacity={0.10} />
+        <NeonOrb color="#FDE68A" size="22rem" style={{ bottom: '22%', left: '-6rem' }} opacity={0.07} />
+      </div>
 
       {/* Sitewide floating decor — clipped away from the top + bottom
           navbars so emojis never paint under them. Single subtle layer. */}

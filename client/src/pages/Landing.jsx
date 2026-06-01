@@ -105,7 +105,9 @@ export default function Landing() {
     <motion.div
       initial={pageTransition.initial}
       animate={pageTransition.animate}
-      className="relative min-h-screen overflow-x-hidden"
+      /* No overflow-x-hidden — avoids a redundant nested scroll container
+         (laggy mobile scroll); horizontal clip lives on <body>. */
+      className="relative min-h-screen"
     >
       <CursorHalo />
       {/* Sitewide floating decor — clipped so it never paints under the
@@ -338,11 +340,15 @@ export default function Landing() {
         </div>
 
         <div className="space-y-6">
-          <MarqueeRow direction="left" speed="normal" mask={false}>
+          <MarqueeRow direction="left" speed="normal" mask={false} pauseOnHover={false}>
             {[...HERO_TEMPLATES, ...HERO_TEMPLATES].map((t, i) => (
               <div
                 key={`row1-${i}`}
-                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-br ${t.grad} card-marquee-pan relative overflow-hidden p-1 border border-slate-900/[0.06] shadow-card shrink-0 keep-light`}
+                /* No `shadow-card` here: its soft 50px-blur drop shadow sits
+                   ~16px below each card, and across the row the shadows merge
+                   into a blurry horizontal "line" under the cards. The border
+                   alone defines the card edge cleanly. */
+                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-br ${t.grad} card-marquee-pan relative overflow-hidden p-1 border border-slate-900/[0.06] shrink-0 keep-light`}
                 style={{ animationDelay: `${(i % 5) * 0.7}s` }}
               >
                 <div className="absolute inset-1 rounded-[1.75rem] overflow-hidden flex flex-col justify-end p-4">
@@ -356,11 +362,13 @@ export default function Landing() {
             ))}
           </MarqueeRow>
 
-          <MarqueeRow direction="right" speed="slow" mask={false}>
+          <MarqueeRow direction="right" speed="slow" mask={false} pauseOnHover={false}>
             {[...HERO_TEMPLATES].reverse().concat(HERO_TEMPLATES).map((t, i) => (
               <div
                 key={`row2-${i}`}
-                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-tr ${t.grad} card-marquee-pan relative overflow-hidden p-1 border border-slate-900/[0.06] shadow-card shrink-0 keep-light`}
+                /* No `shadow-card` — see note on the row above (avoids the
+                   blurry shadow "line" beneath the cards). */
+                className={`w-56 h-80 rounded-[2rem] bg-gradient-to-tr ${t.grad} card-marquee-pan relative overflow-hidden p-1 border border-slate-900/[0.06] shrink-0 keep-light`}
                 style={{ animationDelay: `${(i % 5) * 0.7 + 1.5}s` }}
               >
                 <div className="absolute inset-1 rounded-[1.75rem] overflow-hidden flex flex-col justify-end p-4">

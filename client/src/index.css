@@ -78,16 +78,22 @@ html, body, #root { min-height: 100%; }
      fixed at its root now — the editor is portaled to <body> with its
      own `overflow-anchor: none` container, so a smooth html behavior
      no longer animates its internal layout shifts.
-   • `overscroll-behavior-y: contain` keeps over-scroll from chaining
-     past the body (no rubber-band bleed into modals underneath).
+   • `overscroll-behavior: none` KILLS the rubber-band / overscroll bounce
+     at the top & bottom of the page. With `contain` the browser still
+     animates an overscroll bounce when you hit a boundary — the page
+     "floats" and keeps drifting after the finger lifts, which reads as
+     laggy/unprofessional on mobile. `none` also prevents scroll chaining
+     (no bleed into modals underneath). Set on BOTH <html> and <body> so it
+     applies whichever element the UA treats as the viewport scroller.
    • `scrollbar-gutter: stable` reserves space so content doesn't shift
      horizontally when the scrollbar appears/disappears. */
 html {
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
+  overscroll-behavior: none;
 }
 /* NOTE: do NOT add `overflow-x: hidden` to <html> here — see warning above. */
-body { overflow-x: hidden; overscroll-behavior-y: contain; }
+body { overflow-x: hidden; overscroll-behavior: none; }
 .smooth-scroll { scroll-behavior: smooth; }
 
 /* Hide the inner scrollbar inside template render containers (the

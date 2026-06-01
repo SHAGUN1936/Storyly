@@ -24,8 +24,10 @@ export default function PublicShell({ children }) {
   const { user } = useAuth();
   const location = useLocation();
 
+  // No overflow-x-hidden on the wrapper — avoids a redundant nested scroll
+  // container (laggy mobile scroll). Horizontal clip lives on <body>.
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <div className="relative min-h-screen">
       <CursorHalo />
       <div className="pointer-events-none fixed inset-x-0 top-24 bottom-0 z-0">
         <FloatingDecor density="subtle" opacity={0.15} size={44} />

@@ -17,6 +17,13 @@ const MotionContext = createContext({ lenis: null, prefersReducedMotion: false }
 const NO_LENIS_PREFIXES = [];
 const EDITOR_ROUTE = /^\/template\/[^/]+\/(edit|customize)(\/|$)/;
 
+/* Master switch for Lenis smooth scroll. Turned OFF: Lenis drives scroll
+   with an inertia/lerp so the page keeps gliding ("slowly drifting down")
+   after the user stops scrolling, which reads as laggy. Native scrolling
+   stops exactly when the finger/wheel stops — crisp on every device. Flip
+   to `true` to bring smooth scroll back. */
+const LENIS_SMOOTH_SCROLL = false;
+
 /* Coarse pointer / no-hover = a touch device (phone or tablet). */
 const TOUCH_QUERY = '(pointer: coarse), (hover: none)';
 function detectTouch() {
@@ -46,6 +53,7 @@ export function MotionProvider({ children }) {
   const [isTouch, setIsTouch] = useState(detectTouch);
   const location = useLocation();
   const skipLenis =
+    !LENIS_SMOOTH_SCROLL ||
     isTouch ||
     NO_LENIS_PREFIXES.some((p) => location.pathname.startsWith(p)) ||
     EDITOR_ROUTE.test(location.pathname);

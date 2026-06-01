@@ -222,7 +222,7 @@ export default function Dashboard() {
 
         {/* Tag marquee under hero */}
         <div className="mt-6">
-          <MarqueeRow direction="left" speed="slow">
+          <MarqueeRow direction="left" speed="slow" mask={false} pauseOnHover={false}>
             {[...TRENDING_LABELS, ...TRENDING_LABELS].map((t, i) => (
               <span
                 key={`tl-${i}`}

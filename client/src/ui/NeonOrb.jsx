@@ -42,6 +42,10 @@ export default function NeonOrb({
         background: `radial-gradient(circle, ${color} 0%, transparent 60%)`,
         filter: 'blur(60px)',
         opacity,
+        // Keep the (expensive) blur rasterized on its own GPU layer so the
+        // drift animation + page scroll only TRANSLATE a cached texture
+        // instead of re-painting the blur every frame — prevents scroll jank.
+        willChange: 'transform',
         ...style,
       }}
       {...motionProps}
