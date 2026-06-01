@@ -25,8 +25,15 @@ const EDITOR_ROUTE = /^\/template\/[^/]+\/(edit|customize)(\/|$)/;
 export function MotionProvider({ children }) {
   const lenisRef = useRef(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  /* Touch devices use NATIVE scrolling — never Lenis. JS smooth-scroll on
+     phones hijacks the browser's touch handling and is a common cause of
+     scroll feeling janky or stuck; native mobile scroll is already smooth.
+     Detected via a coarse pointer (phones/tablets) and kept reactive so
+     the device-emulation toggle in dev tools flips it live. */
+  const [isTouch, setIsTouch] = useState(false);
   const location = useLocation();
   const skipLenis =
+    isTouch ||
     NO_LENIS_PREFIXES.some((p) => location.pathname.startsWith(p)) ||
     EDITOR_ROUTE.test(location.pathname);
 
@@ -34,6 +41,15 @@ export function MotionProvider({ children }) {
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => setPrefersReducedMotion(mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+    return () => mq.removeEventListener?.('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(pointer: coarse), (hover: none)');
+    const update = () => setIsTouch(mq.matches);
     update();
     mq.addEventListener?.('change', update);
     return () => mq.removeEventListener?.('change', update);
