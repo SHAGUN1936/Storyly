@@ -64,8 +64,15 @@ html, body, #root { min-height: 100%; }
    • `<body>` is the sole scroll surface. Modals (admin editor, wizard,
      dialogs, popups) all lock body via useLockBodyScroll so their own
      internal scrollbar is the only one visible while open.
-   • `overflow-x: hidden` blocks accidental horizontal scroll from any
-     stray wide element.
+   • Horizontal overflow is clipped on `<body>` ONLY — never on `<html>`.
+     ⚠ Putting `overflow-x: hidden` on the root <html> element forces its
+     `overflow-y` to compute from `visible` to `auto`, which turns <html>
+     into its own scroll container. That container's height grows to fit
+     all content, so the viewport has nothing left to scroll and native
+     single-finger touch scrolling DIES on mobile (two-finger / pinch
+     browser gestures still work, which is the tell-tale symptom). Keeping
+     the clip on <body> still blocks stray horizontal scroll (it
+     propagates to the viewport) while leaving vertical scroll native.
    • `scroll-behavior: smooth` makes anchor jumps + programmatic scrolls
      glide. The earlier "phantom scroll" bug in the admin editor is
      fixed at its root now — the editor is portaled to <body> with its
@@ -79,8 +86,8 @@ html {
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
 }
-html, body { overflow-x: hidden; }
-body { overscroll-behavior-y: contain; }
+/* NOTE: do NOT add `overflow-x: hidden` to <html> here — see warning above. */
+body { overflow-x: hidden; overscroll-behavior-y: contain; }
 .smooth-scroll { scroll-behavior: smooth; }
 
 /* Hide the inner scrollbar inside template render containers (the

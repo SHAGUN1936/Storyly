@@ -69,11 +69,7 @@ export function MotionProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || prefersReducedMotion || skipLenis) {
-      /* TEMP scroll-debug */
-      console.log('[scroll-debug][lenis] SKIPPED', { isTouch, prefersReducedMotion, skipLenis, path: location.pathname });
-      return;
-    }
+    if (typeof window === 'undefined' || prefersReducedMotion || skipLenis) return;
     const lenis = new Lenis({
       lerp: 0.085,
       smoothWheel: true,
@@ -82,8 +78,6 @@ export function MotionProvider({ children }) {
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
     lenisRef.current = lenis;
-    window.__lenis = lenis; /* TEMP scroll-debug: inspect in console */
-    console.log('[scroll-debug][lenis] BOOTED', { path: location.pathname });
     let raf;
     const tick = (time) => {
       lenis.raf(time);
@@ -94,7 +88,6 @@ export function MotionProvider({ children }) {
       cancelAnimationFrame(raf);
       lenis.destroy();
       lenisRef.current = null;
-      if (window.__lenis === lenis) window.__lenis = null;
     };
   }, [prefersReducedMotion, skipLenis]);
 

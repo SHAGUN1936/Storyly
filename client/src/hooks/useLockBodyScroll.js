@@ -1,10 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMotion } from '../motion/MotionProvider';
 
-/* TEMP scroll-debug: flip to false to silence. */
-const DEBUG = true;
-const dlog = (...a) => { if (DEBUG) console.log('[scroll-debug][lock]', ...a); };
-
 /**
  * Robust body-scroll lock used by every modal in the app.
  *
@@ -69,7 +65,6 @@ function applyLock() {
   body.style.right = `${scrollbarWidth}px`;
   body.style.width = `calc(100% - ${scrollbarWidth}px)`;
   html.style.overflow = 'hidden';
-  dlog('applyLock → body position:fixed, html overflow:hidden', { savedScrollY });
 }
 
 function releaseLock() {
@@ -97,7 +92,6 @@ function releaseLock() {
     window.scrollTo({ top: savedScrollY, left: 0, behavior: 'auto' });
     html.style.scrollBehavior = savedSB;
   }
-  dlog('releaseLock → restored body/html, scroll restored to', savedScrollY);
 }
 
 export default function useLockBodyScroll(locked) {
@@ -116,23 +110,19 @@ export default function useLockBodyScroll(locked) {
     if (!locked) return;
     if (typeof window === 'undefined') return;
 
-    dlog(`lock requested — lockCount ${lockCount} → ${lockCount + 1}`);
     if (lockCount === 0) {
       applyLock();
       // Pause Lenis so its rAF loop doesn't keep generating scroll
       // animations against a frozen body.
       lenisRef.current?.stop?.();
-      dlog('lenis.stop() called', { hasLenis: !!lenisRef.current });
     }
     lockCount += 1;
 
     return () => {
       lockCount = Math.max(0, lockCount - 1);
-      dlog(`unlock — lockCount → ${lockCount}`);
       if (lockCount === 0) {
         releaseLock();
         lenisRef.current?.start?.();
-        dlog('lenis.start() called', { hasLenis: !!lenisRef.current });
       }
     };
   }, [locked]);
