@@ -17,6 +17,13 @@ const MotionContext = createContext({ lenis: null, prefersReducedMotion: false }
 const NO_LENIS_PREFIXES = [];
 const EDITOR_ROUTE = /^\/template\/[^/]+\/(edit|customize)(\/|$)/;
 
+/* Coarse pointer / no-hover = a touch device (phone or tablet). */
+const TOUCH_QUERY = '(pointer: coarse), (hover: none)';
+function detectTouch() {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia(TOUCH_QUERY).matches;
+}
+
 /**
  * Global motion provider — boots Lenis smooth scroll except on routes
  * that need native inner-container scrolling. Lenis is also disabled
@@ -25,12 +32,18 @@ const EDITOR_ROUTE = /^\/template\/[^/]+\/(edit|customize)(\/|$)/;
 export function MotionProvider({ children }) {
   const lenisRef = useRef(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  /* Touch devices use NATIVE scrolling — never Lenis. JS smooth-scroll on
-     phones hijacks the browser's touch handling and is a common cause of
-     scroll feeling janky or stuck; native mobile scroll is already smooth.
-     Detected via a coarse pointer (phones/tablets) and kept reactive so
-     the device-emulation toggle in dev tools flips it live. */
-  const [isTouch, setIsTouch] = useState(false);
+  /* Touch devices use NATIVE scrolling — never Lenis. Lenis attaches its
+     touch listeners with `{ passive: false }` and calls preventDefault()
+     to drive its own scroll; on phones this fights the browser's native
+     touch panning and can leave single-finger scrolling blocked. Native
+     mobile scroll is already smooth, so Lenis has nothing to add there.
+
+     Detected SYNCHRONOUSLY in the initial state (lazy initializer) so
+     Lenis is never even constructed on a touch device — there's no
+     window between first render and an effect where its passive:false
+     touch listeners could attach. Kept reactive below so the dev-tools
+     device-emulation toggle flips it live. */
+  const [isTouch, setIsTouch] = useState(detectTouch);
   const location = useLocation();
   const skipLenis =
     isTouch ||
@@ -47,8 +60,8 @@ export function MotionProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(pointer: coarse), (hover: none)');
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(TOUCH_QUERY);
     const update = () => setIsTouch(mq.matches);
     update();
     mq.addEventListener?.('change', update);
