@@ -142,9 +142,9 @@ export default function Earn() {
     <motion.div
       initial={pageTransition.initial}
       animate={pageTransition.animate}
-      /* No overflow-x-hidden — avoids a redundant nested scroll container
-         (laggy mobile scroll); horizontal clip lives on <body>. */
-      className="relative min-h-screen"
+      /* `overflow-x-clip` clips horizontal overflow (prevents mobile
+         shrink-to-fit zoom) without creating a nested scroll container. */
+      className="relative min-h-screen overflow-x-clip"
     >
       <CursorHalo />
       <div className="pointer-events-none fixed inset-x-0 top-24 bottom-0 z-0">

@@ -81,7 +81,11 @@ export default function Layout() {
   // container nested in the body scroller, causing laggy/competing touch
   // scrolling on mobile. Horizontal overflow is already clipped at <body>.
   return (
-    <div className="min-h-screen relative">
+    // `overflow-x-clip` clips horizontal overflow (prevents the mobile
+    // shrink-to-fit "zoom out") WITHOUT making this a scroll container —
+    // `clip` (unlike `hidden`) doesn't force overflow-y:auto, so it can't
+    // reintroduce the nested-scroller lag.
+    <div className="min-h-screen relative overflow-x-clip">
       {/* Cursor halo (desktop only, respects reduced-motion) */}
       <CursorHalo />
 

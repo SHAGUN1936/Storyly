@@ -105,9 +105,12 @@ export default function Landing() {
     <motion.div
       initial={pageTransition.initial}
       animate={pageTransition.animate}
-      /* No overflow-x-hidden — avoids a redundant nested scroll container
-         (laggy mobile scroll); horizontal clip lives on <body>. */
-      className="relative min-h-screen"
+      /* `overflow-x-clip` (NOT `-hidden`) clips horizontal overflow so the
+         page can't get wider than the device — which was making mobile
+         browsers shrink-to-fit ("zoom out" on load). `clip` does NOT create
+         a scroll container, so it avoids the nested-scroller lag that plain
+         `overflow-x-hidden` here would cause. */
+      className="relative min-h-screen overflow-x-clip"
     >
       <CursorHalo />
       {/* Sitewide floating decor — clipped so it never paints under the
