@@ -26,6 +26,9 @@ export default function HtmlTemplateRenderer({
   /* Responsive engine: forced device breakpoint (editor preview) or null
      for automatic width-based selection on published pages. */
   previewBreakpoint = null,
+  /* When a Motion Background is active, the deck's own opaque backdrop must
+     drop to transparent so the animated layer behind it shows through. */
+  transparentBg = false,
 }) {
   const slideCount = useMemo(() => countSlidesInHtml(html), [html]);
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
@@ -81,6 +84,7 @@ export default function HtmlTemplateRenderer({
         canSelect={canSelect}
         embedded={embedded}
         previewBreakpoint={previewBreakpoint}
+        transparentBg={transparentBg}
       />
     );
   }
@@ -100,7 +104,7 @@ export default function HtmlTemplateRenderer({
         embedded
           ? 'min-h-[40vh] overflow-visible'
           : 'min-h-[320px] max-h-[min(75vh,720px)] overflow-x-hidden overflow-y-auto'
-      } rounded-2xl border border-white/10 bg-zinc-900/80 p-4 text-left ${className}`}
+      } rounded-2xl border border-white/10 ${transparentBg ? '' : 'bg-zinc-900/80'} p-4 text-left ${className}`}
       style={embedded
         ? { overflow: 'visible' }
         : {

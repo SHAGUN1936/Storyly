@@ -2,6 +2,7 @@
  * Visual template builder → HTML (data-slot, data-page, data-nav-page).
  * Stored copy: structure.builderState for re-opening in the admin UI.
  */
+import { normalizeMotionBg } from './motionBackgrounds.js';
 
 function escapeHtml(s) {
   return String(s ?? '')
@@ -16,7 +17,12 @@ function escapeCss(val) {
   const s = String(val ?? '').trim();
   if (!s) return 'inherit';
   if (/[;{}<>]/.test(s)) return 'inherit';
-  return s.slice(0, 220);
+  // CRITICAL: convert any double quotes to single quotes. These values are
+  // interpolated into a double-quoted inline attribute (style="..."), and a
+  // font-family like `"Lobster", cursive` would otherwise close the style
+  // attribute at the first `"`, silently dropping font-family (and everything
+  // after it). Single quotes are valid for CSS font names and safe here.
+  return s.replace(/"/g, "'").slice(0, 220);
 }
 
 function placeholderDataUri(label) {
@@ -51,6 +57,9 @@ export function defaultTheme() {
     pageAnimation: 'fade',
     /** Site-wide background music (https URL). Picked from MUSIC_LIBRARY or pasted. */
     audioUrl: '',
+    /** Motion Backgrounds library — animated layer behind the design.
+     *  { type, color1, color2, speed }. type 'none' = off. */
+    motionBg: { type: 'none', color1: '#8B5CF6', color2: '#EC4899', speed: 2 },
   };
 }
 
@@ -60,7 +69,7 @@ export function defaultTheme() {
 export const FILTER_PRESETS = [
   { value: 'none',     label: 'Original' },
   { value: 'vivid',    label: 'Vivid' },
-  { value: 'mono',     label: 'Mono' },
+  { value: 'mono',     label: 'B&W' },
   { value: 'warm',     label: 'Warm' },
   { value: 'cool',     label: 'Cool' },
   { value: 'vintage',  label: 'Vintage' },
@@ -236,6 +245,19 @@ const GOOGLE_FONT_LINKS = {
   '"Abril Fatface", serif':                    'https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap',
   '"Cormorant Garamond", serif':               'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap',
   '"Cinzel", serif':                           'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap',
+  // ── Extra Instagram-style display / script / handwriting / typewriter / neon ──
+  '"Lobster", cursive':                        'https://fonts.googleapis.com/css2?family=Lobster&display=swap',
+  '"Sacramento", cursive':                     'https://fonts.googleapis.com/css2?family=Sacramento&display=swap',
+  '"Yellowtail", cursive':                     'https://fonts.googleapis.com/css2?family=Yellowtail&display=swap',
+  '"Cookie", cursive':                         'https://fonts.googleapis.com/css2?family=Cookie&display=swap',
+  '"Shadows Into Light", cursive':             'https://fonts.googleapis.com/css2?family=Shadows+Into+Light&display=swap',
+  '"Indie Flower", cursive':                   'https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap',
+  '"Kalam", cursive':                          'https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap',
+  '"Amatic SC", cursive':                      'https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&display=swap',
+  '"Special Elite", cursive':                  'https://fonts.googleapis.com/css2?family=Special+Elite&display=swap',
+  '"Courier Prime", monospace':                'https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap',
+  '"Monoton", cursive':                        'https://fonts.googleapis.com/css2?family=Monoton&display=swap',
+  '"Audiowide", cursive':                      'https://fonts.googleapis.com/css2?family=Audiowide&display=swap',
 };
 
 export function googleFontLinkForTheme(theme) {
@@ -323,7 +345,19 @@ export const BUILDER_FONT_OPTIONS = [
   { value: '"Satisfy", cursive',                             label: 'Satisfy',           group: 'Hand' },
   { value: '"Great Vibes", cursive',                         label: 'Great Vibes',       group: 'Hand' },
   { value: '"Permanent Marker", cursive',                    label: 'Permanent Marker',  group: 'Hand' },
+  { value: '"Shadows Into Light", cursive',                  label: 'Shadows',           group: 'Hand' },
+  { value: '"Indie Flower", cursive',                        label: 'Indie Flower',      group: 'Hand' },
+  { value: '"Kalam", cursive',                               label: 'Kalam',             group: 'Hand' },
+  { value: '"Amatic SC", cursive',                           label: 'Amatic',            group: 'Hand' },
+  { value: '"Lobster", cursive',                             label: 'Lobster',           group: 'Script' },
+  { value: '"Sacramento", cursive',                          label: 'Sacramento',        group: 'Script' },
+  { value: '"Yellowtail", cursive',                          label: 'Yellowtail',        group: 'Script' },
+  { value: '"Cookie", cursive',                              label: 'Cookie',            group: 'Script' },
+  { value: '"Special Elite", cursive',                       label: 'Typewriter',        group: 'Retro' },
+  { value: '"Courier Prime", monospace',                     label: 'Courier',           group: 'Retro' },
   { value: '"Press Start 2P", cursive',                      label: 'Press Start 2P',    group: 'Retro' },
+  { value: '"Monoton", cursive',                             label: 'Neon',              group: 'Retro' },
+  { value: '"Audiowide", cursive',                           label: 'Audiowide',         group: 'Retro' },
 ];
 
 /** ── Text effects ─────────────────────────────────────────── */
@@ -332,8 +366,10 @@ export const TEXT_EFFECT_PRESETS = [
   { value: 'gradient',   label: 'Gradient' },
   { value: 'neon',       label: 'Neon' },
   { value: 'glow',       label: 'Glow' },
-  { value: 'shadow',     label: 'Drop shadow' },
+  { value: 'shadow',     label: 'Shadow' },
   { value: 'stroke',     label: 'Outline' },
+  { value: '3d',         label: '3D' },
+  { value: 'reflection', label: 'Reflection' },
   { value: 'typewriter', label: 'Typewriter' },
   { value: 'blink',      label: 'Blink' },
 ];
@@ -390,8 +426,20 @@ export function textEffectStyle(block) {
     case 'shadow':
       css += `text-shadow:0 6px 18px rgba(0,0,0,0.45);`;
       break;
-    case 'stroke':
-      css += `-webkit-text-stroke:2px ${c1};color:transparent;paint-order:stroke fill;`;
+    case 'stroke': {
+      // Outline / text stroke. Width editable via `strokeWidth` (default 2px).
+      const sw = Number(block?.strokeWidth);
+      const w = Number.isFinite(sw) ? Math.max(0.5, Math.min(12, sw)) : 2;
+      css += `-webkit-text-stroke:${w}px ${c1};color:transparent;paint-order:stroke fill;`;
+      break;
+    }
+    case '3d':
+      // Layered shadows give an extruded 3D look (depth toward bottom-right).
+      css += `text-shadow:1px 1px 0 rgba(0,0,0,0.22),2px 2px 0 rgba(0,0,0,0.20),3px 3px 0 rgba(0,0,0,0.18),4px 4px 0 rgba(0,0,0,0.16),5px 5px 0 rgba(0,0,0,0.14),6px 8px 12px rgba(0,0,0,0.35);`;
+      break;
+    case 'reflection':
+      // Mirror image fading below the text (webkit/blink — all mobile browsers).
+      css += `-webkit-box-reflect:below 2px linear-gradient(transparent 55%, rgba(255,255,255,0.28));`;
       break;
     default:
       break;
@@ -744,6 +792,10 @@ function migrateLayerStyle(block) {
     brightness: Number.isFinite(bright) ? Math.max(0, Math.min(300, bright)) : 100,
     contrast:   Number.isFinite(contrast) ? Math.max(0, Math.min(300, contrast)) : 100,
     saturation: Number.isFinite(sat) ? Math.max(0, Math.min(300, sat)) : 100,
+    /** Exposure: a second multiplicative light control (100 = no change). */
+    exposure:   Number.isFinite(Number(block?.exposure)) ? Math.max(0, Math.min(300, Number(block.exposure))) : 100,
+    /** Gaussian blur in px (0 = none). */
+    blur:       Number.isFinite(Number(block?.blur)) ? Math.max(0, Math.min(30, Number(block.blur))) : 0,
     /** Responsive v3: per-breakpoint position/size deltas vs the base. */
     responsive: normalizeBlockResponsive(block?.responsive),
   };
@@ -854,11 +906,15 @@ export function normalizeBuilderState(raw) {
       p.pageDurationMs === '' || p.pageDurationMs === undefined || p.pageDurationMs === null
         ? ''
         : Math.min(120000, Math.max(0, Number(p.pageDurationMs) || 0)),
+    /** Which one-tap theme preset is applied to THIS page (for editor highlight). */
+    themeId: typeof p.themeId === 'string' ? p.themeId : '',
     pageBackground: typeof p.pageBackground === 'string' ? p.pageBackground : '',
     pageImageUrl: typeof p.pageImageUrl === 'string' ? p.pageImageUrl : '',
     pageVideoUrl: typeof p.pageVideoUrl === 'string' ? p.pageVideoUrl : '',
     /** Animated background effect overlay (floating particles). */
     pageEffect: PAGE_EFFECT_SET.has(p.pageEffect) ? p.pageEffect : 'none',
+    /** Per-page Motion Background ({ type, color1, color2, speed }). */
+    motionBg: normalizeMotionBg(p.motionBg),
     textColor: typeof p.textColor === 'string' ? p.textColor : '',
     headingColor: typeof p.headingColor === 'string' ? p.headingColor : '',
     buttonBackground: typeof p.buttonBackground === 'string' ? p.buttonBackground : '',
@@ -890,11 +946,41 @@ function buttonClass(style) {
   return 'tpl-btn tpl-btn-stable';
 }
 
+/** Button variants (Canva-style). */
+export const BUTTON_VARIANT_PRESETS = [
+  { value: 'solid',    label: 'Solid' },
+  { value: 'outline',  label: 'Outline' },
+  { value: 'gradient', label: 'Gradient' },
+  { value: 'ghost',    label: 'Ghost' },
+];
+
 function buttonInlineStyle(block, theme) {
   const bg = block.buttonBg || theme.buttonBackground;
   const fg = block.buttonText || theme.buttonText;
-  const r = Number(theme.buttonRadius) || 24;
-  return `background:${escapeCss(bg)};color:${escapeCss(fg)};border-radius:${r}px`;
+  const rr = Number(block.buttonRadius);
+  const radius = Number.isFinite(rr) ? Math.max(0, Math.min(999, Math.round(rr))) : (Number(theme.buttonRadius) || 24);
+  const variant = ['solid', 'outline', 'gradient', 'ghost'].includes(block.buttonVariant) ? block.buttonVariant : 'solid';
+  let css = `border-radius:${radius}px;`;
+  // Per-button padding (size) + typography.
+  const px = Number(block.paddingX);
+  const py = Number(block.paddingY);
+  if (Number.isFinite(px)) css += `padding-left:${Math.max(0, Math.min(120, px))}px;padding-right:${Math.max(0, Math.min(120, px))}px;`;
+  if (Number.isFinite(py)) css += `padding-top:${Math.max(0, Math.min(80, py))}px;padding-bottom:${Math.max(0, Math.min(80, py))}px;`;
+  if (typeof block.fontFamily === 'string' && block.fontFamily) css += `font-family:${escapeCss(block.fontFamily)};`;
+  const fs = Number(block.fontSize);
+  if (Number.isFinite(fs) && fs > 0) css += `font-size:${Math.max(8, Math.min(120, Math.round(fs)))}px;`;
+  // Style variant.
+  if (variant === 'outline') {
+    css += `background:transparent;color:${escapeCss(bg)};border:2px solid ${escapeCss(bg)};`;
+  } else if (variant === 'ghost') {
+    css += `background:transparent;color:${escapeCss(fg)};border:0;`;
+  } else if (variant === 'gradient') {
+    const bg2 = block.buttonBg2 || '#7c3aed';
+    css += `background:linear-gradient(120deg,${escapeCss(bg)},${escapeCss(bg2)});color:${escapeCss(fg)};border:0;`;
+  } else {
+    css += `background:${escapeCss(bg)};color:${escapeCss(fg)};`;
+  }
+  return css;
 }
 
 function layerStyle(block) {
@@ -973,9 +1059,13 @@ function mediaStyle(block, defaults) {
   const b = Number(block?.brightness);
   const c = Number(block?.contrast);
   const s = Number(block?.saturation);
+  const e = Number(block?.exposure);
+  const bl = Number(block?.blur);
   if (Number.isFinite(b) && b !== 100) parts.push(`brightness(${Math.max(0, Math.min(300, b))}%)`);
+  if (Number.isFinite(e) && e !== 100) parts.push(`brightness(${Math.max(0, Math.min(300, e))}%)`);
   if (Number.isFinite(c) && c !== 100) parts.push(`contrast(${Math.max(0, Math.min(300, c))}%)`);
   if (Number.isFinite(s) && s !== 100) parts.push(`saturate(${Math.max(0, Math.min(300, s))}%)`);
+  if (Number.isFinite(bl) && bl > 0) parts.push(`blur(${Math.max(0, Math.min(30, bl))}px)`);
   /* Frame border/outline. For rectangular / rounded / circle frames a real CSS
      border works; for clipped silhouettes (heart, star, …) a CSS border gets
      clipped away, so we trace the shape with 4-direction drop-shadows instead. */
@@ -1570,6 +1660,59 @@ function renderPageEffect(page) {
   return `<div class="tpl-fx${riseCls}" aria-hidden="true">${spans}</div>`;
 }
 
+/** Per-page Motion Background, rendered AS HTML inside the page (a
+ *  `.page-bg-motion` layer at z-0, behind `.page-inner` which is z-1 — exactly
+ *  like `.page-bg-media`). Pure CSS so it works inside injected markup, on
+ *  every page independently, with no React layering / transparency hacks. */
+function renderPageMotionBg(page) {
+  const m = normalizeMotionBg(page?.motionBg);
+  if (m.type === 'none') return '';
+  const c1 = escapeCss(m.color1);
+  const c2 = escapeCss(m.color2);
+  const dur = ({ 1: '30s', 2: '18s', 3: '10s' })[m.speed] || '18s';
+  const wrap = (inner, extra = '') =>
+    `<div class="page-bg-motion" style="position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;${extra}" aria-hidden="true">${inner}</div>`;
+
+  if (m.type === 'gradient') {
+    return wrap(`<div class="mbg-gradient mbg-anim" style="--c1:${c1};--c2:${c2};animation-duration:${dur}"></div>`);
+  }
+  if (m.type === 'shapes') {
+    const b = [[12, 18, 220, 0], [70, 12, 300, -4], [78, 66, 260, -9], [22, 74, 240, -13], [46, 40, 200, -6]];
+    return wrap(b.map(([l, t, s, d], i) => `<span class="mbg-shape mbg-anim" style="left:${l}%;top:${t}%;width:${s}px;height:${s}px;background:${i % 2 ? c2 : c1};animation-duration:${dur};animation-delay:${d}s"></span>`).join(''));
+  }
+  if (m.type === 'smoke') {
+    const b = [[12, 18, 300, 0], [70, 12, 420, -4], [78, 66, 360, -9], [22, 74, 330, -13]];
+    return wrap(b.map(([l, t, s, d], i) => `<span class="mbg-smoke mbg-anim" style="left:${l}%;top:${t}%;width:${s}px;height:${s}px;background:${i % 2 ? c2 : c1};animation-duration:${dur};animation-delay:${d}s"></span>`).join(''));
+  }
+  if (m.type === 'clouds') {
+    return wrap([0, 1, 2, 3].map((i) => `<span class="mbg-cloud mbg-anim" style="top:${10 + i * 22}%;width:${200 + (i % 2) * 120}px;height:${90 + (i % 2) * 30}px;animation-duration:${dur};animation-delay:${-i * 5}s"></span>`).join(''));
+  }
+  if (m.type === 'galaxy') {
+    return wrap(
+      `<div class="mbg-stars mbg-anim" style="animation-duration:${dur}"></div><div class="mbg-stars mbg-stars-2 mbg-anim" style="animation-duration:${dur}"></div><div class="mbg-galaxy-core" style="background:radial-gradient(circle, ${c2}33, transparent 60%)"></div>`,
+      `background:radial-gradient(120% 120% at 50% 40%, ${c1}22, transparent 70%)`,
+    );
+  }
+  if (m.type === 'waves') {
+    return wrap(`<svg class="mbg-waves" viewBox="0 0 1440 320" preserveAspectRatio="none"><path class="mbg-anim mbg-wave-a" fill="${c1}" fill-opacity="0.45" d="M0,160 C320,260 520,60 720,140 C920,220 1120,80 1440,160 L1440,320 L0,320 Z" style="animation-duration:${dur}"></path><path class="mbg-anim mbg-wave-b" fill="${c2}" fill-opacity="0.4" d="M0,200 C300,120 560,280 760,200 C1000,110 1180,250 1440,190 L1440,320 L0,320 Z" style="animation-duration:${dur}"></path></svg>`);
+  }
+  if (m.type === 'light') {
+    return wrap(`<div class="mbg-light mbg-anim" style="--c1:${c1};--c2:${c2};animation-duration:${dur}"></div>`);
+  }
+  if (m.type === 'particles') {
+    // CSS dot field (tsParticles JS can't run inside injected markup).
+    let dots = '';
+    for (let i = 0; i < 16; i++) {
+      const l = (i * 61) % 100;
+      const t = (i * 37) % 100;
+      const s = 3 + (i % 3) * 2;
+      dots += `<span class="mbg-dot mbg-anim" style="left:${l}%;top:${t}%;width:${s}px;height:${s}px;background:${i % 2 ? c2 : c1};animation-duration:${dur};animation-delay:-${i}s"></span>`;
+    }
+    return wrap(dots);
+  }
+  return '';
+}
+
 function renderPageHtml(page, pi, globalTheme) {
   const pt = effectivePageTheme(page, globalTheme);
   const active = pi === 0 ? ' active' : '';
@@ -1600,7 +1743,9 @@ function renderPageHtml(page, pi, globalTheme) {
     Number.isFinite(dur) && dur > 0 ? ` data-page-duration-ms="${Math.min(120000, Math.floor(dur))}"` : '';
 
   const fxLayer = renderPageEffect(page);
+  const motionLayer = renderPageMotionBg(page);
   return `<div class="page${active}${animExtra}" id="page${pi + 1}" data-page data-page-title="${title}"${durAttr}${pageStyle}>
+${motionLayer}
 ${media}
 ${fxLayer}
 <div class="page-inner" style="${innerStyle}">

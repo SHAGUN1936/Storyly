@@ -22,11 +22,21 @@ import { geometryToCommit, slotFor } from '../lib/fabricBlockSync';
 const TEXT_TYPES = new Set(['heading', 'subheading', 'text', 'paragraph']);
 const SNAP_PX = 6;
 
+/* Coarse-pointer (finger) devices get the full multi-touch gesture layer and
+   finger-sized handles. Desktop (fine pointer / mouse) keeps the exact
+   existing behaviour — the touch code below is gated on this and never runs. */
+const IS_TOUCH =
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(pointer: coarse)').matches;
+
 export default function FabricEditorCanvas({
   previewRef, blocks, pageIndex, designW, designH, selectedIndex, enabled,
   onSelect, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder,
+  onCopy, onPaste, canPaste = false,
 }) {
   const canvasElRef = useRef(null);
+  const wrapRef = useRef(null);
   const fabricRef = useRef(null);
   const FabricRef = useRef(null);
   const proxiesRef = useRef([]);
@@ -41,9 +51,12 @@ export default function FabricEditorCanvas({
   const [spacing, setSpacing] = useState([]);
   const [editing, setEditing] = useState(false);
   const [selCount, setSelCount] = useState(0);
+  /* Touch-only UI: long-press context menu, live gesture readout, canvas zoom. */
+  const [ctxMenu, setCtxMenu] = useState(null);   // { x, y, blockIndex, isText }
+  const [gestureInfo, setGestureInfo] = useState('');
 
   const cb = useRef({});
-  cb.current = { onSelect, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder, designW, designH, pageIndex };
+  cb.current = { onSelect, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder, onCopy, onPaste, designW, designH, pageIndex };
 
   const arrEq = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   const setGuidesIfChanged = (vs, hs) => {
@@ -297,6 +310,19 @@ export default function FabricEditorCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
+  /* ── Freeze entrance/loop motion in the preview while editing ──
+     so the proxy reads each element's BASE box (a running animation otherwise
+     offsets getBoundingClientRect → drifting position/size on drag/resize,
+     worst on first load). The `.fabric-editing` CSS handles the rest. */
+  useEffect(() => {
+    const host = previewRef.current;
+    if (!host) return undefined;
+    if (enabled) host.classList.add('fabric-editing');
+    else host.classList.remove('fabric-editing');
+    return () => host.classList.remove('fabric-editing');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+
   /* ── Re-sync on block / page / selection / size change ── */
   useEffect(() => {
     if (!enabled) return undefined;
@@ -309,6 +335,208 @@ export default function FabricEditorCanvas({
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, blocks, pageIndex, selectedIndex, designW, designH]);
+
+  /* ── Multi-touch gesture layer (mobile-first; touch devices only) ──
+     • one finger        → select + drag (handled by Fabric)
+     • two-finger pinch  → resize the element under the fingers
+     • two-finger twist  → rotate it (magnetises to 15°)
+     • two-finger drag   → move it (pinch + twist + move are one fluid gesture)
+     • double-tap text   → edit it inline
+     • long-press        → select + open the context menu (haptic)
+     We DRIVE the Fabric object programmatically and LOCK it for the duration,
+     so Fabric's own pointer transforms become no-ops and never fight us. All
+     of this is gated on IS_TOUCH — desktop editing is byte-for-byte unchanged. */
+  useEffect(() => {
+    if (!enabled || !IS_TOUCH) return undefined;
+    const wrap = wrapRef.current;
+    if (!wrap) return undefined;
+
+    const getC = () => fabricRef.current;
+    const getF = () => FabricRef.current;
+    const rectOf = () => getC()?.upperCanvasEl.getBoundingClientRect();
+    const mid = (t) => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+    const span = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const twist = (t) => (Math.atan2(t[1].clientY - t[0].clientY, t[1].clientX - t[0].clientX) * 180) / Math.PI;
+    const setLocks = (o, v) => { if (o) o.lockMovementX = o.lockMovementY = o.lockScalingX = o.lockScalingY = o.lockRotation = v; };
+
+    let g = null;            // active two-finger gesture
+    let lp = null;           // long-press tracker
+    let engaged = false;     // a multi-touch sequence is in progress → isolate Fabric
+    let suppressTap = false; // a gesture/long-press happened → don't treat lift as a tap
+    let lastTap = 0, lastTapX = 0, lastTapY = 0;
+    const clearLP = () => { if (lp?.timer) clearTimeout(lp.timer); lp = null; };
+
+    const pickBlockAt = (cx, cy) => {
+      const host = previewRef.current; if (!host) return null;
+      let hit = null;
+      proxiesRef.current.forEach((o) => {
+        if (!o || o.blockIndex == null) return;
+        const el = host.querySelector(`[data-block-slot="${o.slot}"]`);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+          if (hit == null || o.blockIndex > hit) hit = o.blockIndex; // topmost wins
+        }
+      });
+      return hit;
+    };
+
+    const commitObj = (o) => {
+      const canvas = getC(); const fabric = getF();
+      if (!canvas || !fabric || !o || o.blockIndex == null) return;
+      const dims = { canvasW: canvas.getWidth(), canvasH: canvas.getHeight(), designW: cb.current.designW, designH: cb.current.designH };
+      const d = fabric.util.qrDecompose(o.calcTransformMatrix());
+      const v = geometryToCommit({ centerX: d.translateX, centerY: d.translateY, scaledW: o.width * Math.abs(d.scaleX), scaledH: o.height * Math.abs(d.scaleY), angle: d.angle }, dims);
+      const slot = slotFor(cb.current.pageIndex, o.blockIndex);
+      cb.current.onMoveCommit?.(slot, v.moveX, v.moveY, v.refW, v.refH);
+      cb.current.onResizeCommit?.(slot, v.designW, v.designH);
+      cb.current.onRotateCommit?.(slot, v.deg);
+    };
+
+    /* Focus a text block's editable node (shared by double-tap + context menu). */
+    const editTextAt = (idx) => {
+      const host = previewRef.current; if (!host) return;
+      const el = host.querySelector(`[data-block-slot="${slotFor(cb.current.pageIndex, idx)}"]`);
+      const target = el && (el.matches('[data-text-slot]') ? el : el.querySelector('[data-text-slot]') || el);
+      if (!target) return;
+      editingRef.current = true; setEditing(true);
+      requestAnimationFrame(() => {
+        try {
+          target.focus?.();
+          const r = document.createRange(); r.selectNodeContents(target);
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        } catch { /* ignore */ }
+        const done = () => { target.removeEventListener('blur', done); editingRef.current = false; setEditing(false); };
+        target.addEventListener('blur', done);
+      });
+    };
+
+    const doubleTap = (cx, cy) => {
+      const idx = pickBlockAt(cx, cy);
+      if (idx != null && TEXT_TYPES.has((blocks?.[idx] || {}).type)) editTextAt(idx);
+    };
+
+    const onStart = (e) => {
+      const canvas = getC(); if (!canvas) return;
+      const t = e.touches;
+      if (engaged || t.length >= 2) { e.preventDefault(); e.stopPropagation(); }
+      if (t.length === 1 && !engaged) {
+        const p = t[0];
+        clearLP();
+        lp = {
+          x: p.clientX, y: p.clientY, fired: false,
+          timer: setTimeout(() => {
+            if (!lp) return;
+            lp.fired = true; suppressTap = true;
+            const idx = pickBlockAt(p.clientX, p.clientY);
+            if (idx != null) {
+              cb.current.onSelect?.(idx);
+              try { navigator.vibrate?.(15); } catch { /* no haptics */ }
+              const isText = TEXT_TYPES.has((blocks?.[idx] || {}).type);
+              setCtxMenu({ x: p.clientX, y: p.clientY, blockIndex: idx, isText });
+            }
+          }, 500),
+        };
+        return;
+      }
+      if (t.length >= 2) {
+        suppressTap = true; clearLP(); setCtxMenu(null);
+        const fabric = getF();
+        const m = mid(t); const rect = rectOf();
+        /* Pinch over an element transforms it — even if it wasn't selected yet
+           (auto-select the element under the fingers, like Instagram/Canva). */
+        let active = canvas.getActiveObject();
+        if (!active || active.type === 'activeselection' || active.blockIndex == null) {
+          const idx = pickBlockAt(m.x, m.y);
+          const proxy = idx != null ? proxiesRef.current[idx] : null;
+          if (proxy) { canvas.setActiveObject(proxy); active = proxy; }
+        }
+        if (active && active.type !== 'activeselection' && active.blockIndex != null && fabric) {
+          engaged = true;
+          try { canvas._currentTransform = null; } catch { /* private API best-effort */ }
+          canvas.selection = false; canvas.skipTargetFind = true;
+          setLocks(active, true);
+          g = {
+            obj: active,
+            baseSX: active.scaleX, baseSY: active.scaleY, baseAngle: active.angle,
+            baseCenter: active.getCenterPoint(), baseSpan: span(t), baseTwist: twist(t),
+            baseMid: { x: m.x - rect.left, y: m.y - rect.top }, zoom: canvas.getZoom() || 1,
+          };
+          canvas.requestRenderAll();
+        } else {
+          // Nothing to transform under the fingers — ignore (no canvas-viewport
+          // zoom: it would scale only the overlay and detach the handles).
+          g = null;
+        }
+      }
+    };
+
+    const onMove = (e) => {
+      const canvas = getC(); const fabric = getF(); if (!canvas) return;
+      const t = e.touches;
+      if (lp && t.length === 1 && Math.hypot(t[0].clientX - lp.x, t[0].clientY - lp.y) > 10) clearLP();
+      if (engaged) { e.preventDefault(); e.stopPropagation(); }
+      if (!g || t.length < 2 || !fabric) return;
+      const rect = rectOf(); const m = mid(t);
+      const ratio = g.baseSpan > 0 ? span(t) / g.baseSpan : 1;
+      const o = g.obj;
+      try { canvas._currentTransform = null; } catch { /* ignore */ }
+      const sx = Math.max(0.05, Math.min(12, g.baseSX * ratio));
+      const sy = Math.max(0.05, Math.min(12, g.baseSY * ratio));
+      let deg = g.baseAngle + (twist(t) - g.baseTwist);
+      const snap = Math.round(deg / 15) * 15;
+      if (Math.abs(deg - snap) < 4) deg = snap;            // magnetise to 15°
+      deg = ((deg % 360) + 360) % 360;
+      const dx = ((m.x - rect.left) - g.baseMid.x) / g.zoom;
+      const dy = ((m.y - rect.top) - g.baseMid.y) / g.zoom;
+      o.set({ scaleX: sx, scaleY: sy, angle: deg });
+      o.setPositionByOrigin(new fabric.Point(g.baseCenter.x + dx, g.baseCenter.y + dy), 'center', 'center');
+      o.setCoords();
+      canvas.requestRenderAll();
+      setGestureInfo(`${Math.round(o.width * sx)} × ${Math.round(o.height * sy)}  ·  ${Math.round(deg)}°`);
+    };
+
+    const onEnd = (e) => {
+      const canvas = getC(); if (!canvas) return;
+      const t = e.touches;
+      if (engaged) { e.stopPropagation(); }
+      if (g && t.length < 2) {
+        commitObj(g.obj);
+        setLocks(g.obj, false);
+        setGestureInfo('');
+        g = null;
+      }
+      if (t.length === 0) {
+        const lpFired = lp?.fired; clearLP();
+        if (engaged) { canvas.selection = true; canvas.skipTargetFind = false; }
+        const wasGesture = engaged || suppressTap || lpFired;
+        engaged = false; suppressTap = false;
+        if (!wasGesture) {
+          const ct = e.changedTouches[0];
+          if (ct) {
+            const now = Date.now();
+            if (now - lastTap < 300 && Math.hypot(ct.clientX - lastTapX, ct.clientY - lastTapY) < 30) {
+              doubleTap(ct.clientX, ct.clientY); lastTap = 0;
+            } else { lastTap = now; lastTapX = ct.clientX; lastTapY = ct.clientY; }
+          }
+        }
+      }
+    };
+
+    const opts = { passive: false, capture: true };
+    wrap.addEventListener('touchstart', onStart, opts);
+    wrap.addEventListener('touchmove', onMove, opts);
+    wrap.addEventListener('touchend', onEnd, opts);
+    wrap.addEventListener('touchcancel', onEnd, opts);
+    return () => {
+      clearLP();
+      wrap.removeEventListener('touchstart', onStart, opts);
+      wrap.removeEventListener('touchmove', onMove, opts);
+      wrap.removeEventListener('touchend', onEnd, opts);
+      wrap.removeEventListener('touchcancel', onEnd, opts);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, blocks]);
 
   function resizeAndSync() {
     const canvas = fabricRef.current;
@@ -348,8 +576,9 @@ export default function FabricEditorCanvas({
           fill: 'rgba(139,92,246,0.001)', stroke: 'transparent', strokeWidth: 0,
           hasBorders: true, hasControls: true,
           borderColor: '#8B5CF6', cornerColor: '#8B5CF6', cornerStrokeColor: '#FFFFFF',
-          cornerSize: 12, cornerStyle: 'circle', transparentCorners: false,
-          borderScaleFactor: 2, lockScalingFlip: true, objectCaching: false, padding: 2,
+          cornerSize: IS_TOUCH ? 22 : 12, touchCornerSize: 44,
+          cornerStyle: 'circle', transparentCorners: false,
+          borderScaleFactor: 2, lockScalingFlip: true, objectCaching: false, padding: IS_TOUCH ? 4 : 2,
         });
         canvas.add(obj);
       }
@@ -433,7 +662,7 @@ export default function FabricEditorCanvas({
   return (
     // `touchAction: none` lets finger drags drive Fabric (move/resize/rotate)
     // instead of scrolling the page — the key to touch editing on mobile.
-    <div className="absolute inset-0 z-20" style={{ pointerEvents: editing ? 'none' : 'auto', touchAction: 'none' }} aria-hidden>
+    <div ref={wrapRef} className="absolute inset-0 z-20" style={{ pointerEvents: editing ? 'none' : 'auto', touchAction: 'none' }}>
       <canvas ref={canvasElRef} />
       {guides.vs.map((x) => (
         <div key={`v${x}`} className="pointer-events-none absolute top-0 bottom-0" style={{ left: x, width: 1, background: '#8B5CF6', boxShadow: '0 0 4px rgba(139,92,246,0.8)' }} />
@@ -478,6 +707,64 @@ export default function FabricEditorCanvas({
           )}
         </div>
       )}
+
+      {/* ── Touch-only chrome ─────────────────────────────────────── */}
+      {/* Live pinch/rotate readout */}
+      {gestureInfo && (
+        <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-slate-900/90 px-3 py-1 text-[12px] font-bold text-white shadow-lg border border-white/10">
+          {gestureInfo}
+        </div>
+      )}
+      {/* Long-press context menu */}
+      {ctxMenu && (() => {
+        const idx = ctxMenu.blockIndex;
+        const close = () => setCtxMenu(null);
+        const run = (fn) => () => { fn?.(); close(); };
+        const editText = () => {
+          const host = previewRef.current; if (!host) return;
+          const el = host.querySelector(`[data-block-slot="${slotFor(pageIndex, idx)}"]`);
+          const target = el && (el.matches('[data-text-slot]') ? el : el.querySelector('[data-text-slot]') || el);
+          if (!target) return;
+          editingRef.current = true; setEditing(true);
+          requestAnimationFrame(() => {
+            try {
+              target.focus?.();
+              const r = document.createRange(); r.selectNodeContents(target);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+            } catch { /* ignore */ }
+            const done = () => { target.removeEventListener('blur', done); editingRef.current = false; setEditing(false); };
+            target.addEventListener('blur', done);
+          });
+        };
+        const Item = ({ onClick, children, danger }) => (
+          <button type="button" onClick={onClick}
+            className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-semibold transition active:scale-[0.98] ${danger ? 'text-rose-300 hover:bg-rose-500/15' : 'text-slate-100 hover:bg-brand-500/25'}`}>
+            {children}
+          </button>
+        );
+        const mw = 168;
+        const left = Math.max(8, Math.min(ctxMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 360) - mw - 8));
+        const top = Math.min(ctxMenu.y + 6, (typeof window !== 'undefined' ? window.innerHeight : 640) - 300);
+        return (
+          <>
+            <div className="fixed inset-0 z-[60]" style={{ pointerEvents: 'auto' }} onPointerDown={close} />
+            <div
+              className="fixed z-[61] w-[168px] overflow-hidden rounded-2xl border border-white/12 bg-slate-900/95 py-1 shadow-2xl backdrop-blur"
+              style={{ left, top, pointerEvents: 'auto' }}
+            >
+              {ctxMenu.isText && <Item onClick={run(editText)}>✏️ Edit text</Item>}
+              <Item onClick={run(() => cb.current.onDuplicate?.(idx))}>⧉ Duplicate</Item>
+              {onCopy && <Item onClick={run(() => cb.current.onCopy?.(idx))}>📋 Copy</Item>}
+              {onPaste && canPaste && <Item onClick={run(() => cb.current.onPaste?.())}>📥 Paste</Item>}
+              <div className="my-1 h-px bg-white/10" />
+              <Item onClick={run(() => cb.current.onReorder?.(idx, 'front'))}>⤒ Bring to front</Item>
+              <Item onClick={run(() => cb.current.onReorder?.(idx, 'back'))}>↧ Send backward</Item>
+              <div className="my-1 h-px bg-white/10" />
+              <Item danger onClick={run(() => cb.current.onDelete?.(idx))}>🗑 Delete</Item>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

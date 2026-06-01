@@ -56,6 +56,8 @@ export default function HtmlSlideDeck({
   /* Responsive engine: forced device breakpoint (editor preview) or null
      for automatic width-based selection on published pages. */
   previewBreakpoint = null,
+  /* Drop the deck's dark backdrop so a Motion Background behind it shows. */
+  transparentBg = false,
 }) {
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
   const containerRef = useRef(null);
@@ -666,7 +668,7 @@ export default function HtmlSlideDeck({
           embedded
             ? 'min-h-[60vh] overflow-visible'
             : 'min-h-[360px] h-[min(72vh,680px)] overflow-x-hidden overflow-y-auto'
-        } rounded-2xl border border-white/10 bg-black/50 text-left${editable && dragMode ? ' tpl-drag-mode' : ''}`}
+        } rounded-2xl border border-white/10 ${transparentBg ? '' : 'bg-black/50'} text-left${editable && dragMode ? ' tpl-drag-mode' : ''}`}
         style={embedded
           ? { overflow: 'visible' }
           : {

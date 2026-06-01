@@ -25,7 +25,7 @@ import {
   updateBuilderBlockPositionSynced,
   updateBuilderBlockPositionPctSynced,
   autoAlignBuilderPage,
-  updateBuilderBlockSizeSynced,
+  updateBuilderBlockSizeForDevice,
   updateBuilderBlockRotateSynced,
   defaultResponsiveConfig,
   FILTER_PRESETS,
@@ -45,6 +45,10 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import DeviceSelect from '../components/DeviceSelect';
 import SlideshowBuilder from '../components/SlideshowBuilder';
 import FabricEditorCanvas from '../components/FabricEditorCanvas';
+import TextStudioPanel from '../components/TextStudioPanel';
+import FontBar from '../components/FontBar';
+import ButtonStudioPanel from '../components/ButtonStudioPanel';
+import { MOTION_BG_PRESETS, normalizeMotionBg } from '../lib/motionBackgrounds';
 import { STARTER_TEMPLATES } from '../lib/starterTemplates';
 import { StarSticker, DiscoSticker, GiftSticker } from '../ui/CartoonStickers';
 import FloatingDecor from '../ui/FloatingDecor';
@@ -107,6 +111,9 @@ export default function Admin() {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [builderState, setBuilderState] = useState(() => defaultVisualBuilderState());
   const [activePage, setActivePage] = useState(0);
+  // Theme presets apply per-page by default ('page') so every page can look
+  // different; 'all' restyles the whole design at once.
+  const [themeScope, setThemeScope] = useState('page');
   // Nothing is selected by default — an element only becomes active when the
   // user actually clicks it (so the contextual top bar stays hidden until then).
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
@@ -115,8 +122,17 @@ export default function Admin() {
    *  HTML preview and provides the select/drag/resize/rotate handles; commits
    *  flow through the SAME builderState mutators as the legacy DOM editor, so
    *  the data + render path are unchanged. OFF = legacy editor, zero risk. */
-  const [fabricMode, setFabricMode] = useState(false);
+  /* Precision (multi-touch) editing auto-enables on finger devices so the
+     mobile editor is touch-ready out of the box; desktop stays opt-in. */
+  const [fabricMode, setFabricMode] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true
+  );
   const editorArtboardRef = useRef(null);
+  /* In-app clipboard for Copy/Paste of a block (survives across pages). */
+  const blockClipboard = useRef(null);
+  const [hasClipboard, setHasClipboard] = useState(false);
+  /** Instagram-style bottom font bar (quick font picker for the selected text). */
+  const [fontBarOpen, setFontBarOpen] = useState(false);
   /** Responsive engine: which device the canvas previews ('mobile' |
    *  'tablet' | 'desktop' | null). null = the design's base breakpoint.
    *  Editing is enabled only on the base; other devices are preview-only
@@ -432,30 +448,59 @@ export default function Admin() {
     }
   };
 
-  /* Apply a one-tap theme preset — sets the page background gradient (with
-     optional motion), text/heading/button colors, font, and page animation
-     across the whole design. */
+  /* Build the per-page fields a theme preset writes onto one page: background
+     gradient, text/heading/button colors, font, page animation, and an
+     animated-gradient motion layer when the preset is a "motion" look. */
+  const pageThemeFields = (preset) => ({
+    themeId: preset.id,
+    pageBackground: `linear-gradient(${preset.gradientAngle}deg, ${preset.gradientFrom}, ${preset.gradientTo})`,
+    textColor: preset.textColor,
+    headingColor: preset.headingColor,
+    buttonBackground: preset.buttonBackground,
+    buttonText: preset.buttonText,
+    fontFamily: preset.fontFamily,
+    pageAnimation: preset.pageAnimation,
+    // Motion presets animate the gradient via the per-page motion layer;
+    // calm presets clear it so the static gradient shows.
+    motionBg: preset.bgMotion
+      ? { type: 'gradient', color1: preset.gradientFrom, color2: preset.gradientTo, speed: 2 }
+      : { type: 'none', color1: preset.gradientFrom, color2: preset.gradientTo, speed: 2 },
+  });
+
+  /* Apply a one-tap theme preset. Scope 'page' (default) restyles ONLY the
+     current page so every page can look different; scope 'all' restyles the
+     whole design and clears per-page overrides so all pages match. */
   const applyTheme = (preset) => {
-    setBuilderState((prev) => {
-      const n = normalizeBuilderState(prev);
-      return {
-        ...n,
-        theme: {
-          ...n.theme,
-          backgroundKind: 'gradient',
-          bgMotion: !!preset.bgMotion,
-          gradientFrom: preset.gradientFrom,
-          gradientTo: preset.gradientTo,
-          gradientAngle: preset.gradientAngle,
-          textColor: preset.textColor,
-          headingColor: preset.headingColor,
-          buttonBackground: preset.buttonBackground,
-          buttonText: preset.buttonText,
-          fontFamily: preset.fontFamily,
-          pageAnimation: preset.pageAnimation,
-        },
-      };
-    });
+    if (themeScope === 'all') {
+      setBuilderState((prev) => {
+        const n = normalizeBuilderState(prev);
+        const cleared = {
+          themeId: '', pageBackground: '', textColor: '', headingColor: '',
+          buttonBackground: '', buttonText: '', fontFamily: '', pageAnimation: '',
+          motionBg: { type: 'none', color1: preset.gradientFrom, color2: preset.gradientTo, speed: 2 },
+        };
+        return {
+          ...n,
+          theme: {
+            ...n.theme,
+            backgroundKind: 'gradient',
+            bgMotion: !!preset.bgMotion,
+            gradientFrom: preset.gradientFrom,
+            gradientTo: preset.gradientTo,
+            gradientAngle: preset.gradientAngle,
+            textColor: preset.textColor,
+            headingColor: preset.headingColor,
+            buttonBackground: preset.buttonBackground,
+            buttonText: preset.buttonText,
+            fontFamily: preset.fontFamily,
+            pageAnimation: preset.pageAnimation,
+          },
+          pages: n.pages.map((p) => ({ ...p, ...cleared })),
+        };
+      });
+      return;
+    }
+    patchActivePage(pageThemeFields(preset));
   };
 
   useEffect(() => {
@@ -758,6 +803,31 @@ export default function Admin() {
     blocks.splice(idx + 1, 0, copy);
     setPageAt(pageIndex, { ...page, blocks });
     setSelectedBlockIndex(idx + 1);
+  };
+
+  const copyBlockAt = (pageIndex, idx) => {
+    const src = normalizedBuilder.pages[pageIndex]?.blocks?.[idx];
+    if (!src) return;
+    blockClipboard.current = JSON.parse(JSON.stringify(src));
+    setHasClipboard(true);
+    toast.success('Copied');
+  };
+
+  const pasteBlock = (pageIndex) => {
+    const src = blockClipboard.current;
+    if (!src) return;
+    const page = normalizedBuilder.pages[pageIndex];
+    if (!page) return;
+    const blocks = [...(page.blocks || [])];
+    const copy = JSON.parse(JSON.stringify(src));
+    // Nudge so the pasted block doesn't sit exactly on the original.
+    if (Number.isFinite(Number(copy.x))) copy.x = Number(copy.x) + 24;
+    if (Number.isFinite(Number(copy.y))) copy.y = Number(copy.y) + 24;
+    if (Number.isFinite(Number(copy.xPct))) copy.xPct = Math.min(96, Number(copy.xPct) + 4);
+    if (Number.isFinite(Number(copy.yPct))) copy.yPct = Math.min(96, Number(copy.yPct) + 4);
+    blocks.push(copy);
+    setPageAt(pageIndex, { ...page, blocks });
+    setSelectedBlockIndex(blocks.length - 1);
   };
 
   const deleteBlockAt = (pageIndex, idx) => {
@@ -1385,7 +1455,7 @@ export default function Admin() {
                         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
                           fabricMode ? 'bg-brand-500 text-white' : 'bg-white/5 hover:bg-white/15 text-slate-200'
                         }`}
-                        data-tooltip="Precision: drag, resize, rotate, multi-select, align & snap (works on touch). Del removes, Ctrl/Cmd+D duplicates."
+                        data-tooltip="Precision editing. Desktop: drag, resize, rotate, multi-select, align, snap, Del/Ctrl+D. Touch: one-finger drag, two-finger pinch-resize + rotate, pinch the canvas to zoom/pan, double-tap to zoom, long-press for menu."
                         data-tooltip-pos="bottom"
                         aria-pressed={fabricMode}
                       ><MousePointer2 size={14} strokeWidth={2.2} /> Precision</button>
@@ -1635,22 +1705,27 @@ export default function Admin() {
 
                             {isText && (
                               <>
-                                <select
-                                  value={sb.fontFamily || ''}
-                                  onChange={(e) => updateSelectedBlock({ fontFamily: e.target.value })}
-                                  data-tooltip="Font" data-tooltip-pos="bottom"
-                                  className={`shrink-0 w-24 rounded-lg border border-white/10 bg-slate-900 px-2 py-1.5 text-[11px] text-white ${DARK_SELECT_CLASS}`}
-                                >
-                                  <option value="">Font</option>
-                                  {BUILDER_FONT_OPTIONS.map((f) => (
-                                    <option key={f.value} value={f.value}>{f.label}</option>
-                                  ))}
-                                </select>
-                                <label className="shrink-0 relative w-8 h-8 rounded-lg border border-white/10 overflow-hidden cursor-pointer" data-tooltip="Text color" data-tooltip-pos="bottom">
+                                <button
+                                  type="button"
+                                  onClick={() => setFontBarOpen((v) => !v)}
+                                  data-tooltip="Fonts" data-tooltip-pos="bottom"
+                                  aria-pressed={fontBarOpen}
+                                  style={{ fontFamily: sb.fontFamily || undefined }}
+                                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-sm leading-none transition ${fontBarOpen ? 'bg-brand-500 text-white border-brand-400' : 'bg-slate-900 text-white border-white/10 hover:bg-slate-800'}`}
+                                >Aa</button>
+                                <label className="shrink-0 relative w-8 h-8 rounded-lg border border-white/10 overflow-hidden cursor-pointer" data-tooltip="Text / effect color" data-tooltip-pos="bottom">
                                   <input
                                     type="color"
                                     value={colorVal}
-                                    onChange={(e) => updateSelectedBlock({ [colorKey]: e.target.value })}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      // Drive BOTH the plain text color AND the effect's
+                                      // primary color (gradient/neon/glow/outline read
+                                      // textGradientFrom) so this picker works whatever
+                                      // effect is on. The 2nd gradient color is in the panel.
+                                      if (sb.type === 'shape') updateSelectedBlock({ fillColor: v });
+                                      else updateSelectedBlock({ color: v, textGradientFrom: v });
+                                    }}
                                     className="absolute inset-0 w-[150%] h-[150%] -m-1 cursor-pointer"
                                   />
                                 </label>
@@ -1794,6 +1869,21 @@ export default function Admin() {
                       );
                     })()}
 
+                    {/* Instagram-style bottom font bar — quick font picker for
+                        the selected text element (chips render in their own
+                        font, tap to apply live). Closes if the selection is
+                        cleared or a non-text block is selected. */}
+                    <FontBar
+                      open={fontBarOpen && (() => {
+                        const b = normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex];
+                        // Fonts apply to text blocks AND buttons (button label font).
+                        return !!b && ('text' in b || ['button', 'buttonSlot'].includes(b.type));
+                      })()}
+                      value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.fontFamily || ''}
+                      onPick={(ff) => updateSelectedBlock({ fontFamily: ff })}
+                      onClose={() => setFontBarOpen(false)}
+                    />
+
                     {/* Click-away backdrop — tapping anywhere outside an open
                         panel/picker closes them all. */}
                     {(leftPanel || picker) && (
@@ -1906,12 +1996,35 @@ export default function Admin() {
                       {/* Themes — one-tap looks (gradient bg + colors + font) */}
                       {leftPanel === 'themes' && (
                       <div>
-                        <p className="mb-2 text-[11px] text-slate-400">Tap a theme — it restyles the whole design and syncs to every device.</p>
+                        {/* Scope toggle — apply a theme to just this page or the whole design */}
+                        <div className="mb-2 flex items-center gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1">
+                          {[
+                            { id: 'page', label: `This page (${activePage + 1})` },
+                            { id: 'all', label: 'All pages' },
+                          ].map((o) => (
+                            <button
+                              key={o.id}
+                              type="button"
+                              onClick={() => setThemeScope(o.id)}
+                              aria-pressed={themeScope === o.id}
+                              className={`flex-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition ${
+                                themeScope === o.id ? 'bg-brand-500 text-white' : 'text-slate-300 hover:bg-white/5'
+                              }`}
+                            >{o.label}</button>
+                          ))}
+                        </div>
+                        <p className="mb-2 text-[11px] text-slate-400">
+                          {themeScope === 'page'
+                            ? 'Tap a theme — it restyles only this page, so every page can look different.'
+                            : 'Tap a theme — it restyles every page and syncs to all devices.'}
+                        </p>
                         <div className="grid grid-cols-2 gap-2">
                           {THEME_PRESETS.map((t) => {
                             const active =
-                              normalizedBuilder.theme?.gradientFrom === t.gradientFrom &&
-                              normalizedBuilder.theme?.gradientTo === t.gradientTo;
+                              themeScope === 'page'
+                                ? normalizedBuilder.pages[activePage]?.themeId === t.id
+                                : normalizedBuilder.theme?.gradientFrom === t.gradientFrom &&
+                                  normalizedBuilder.theme?.gradientTo === t.gradientTo;
                             return (
                               <button
                                 key={t.id}
@@ -1940,6 +2053,52 @@ export default function Admin() {
                           <h5 className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-brand-200 font-extrabold">
                             <span className="text-sm">🌈</span> Background
                           </h5>
+
+                          {/* ── Motion Backgrounds library ──
+                              Animated background behind the whole design
+                              (gradient/particles/shapes/waves/galaxy/smoke/
+                              clouds/light). Real-time; saved in theme.motionBg. */}
+                          {(() => {
+                            const m = normalizeMotionBg(normalizedBuilder.pages[activePage]?.motionBg);
+                            const setM = (patch) => patchActivePage({ motionBg: { ...m, ...patch } });
+                            return (
+                              <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
+                                <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">🎞️ Motion background <span className="text-slate-500 normal-case font-normal">(this page)</span></label>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {MOTION_BG_PRESETS.map((p) => {
+                                    const active = m.type === p.id;
+                                    return (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => setM({ type: p.id })}
+                                        aria-pressed={active}
+                                        className={`rounded-lg px-2 py-1 text-[11px] font-semibold border transition ${active ? 'bg-brand-500 text-white border-brand-300' : 'bg-slate-800 text-white border-white/15 hover:bg-slate-700'}`}
+                                      >{p.icon} {p.label}</button>
+                                    );
+                                  })}
+                                </div>
+                                {m.type !== 'none' && (
+                                  <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                                    <label className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                                      <span className="relative w-7 h-7 rounded-lg border border-white/15 overflow-hidden cursor-pointer">
+                                        <input type="color" value={m.color1} onChange={(e) => setM({ color1: e.target.value })} className="absolute inset-0 w-[160%] h-[160%] -m-2 cursor-pointer" />
+                                      </span>Color 1
+                                    </label>
+                                    <label className="flex items-center gap-1.5 text-[11px] text-slate-300">
+                                      <span className="relative w-7 h-7 rounded-lg border border-white/15 overflow-hidden cursor-pointer">
+                                        <input type="color" value={m.color2} onChange={(e) => setM({ color2: e.target.value })} className="absolute inset-0 w-[160%] h-[160%] -m-2 cursor-pointer" />
+                                      </span>Color 2
+                                    </label>
+                                    <label className="flex items-center gap-2 text-[11px] text-slate-300">
+                                      Speed
+                                      <input type="range" min={1} max={3} step={1} value={m.speed} onChange={(e) => setM({ speed: Number(e.target.value) })} />
+                                    </label>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           {/* Animated gradient (motion theme) */}
                           <label className="flex items-center justify-between gap-2 rounded-xl bg-white/5 hover:bg-white/[0.08] px-3 py-2 text-xs font-semibold text-slate-100 cursor-pointer transition">
@@ -2211,7 +2370,7 @@ export default function Admin() {
                                   selectedSlot={selectedSlotForCanvas}
                                   onSelectionChange={handleAdminSelectionChange}
                                   onResizeCommit={(slot, w, h) =>
-                                    setBuilderState((prev) => updateBuilderBlockSizeSynced(prev, slot, w, h, activeBp))
+                                    setBuilderState((prev) => updateBuilderBlockSizeForDevice(prev, slot, w, h, activeBp))
                                   }
                                   onRotateCommit={(slot, deg) =>
                                     setBuilderState((prev) => updateBuilderBlockRotateSynced(prev, slot, deg))
@@ -2239,13 +2398,16 @@ export default function Admin() {
                                     setBuilderState((prev) => updateBuilderBlockPositionPctSynced(prev, slot, xPct, yPct));
                                   }}
                                   onResizeCommit={(slot, w, h) =>
-                                    setBuilderState((prev) => updateBuilderBlockSizeSynced(prev, slot, w, h, activeBp))
+                                    setBuilderState((prev) => updateBuilderBlockSizeForDevice(prev, slot, w, h, activeBp))
                                   }
                                   onRotateCommit={(slot, deg) =>
                                     setBuilderState((prev) => updateBuilderBlockRotateSynced(prev, slot, deg))
                                   }
                                   onDuplicate={(idx) => duplicateBlockAt(activePage, idx)}
                                   onDelete={(idx) => deleteBlockAt(activePage, idx)}
+                                  onCopy={(idx) => copyBlockAt(activePage, idx)}
+                                  onPaste={() => pasteBlock(activePage)}
+                                  canPaste={hasClipboard}
                                   onReorder={(idx, dir) => {
                                     const len = normalizedBuilder.pages[activePage]?.blocks?.length || 0;
                                     const to = dir === 'forward' ? Math.min(len - 1, idx + 1)
@@ -2371,15 +2533,9 @@ export default function Admin() {
                               className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
                             />
                           </div>
-                          <div>
-                            <label className="block text-xs text-slate-400 mb-1">Background</label>
-                            <input
-                              value={normalizedBuilder.pages[activePage]?.pageBackground || ''}
-                              onChange={(e) => patchPage(activePage, { pageBackground: e.target.value })}
-                              className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
-                              placeholder="#1a1a1a"
-                            />
-                          </div>
+                          {/* Background field removed — use the visual
+                              "🌈 Background" panel (gradient / image / video /
+                              effects) in the left Themes panel instead. */}
                         </div>
                       </div>
 
@@ -2415,6 +2571,13 @@ export default function Admin() {
                                 />
                               </div>
                             )}
+                            {/* Canva-style text studio: IG font picker + effects + sliders */}
+                            {'text' in (normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex] || {}) && (
+                              <TextStudioPanel
+                                block={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]}
+                                onChange={updateSelectedBlock}
+                              />
+                            )}
                             {'label' in (normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex] || {}) && (
                               <div>
                                 <label className="block text-xs text-slate-400 mb-1">Label</label>
@@ -2438,6 +2601,13 @@ export default function Admin() {
                                   className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_INPUT_CLASS}`}
                                 />
                               </div>
+                            )}
+                            {/* Canva-style button styling (variant / colors / radius / padding) */}
+                            {['button', 'buttonSlot'].includes(normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type) && (
+                              <ButtonStudioPanel
+                                block={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]}
+                                onChange={updateSelectedBlock}
+                              />
                             )}
                             {normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type === 'gallery' && (
                               <>
@@ -2510,31 +2680,44 @@ export default function Admin() {
                                     </select>
                                   </div>
                                 )}
-                                <div>
-                                  <label className="block text-xs text-slate-400 mb-1">📷 Filter</label>
-                                  <select
-                                    value={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.imageFilter || 'none'}
-                                    onChange={(e) => updateSelectedBlock({ imageFilter: e.target.value })}
-                                    className={`w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white ${DARK_SELECT_CLASS}`}
-                                  >
-                                    {FILTER_PRESETS.map((f) => (
-                                      <option key={f.value} value={f.value}>{f.label}</option>
-                                    ))}
-                                  </select>
+                                {/* ── Filters panel (Instagram-style) ──
+                                    Presets + fine adjustments are CSS filters
+                                    applied live to the source image → fully
+                                    non-destructive, editable any time, and
+                                    persisted in the block JSON (imageFilter +
+                                    brightness/contrast/saturation/exposure/blur). */}
+                                <div className="pt-1">
+                                  <label className="block text-xs font-semibold text-brand-300/90 mb-1.5">📷 Filters</label>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {FILTER_PRESETS.map((f) => {
+                                      const active = (normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.imageFilter || 'none') === f.value;
+                                      return (
+                                        <button
+                                          key={f.value}
+                                          type="button"
+                                          onClick={() => updateSelectedBlock({ imageFilter: f.value })}
+                                          aria-pressed={active}
+                                          className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition ${active ? 'bg-brand-500 text-white shadow' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                                        >{f.label}</button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
-                                {/* Brightness / Contrast / Saturation */}
+                                {/* Fine adjustments — % controls (100 = no change) + blur in px. */}
                                 {[
-                                  { key: 'brightness', label: '☀ Brightness' },
-                                  { key: 'contrast',   label: '◐ Contrast' },
-                                  { key: 'saturation', label: '🎨 Saturation' },
-                                ].map(({ key, label }) => {
-                                  const cur = normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.[key] ?? 100;
+                                  { key: 'brightness', label: '☀ Brightness', min: 0, max: 200, def: 100, unit: '%' },
+                                  { key: 'contrast',   label: '◐ Contrast',   min: 0, max: 200, def: 100, unit: '%' },
+                                  { key: 'saturation', label: '🎨 Saturation', min: 0, max: 200, def: 100, unit: '%' },
+                                  { key: 'exposure',   label: '◔ Exposure',   min: 0, max: 200, def: 100, unit: '%' },
+                                  { key: 'blur',       label: '🌫 Blur',       min: 0, max: 30,  def: 0,   unit: 'px' },
+                                ].map(({ key, label, min, max, def, unit }) => {
+                                  const cur = normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.[key] ?? def;
                                   return (
                                     <div key={key}>
-                                      <label className="block text-xs text-slate-400 mb-1">{label}: {Math.round(cur)}%</label>
+                                      <label className="block text-xs text-slate-400 mb-1">{label}: {Math.round(cur)}{unit}</label>
                                       <div className="flex items-center gap-2">
                                         <input
-                                          type="range" min={0} max={300}
+                                          type="range" min={min} max={max}
                                           value={cur}
                                           onChange={(e) => updateSelectedBlock({ [key]: Number(e.target.value) })}
                                           className="w-full"
@@ -2542,13 +2725,18 @@ export default function Admin() {
                                         <button
                                           type="button"
                                           title="Reset"
-                                          onClick={() => updateSelectedBlock({ [key]: 100 })}
+                                          onClick={() => updateSelectedBlock({ [key]: def })}
                                           className="rounded bg-white/5 hover:bg-white/15 text-slate-300 text-[10px] px-1.5 py-0.5"
                                         >↺</button>
                                       </div>
                                     </div>
                                   );
                                 })}
+                                <button
+                                  type="button"
+                                  onClick={() => updateSelectedBlock({ imageFilter: 'none', brightness: 100, contrast: 100, saturation: 100, exposure: 100, blur: 0 })}
+                                  className="mt-1 w-full rounded-lg bg-white/5 hover:bg-white/15 text-slate-200 text-[11px] font-semibold py-1.5 transition"
+                                >Reset all filters</button>
                               </>
                             )}
 
