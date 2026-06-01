@@ -42,7 +42,13 @@ export default function PasswordField({
         data-tooltip={visible ? 'Hide password' : 'Show password'}
         data-tooltip-pos="top"
         data-tooltip-align="end"
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition"
+        /* `!absolute` (position:absolute !important) is required because the
+           `data-tooltip` attribute matches `[data-tooltip]{position:relative}`
+           in index.css, which has equal specificity to `.absolute` but is
+           declared later — so without !important it wins and the eye button
+           falls out of the field (renders left + below instead of pinned to
+           the field's right edge). */
+        className="!absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] active:scale-90 transition"
         // Don't steal tab focus inside the form flow
         tabIndex={-1}
       >

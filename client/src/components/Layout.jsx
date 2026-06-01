@@ -261,7 +261,10 @@ export default function Layout() {
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed inset-x-0 bottom-0 z-40 px-3 pb-3 pointer-events-none">
         <div className="pointer-events-auto rounded-full border border-white/10 bg-ink-900/85 backdrop-blur-xl shadow-glass pb-safe">
-          <div className="grid grid-cols-5">
+          {/* Exactly 4 items (Feed, My pages, Create, Admin/Sign-out) — use
+              grid-cols-4 so they're spaced EQUALLY. grid-cols-5 left an empty
+              5th column, pushing the items into uneven spacing. */}
+          <div className="grid grid-cols-4">
             {navItems.map((item) => {
               const active = isActive(item.to);
               const Icon = item.icon;
