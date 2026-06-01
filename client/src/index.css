@@ -109,9 +109,29 @@ body { overflow-x: hidden; overscroll-behavior-y: contain; }
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
-  /* Deep ink with six candy glows — lavender, pink, peach, yellow, mint,
-     plus a second mint pop. Green + yellow now hold their weight in the
-     rotation so the bg reads as multicolor candy, not just violet. */
+  background-color: #07060D;
+  color: #E7E9F0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Deep ink with six candy glows — lavender, pink, peach, yellow, mint,
+   plus a second mint pop. Painted on a FIXED, GPU-composited layer instead
+   of `background-attachment: fixed` on <body>. `background-attachment: fixed`
+   forces the browser to REPAINT the full-viewport gradient on every scroll
+   frame, which makes mobile scrolling stutter badly (iOS Safari / Android
+   Chrome especially). A `position: fixed` pseudo-element is promoted to its
+   own compositor layer and simply stays put while content scrolls over it —
+   identical look, no per-frame repaint. `translateZ(0)` guarantees the GPU
+   layer; `z-index: -1` keeps it behind page content. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  transform: translateZ(0);
   background-color: #07060D;
   background-image:
     radial-gradient(55rem 40rem at 88% -8%,  rgba(196,181,253,0.08), transparent 60%),
@@ -120,11 +140,6 @@ body {
     radial-gradient(50rem 36rem at 5% 95%,   rgba(167,243,208,0.09), transparent 60%),
     radial-gradient(42rem 30rem at 65% 50%,  rgba(253,230,138,0.07), transparent 60%),
     radial-gradient(38rem 28rem at 35% 15%,  rgba(110,231,183,0.06), transparent 60%);
-  background-attachment: fixed;
-  color: #E7E9F0;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  overflow-x: hidden;
 }
 
 ::selection { background: rgba(167,139,250,0.35); color: #FFFFFF; }
@@ -1763,6 +1778,11 @@ html.light body {
   /* Slightly dimmer cream-lavender so cards (mostly white) actually pop
      instead of disappearing into a near-white background. */
   background-color: #E9E3F4;
+  color: #334155;
+}
+/* Light-mode glows on the same fixed, composited layer (see body::before). */
+html.light body::before {
+  background-color: #E9E3F4;
   /* Six candy washes — alphas turned up since the new base is more muted
      and can carry richer color without washing out. */
   background-image:
@@ -1772,7 +1792,6 @@ html.light body {
     radial-gradient(50rem 36rem at 5% 95%,  rgba(167,243,208,0.22), transparent 60%),
     radial-gradient(42rem 30rem at 65% 50%, rgba(253,230,138,0.18), transparent 60%),
     radial-gradient(38rem 28rem at 35% 15%, rgba(110,231,183,0.16), transparent 60%);
-  color: #334155;
 }
 html.light ::selection { background: rgba(139,92,246,0.22); color: #334155; }
 html.light::-webkit-scrollbar-thumb {
