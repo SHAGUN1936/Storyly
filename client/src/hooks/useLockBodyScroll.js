@@ -1,5 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMotion } from '../motion/MotionProvider';
+
+/* TEMP scroll-debug: flip to false to silence. */
+const DEBUG = true;
+const dlog = (...a) => { if (DEBUG) console.log('[scroll-debug][lock]', ...a); };
 
 /**
  * Robust body-scroll lock used by every modal in the app.
@@ -65,6 +69,7 @@ function applyLock() {
   body.style.right = `${scrollbarWidth}px`;
   body.style.width = `calc(100% - ${scrollbarWidth}px)`;
   html.style.overflow = 'hidden';
+  dlog('applyLock → body position:fixed, html overflow:hidden', { savedScrollY });
 }
 
 function releaseLock() {
@@ -92,29 +97,43 @@ function releaseLock() {
     window.scrollTo({ top: savedScrollY, left: 0, behavior: 'auto' });
     html.style.scrollBehavior = savedSB;
   }
+  dlog('releaseLock → restored body/html, scroll restored to', savedScrollY);
 }
 
 export default function useLockBodyScroll(locked) {
   const { lenis } = useMotion();
+  /* Read Lenis through a ref so it is NOT an effect dependency. Lenis's
+     identity changes on every route change (the provider destroys and
+     recreates it) and the context value flips from null→instance after
+     mount. If `lenis` were a dependency, this effect would tear down and
+     re-apply the lock out of band while a modal is open — a real source
+     of lockCount / stop()-start() imbalance that could leave the page
+     stuck. The lock only needs to track `locked`. */
+  const lenisRef = useRef(lenis);
+  lenisRef.current = lenis;
 
   useEffect(() => {
     if (!locked) return;
     if (typeof window === 'undefined') return;
 
+    dlog(`lock requested — lockCount ${lockCount} → ${lockCount + 1}`);
     if (lockCount === 0) {
       applyLock();
       // Pause Lenis so its rAF loop doesn't keep generating scroll
       // animations against a frozen body.
-      lenis?.stop?.();
+      lenisRef.current?.stop?.();
+      dlog('lenis.stop() called', { hasLenis: !!lenisRef.current });
     }
     lockCount += 1;
 
     return () => {
       lockCount = Math.max(0, lockCount - 1);
+      dlog(`unlock — lockCount → ${lockCount}`);
       if (lockCount === 0) {
         releaseLock();
-        lenis?.start?.();
+        lenisRef.current?.start?.();
+        dlog('lenis.start() called', { hasLenis: !!lenisRef.current });
       }
     };
-  }, [locked, lenis]);
+  }, [locked]);
 }
