@@ -126,6 +126,13 @@ export const LOOP_ANIM_PRESETS = [
   { value: 'spin',      label: 'Spin' },
   { value: 'glow',      label: 'Glow' },
   { value: 'drift',     label: 'Drift (roam screen)' },
+  { value: 'swing',     label: 'Swing' },
+  { value: 'tada',      label: 'Tada' },
+  { value: 'jelly',     label: 'Jelly' },
+  { value: 'wobble',    label: 'Wobble' },
+  { value: 'flip',      label: 'Flip' },
+  { value: 'rubber',    label: 'Rubber' },
+  { value: 'orbit',     label: 'Orbit' },
 ];
 
 /** Animated background-effect overlays — floating particle layers that drift
@@ -144,6 +151,14 @@ export const PAGE_EFFECT_PRESETS = [
   { value: 'rain',     label: 'Rain',     emojis: ['💧','🌧','〵','│','ʼ'] },
   { value: 'fire',     label: 'Embers',   emojis: ['🔥','✨','🌟','💥','⚡'] },
   { value: 'balloons', label: 'Balloons', emojis: ['🎈','🎈','🩷','💙','💛'] },
+  { value: 'butterflies', label: 'Butterflies', emojis: ['🦋','🦋','🌸','✨','🍃'] },
+  { value: 'money',    label: 'Money',    emojis: ['💵','💸','🤑','💰','🪙'] },
+  { value: 'party',    label: 'Party',    emojis: ['🥳','🎉','🎊','🪩','🎈'] },
+  { value: 'spooky',   label: 'Spooky',   emojis: ['👻','🦇','🕸','🎃','💀'] },
+  { value: 'magic',    label: 'Magic',    emojis: ['🪄','✨','🔮','💫','⭐'] },
+  { value: 'food',     label: 'Food',     emojis: ['🍕','🍔','🍩','🍦','🧁'] },
+  { value: 'ocean',    label: 'Ocean',    emojis: ['🐠','🐟','🫧','🌊','🐚'] },
+  { value: 'spring',   label: 'Spring',   emojis: ['🌷','🌼','🌸','🐝','🦋'] },
 ];
 const PAGE_EFFECT_SET = new Set(PAGE_EFFECT_PRESETS.map((e) => e.value));
 
@@ -742,7 +757,7 @@ function normalizeButtonStyle(s) {
 }
 
 const ENTER_ANIM_SET = new Set(['none','fadeIn','slideUp','slideDown','slideLeft','slideRight','zoom','pop','bounce','tilt']);
-const LOOP_ANIM_SET = new Set(['none','float','pulse','bounce','shake','wiggle','heartbeat','spin','glow','drift']);
+const LOOP_ANIM_SET = new Set(['none','float','pulse','bounce','shake','wiggle','heartbeat','spin','glow','drift','swing','tada','jelly','wobble','flip','rubber','orbit']);
 const FILTER_SET = new Set(['none','vivid','mono','warm','cool','vintage','dramatic','mute','sepia','noir','blur']);
 
 function migrateLayerStyle(block) {
@@ -788,6 +803,10 @@ function migrateLayerStyle(block) {
     /** Editor-only metadata: not rendered, controls UX. */
     locked: block?.locked === true,
     hidden: block?.hidden === true,
+    /** Layers panel: custom display name + group membership (flat groupId).
+        Blocks sharing a groupId form a group (move/lock/hide/select together). */
+    name: typeof block?.name === 'string' ? block.name.slice(0, 60) : '',
+    groupId: typeof block?.groupId === 'string' && block.groupId ? block.groupId : '',
     /** Image adjustments: percentages where 100 = no change. */
     brightness: Number.isFinite(bright) ? Math.max(0, Math.min(300, bright)) : 100,
     contrast:   Number.isFinite(contrast) ? Math.max(0, Math.min(300, contrast)) : 100,
@@ -1242,9 +1261,172 @@ ${single}
       const cls = buttonClass(block.buttonStyle);
       return `<button data-block-slot="${bslot}" type="button" class="${cls}${eA}" style="${st};${layerStyle(block)}" data-button-slot="${sid(`btn_${blockIndex}`)}" data-nav-page="${target}" data-slot-label="${escapeHtml(block.labelHint || 'Button')}">${escapeHtml(block.defaultLabel || 'OK')}</button>`;
     }
+    case 'trickyn':
+    case 'reveal':
+    case 'quiz':
+    case 'poll':
+    case 'memory':
+    case 'spot':
+    case 'wheel':
+    case 'giftbox':
+    case 'flip':
+    case 'slot':
+    case 'puzzle':
+    case 'rps':
+      return renderGame(block, bslot, eA);
     default:
       return '';
   }
+}
+
+/** Interactive "fun" blocks (quiz, poll, games, …). The markup is fully
+ *  self-describing via classes / data-attributes; behaviour is wired by
+ *  useInteractiveGames in the published deck (NOT in the editor, where blocks
+ *  must stay selectable). Each renders sensible content from its config so it
+ *  also previews correctly in the editor. */
+const GAME_LABEL = { trickyn: 'Question', reveal: 'Reveal', quiz: 'Quiz', poll: 'Poll', memory: 'Memory', spot: 'Spot', wheel: 'Wheel', giftbox: 'Gift', flip: 'Flip Card', slot: 'Slot', puzzle: 'Puzzle', rps: 'RPS' };
+const GAME_FX_SET = new Set(['glow', 'glass', 'neon']);
+/** Per-block theme → CSS variables + optional surface background/image. */
+function gameThemeCss(block) {
+  let s = '';
+  const add = (k, v) => { if (typeof v === 'string' && v.trim()) s += `${k}:${escapeCss(v)};`; };
+  add('--g-accent', block.gameAccent);
+  add('--g-accent2', block.gameAccent2);
+  add('--g-text', block.gameTextColor);
+  add('--g-card', block.gameCardColor);
+  if (typeof block.gameFont === 'string' && block.gameFont) s += `--g-font:${escapeCss(block.gameFont)};`;
+  if (block.gameShape === 'square') s += '--g-radius:6px;--g-card-radius:6px;';
+  else if (block.gameShape === 'rounded') s += '--g-radius:18px;--g-card-radius:16px;';
+  else if (block.gameShape === 'pill') s += '--g-radius:999px;--g-card-radius:16px;';
+  const img = escapeCssUrl(block.gameImageUrl);
+  if (typeof block.gameBg === 'string' && block.gameBg.trim()) s += `background:${escapeCss(block.gameBg)};`;
+  if (img) s += `background-image:url(${JSON.stringify(img)});background-size:cover;background-position:center;`;
+  if ((typeof block.gameBg === 'string' && block.gameBg.trim()) || img) s += 'padding:20px;border-radius:22px;';
+  return s;
+}
+function gameFxClass(block) { return GAME_FX_SET.has(block.gameFx) ? ` tpl-gfx-${block.gameFx}` : ''; }
+function gameWrap(type, bslot, eA, block, inner, extraAttr = '') {
+  return `<div data-block-slot="${bslot}" data-game="${type}" data-slot-label="${GAME_LABEL[type] || 'Game'}" class="tpl-game tpl-game-${type}${gameFxClass(block)}${eA}"${extraAttr} style="${layerStyle(block)}${gameThemeCss(block)}">${inner}</div>`;
+}
+function renderGame(block, bslot, eA) {
+  const t = block.type;
+  const list = (v, fb) => (Array.isArray(v) && v.length ? v : fb).map((s) => String(s));
+  if (t === 'trickyn') {
+    const q = escapeHtml(block.question || 'Do you love me? 💕');
+    const yes = escapeHtml(block.yesText || 'Yes 🥰');
+    const no = escapeHtml(block.noText || 'No');
+    const ok = escapeHtml(block.successText || "Yay! I knew it! 💖");
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-game-q">${q}</div>
+       <div class="tpl-game-btns"><button type="button" data-yes class="tpl-game-btn tpl-game-yes">${yes}</button><button type="button" data-dodge class="tpl-game-btn tpl-game-no">${no}</button></div>
+       <div class="tpl-game-success" data-success hidden>${ok}</div>`);
+  }
+  if (t === 'reveal') {
+    const cover = escapeHtml(block.coverText || 'Tap to reveal 🎁');
+    const msg = escapeHtml(block.message || 'Surprise! 🎉');
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-reveal"><div class="tpl-reveal-msg">${msg}</div><div class="tpl-reveal-cover" data-cover>${cover}</div></div>`);
+  }
+  if (t === 'quiz') {
+    const q = escapeHtml(block.question || 'Pick the right answer:');
+    const opts = list(block.options, ['Option A', 'Option B', 'Option C']);
+    const correct = Math.max(0, Math.min(opts.length - 1, Number(block.correctIndex) || 0));
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-game-q">${q}</div>
+       <div class="tpl-quiz-opts">${opts.map((o, i) => `<button type="button" class="tpl-quiz-opt" data-opt${i === correct ? ' data-correct' : ''}>${escapeHtml(o)}</button>`).join('')}</div>
+       <div class="tpl-quiz-feedback" data-feedback></div>`);
+  }
+  if (t === 'poll') {
+    const q = escapeHtml(block.question || 'What do you think?');
+    const opts = list(block.options, ['Yes', 'No', 'Maybe']);
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-game-q">${q}</div>
+       <div class="tpl-poll">${opts.map((o) => `<button type="button" class="tpl-poll-opt" data-opt data-votes="0"><span class="tpl-poll-bar"></span><span class="tpl-poll-label">${escapeHtml(o)}</span><span class="tpl-poll-pct"></span></button>`).join('')}</div>`);
+  }
+  if (t === 'memory') {
+    const base = list(block.emojis, ['🍎', '⭐', '🎈', '🌸', '🐱', '🍩']).slice(0, 8);
+    const cards = [...base, ...base];   // pairs; runtime shuffles on the published page
+    const isUrl = (s) => /^(https?:|data:)/i.test(s);
+    const face = (e) => (isUrl(e)
+      ? `<span class="tpl-mem-face"><img class="tpl-mem-img" src="${escapeHtml(e)}" alt="" /></span>`
+      : `<span class="tpl-mem-face">${escapeHtml(e)}</span>`);
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-memory" style="grid-template-columns:repeat(${Math.ceil(Math.sqrt(cards.length))},1fr)">${cards.map((e) => `<button type="button" class="tpl-mem-card" data-emoji="${escapeHtml(e)}">${face(e)}</button>`).join('')}</div>
+       <div class="tpl-game-status" data-status>Find the matching pairs!</div>`);
+  }
+  if (t === 'spot') {
+    const emoji = escapeHtml(block.emoji || '😀');
+    const odd = escapeHtml(block.odd || '😈');
+    const count = Math.max(6, Math.min(40, Number(block.count) || 20));
+    const oddIdx = Math.floor(count / 2);
+    const cols = Math.ceil(Math.sqrt(count));
+    const cells = Array.from({ length: count }, (_, i) =>
+      i === oddIdx
+        ? `<button type="button" class="tpl-spot-cell" data-odd>${odd}</button>`
+        : `<button type="button" class="tpl-spot-cell">${emoji}</button>`).join('');
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-spot" style="grid-template-columns:repeat(${cols},1fr)">${cells}</div>
+       <div class="tpl-game-status" data-status>Spot the different one! 🔍</div>`,
+      ` data-emoji="${emoji}" data-odd="${odd}"`);
+  }
+  if (t === 'wheel') {
+    const segs = list(block.segments, ['Prize 🎁', 'Again', 'Win! 🏆', 'Oops', 'Lucky ⭐', 'Try']).slice(0, 8);
+    const n = segs.length;
+    const palette = ['#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#06B6D4', '#A855F7'];
+    const step = 360 / n;
+    const stops = segs.map((_, i) => `${escapeCss(palette[i % palette.length])} ${(i * step).toFixed(2)}deg ${((i + 1) * step).toFixed(2)}deg`).join(',');
+    const labels = segs.map((s, i) =>
+      `<span class="tpl-wheel-label" style="transform:rotate(${(i * step + step / 2).toFixed(2)}deg)"><span>${escapeHtml(s)}</span></span>`).join('');
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-wheel-wrap"><div class="tpl-wheel" data-wheel style="background:conic-gradient(${stops})">${labels}</div><div class="tpl-wheel-pin"></div></div>
+       <button type="button" class="tpl-game-btn" data-spin>Spin 🎡</button>
+       <div class="tpl-game-status" data-result></div>`,
+      ` data-segments="${escapeHtml(JSON.stringify(segs))}"`);
+  }
+  if (t === 'giftbox') {
+    const msg = escapeHtml(block.message || "🎉 You're invited!");
+    const box = escapeHtml(block.boxEmoji || '🎁');
+    return gameWrap(t, bslot, eA, block,
+      `<button type="button" class="tpl-gift" data-gift><span class="tpl-gift-box">${box}</span><span class="tpl-gift-hint">Tap to open</span></button>
+       <div class="tpl-gift-msg" data-msg hidden>${msg}</div>`);
+  }
+  if (t === 'flip') {
+    const front = escapeHtml(block.front || 'Tap me 👆');
+    const back = escapeHtml(block.back || 'Surprise! 🎉');
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-flip" data-flip><div class="tpl-flip-inner"><div class="tpl-flip-front">${front}</div><div class="tpl-flip-back">${back}</div></div></div>
+       <div class="tpl-game-status">Tap to flip</div>`);
+  }
+  if (t === 'slot') {
+    const syms = list(block.symbols, ['🍒', '🍋', '🔔', '⭐', '7️⃣', '🍀']).slice(0, 8);
+    const first = escapeHtml(syms[0] || '🍒');
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-slot">${[0, 1, 2].map(() => `<span class="tpl-slot-reel" data-reel>${first}</span>`).join('')}</div>
+       <button type="button" class="tpl-game-btn" data-spin>Spin 🎰</button>
+       <div class="tpl-game-status" data-result></div>`,
+      ` data-symbols="${escapeHtml(JSON.stringify(syms))}"`);
+  }
+  if (t === 'puzzle') {
+    const img = escapeCssUrl(block.puzzleImageUrl);
+    const cells = Array.from({ length: 9 }, (_, v) => {
+      if (v === 8) return '<button type="button" class="tpl-puz-cell is-blank" data-val="8"></button>';
+      const style = img ? `background-image:url(${JSON.stringify(img)});background-size:300%;background-position:${(v % 3) * 50}% ${Math.floor(v / 3) * 50}%;` : '';
+      return `<button type="button" class="tpl-puz-cell" data-val="${v}" style="${style}">${img ? '' : v + 1}</button>`;
+    }).join('');
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-puzzle">${cells}</div>
+       <div class="tpl-game-status" data-status>Slide the tiles to solve!</div>`,
+      img ? ` data-image="${escapeHtml(block.puzzleImageUrl)}"` : '');
+  }
+  if (t === 'rps') {
+    const q = escapeHtml(block.question || 'Rock · Paper · Scissors');
+    const moves = [['rock', '✊'], ['paper', '✋'], ['scissors', '✌️']];
+    return gameWrap(t, bslot, eA, block,
+      `<div class="tpl-game-q">${q}</div>
+       <div class="tpl-rps">${moves.map(([k, e]) => `<button type="button" class="tpl-rps-btn" data-rps="${k}">${e}</button>`).join('')}</div>
+       <div class="tpl-game-status" data-result>Choose your move!</div>`);
+  }
+  return '';
 }
 
 function renderShapeSvg(kind, w, h, fill, stroke, strokeW) {
@@ -1560,6 +1742,13 @@ function buildThemeCss(theme) {
 .visual-template-root .tpl-loop-spin      { animation: tpl-lp-spin 6s linear infinite; }
 .visual-template-root .tpl-loop-glow      { animation: tpl-lp-glow 2.4s ease-in-out infinite; }
 .visual-template-root .tpl-loop-drift     { animation: tpl-lp-drift 16s ease-in-out infinite; }
+.visual-template-root .tpl-loop-swing     { animation: tpl-lp-swing 2.4s ease-in-out infinite; transform-origin: top center; }
+.visual-template-root .tpl-loop-tada      { animation: tpl-lp-tada 2.2s ease-in-out infinite; }
+.visual-template-root .tpl-loop-jelly     { animation: tpl-lp-jelly 1.6s ease-in-out infinite; }
+.visual-template-root .tpl-loop-wobble    { animation: tpl-lp-wobble 1.8s ease-in-out infinite; }
+.visual-template-root .tpl-loop-flip      { animation: tpl-lp-flip 3s ease-in-out infinite; }
+.visual-template-root .tpl-loop-rubber    { animation: tpl-lp-rubber 1.8s ease-in-out infinite; }
+.visual-template-root .tpl-loop-orbit     { animation: tpl-lp-orbit 5s linear infinite; }
 @keyframes tpl-lp-float { 0%,100% { translate: 0 0 } 50% { translate: 0 -10px } }
 @keyframes tpl-lp-pulse { 0%,100% { scale: 1 } 50% { scale: 1.06 } }
 @keyframes tpl-lp-bounce { 0%,100% { translate: 0 0 } 50% { translate: 0 -14px } }
@@ -1577,6 +1766,25 @@ function buildThemeCss(theme) {
   60%  { translate: 60px 60px;  rotate: 4deg; }
   80%  { translate: -70px -30px;rotate: -6deg; }
   100% { translate: 0 0;        rotate: 0deg; }
+}
+@keyframes tpl-lp-swing { 0%,100% { rotate: 0deg } 25% { rotate: 7deg } 75% { rotate: -7deg } }
+@keyframes tpl-lp-tada {
+  0%,100% { scale: 1; rotate: 0deg } 10% { scale: .9; rotate: -3deg }
+  30%,50%,70% { scale: 1.12; rotate: 3deg } 40%,60% { scale: 1.12; rotate: -3deg } 80% { scale: 1; rotate: 0deg }
+}
+@keyframes tpl-lp-jelly {
+  0%,100% { scale: 1 1 } 30% { scale: 1.18 .82 } 45% { scale: .85 1.15 } 60% { scale: 1.08 .92 } 75% { scale: .96 1.04 }
+}
+@keyframes tpl-lp-wobble {
+  0%,100% { translate: 0 0; rotate: 0deg } 15% { translate: -16px 0; rotate: -5deg } 30% { translate: 12px 0; rotate: 4deg }
+  45% { translate: -9px 0; rotate: -3deg } 60% { translate: 6px 0; rotate: 2deg } 75% { translate: -3px 0; rotate: -1deg }
+}
+@keyframes tpl-lp-flip { 0%,40%,100% { transform: perspective(420px) rotateY(0deg) } 70% { transform: perspective(420px) rotateY(180deg) } }
+@keyframes tpl-lp-rubber {
+  0%,100% { scale: 1 1 } 30% { scale: 1.25 .75 } 40% { scale: .75 1.25 } 55% { scale: 1.15 .85 } 70% { scale: .95 1.05 }
+}
+@keyframes tpl-lp-orbit {
+  0% { translate: 0 0 } 25% { translate: 14px -14px } 50% { translate: 0 -20px } 75% { translate: -14px -14px } 100% { translate: 0 0 }
 }
 
 /* ── Stickers ─────────────────────────────────────────────────── */
@@ -1635,7 +1843,7 @@ const ANIM_CLASS = {
 };
 
 /* Effects that float UP from the bottom (vs. falling from the top). */
-const RISE_FX = new Set(['hearts', 'bubbles', 'sparkles', 'stars', 'music', 'fire', 'balloons']);
+const RISE_FX = new Set(['hearts', 'bubbles', 'sparkles', 'stars', 'music', 'fire', 'balloons', 'butterflies', 'party', 'magic', 'ocean', 'spring']);
 
 /** Build the animated background-effect overlay for a page — a layer of
  *  drifting emoji particles ("live wallpaper"). Positions/timings are
@@ -1709,6 +1917,46 @@ function renderPageMotionBg(page) {
       dots += `<span class="mbg-dot mbg-anim" style="left:${l}%;top:${t}%;width:${s}px;height:${s}px;background:${i % 2 ? c2 : c1};animation-duration:${dur};animation-delay:-${i}s"></span>`;
     }
     return wrap(dots);
+  }
+  if (m.type === 'aurora') {
+    return wrap(`<div class="mbg-aurora mbg-anim" style="--c1:${c1};--c2:${c2};animation-duration:${dur}"></div><div class="mbg-aurora mbg-aurora-2 mbg-anim" style="--c1:${c2};--c2:${c1};animation-duration:${dur}"></div>`,
+      `background:radial-gradient(120% 90% at 50% 110%, ${c1}22, transparent 70%)`);
+  }
+  if (m.type === 'rain') {
+    let drops = '';
+    for (let i = 0; i < 28; i++) {
+      const l = (i * 53) % 100;
+      const h = 12 + (i % 4) * 6;
+      drops += `<span class="mbg-raindrop mbg-anim" style="left:${l}%;height:${h}px;background:linear-gradient(${c2},transparent);animation-duration:calc(${dur} / 6);animation-delay:-${(i % 10) * 0.4}s"></span>`;
+    }
+    return wrap(drops);
+  }
+  if (m.type === 'bubbles') {
+    let b = '';
+    for (let i = 0; i < 14; i++) {
+      const l = (i * 67) % 100;
+      const s = 14 + (i % 5) * 12;
+      b += `<span class="mbg-bubble mbg-anim" style="left:${l}%;width:${s}px;height:${s}px;border-color:${i % 2 ? c2 : c1};animation-duration:${dur};animation-delay:-${i * 0.8}s"></span>`;
+    }
+    return wrap(b);
+  }
+  if (m.type === 'fireflies') {
+    let f = '';
+    for (let i = 0; i < 18; i++) {
+      const l = (i * 59) % 100;
+      const t = (i * 43) % 100;
+      f += `<span class="mbg-firefly mbg-anim" style="left:${l}%;top:${t}%;background:${i % 2 ? c2 : c1};box-shadow:0 0 8px 2px ${i % 2 ? c2 : c1};animation-duration:${dur};animation-delay:-${i * 0.6}s"></span>`;
+    }
+    return wrap(f);
+  }
+  if (m.type === 'snowfall') {
+    let s = '';
+    for (let i = 0; i < 24; i++) {
+      const l = (i * 61) % 100;
+      const sz = 4 + (i % 4) * 3;
+      s += `<span class="mbg-snow mbg-anim" style="left:${l}%;width:${sz}px;height:${sz}px;animation-duration:calc(${dur} / 2);animation-delay:-${(i % 8) * 0.7}s"></span>`;
+    }
+    return wrap(s);
   }
   return '';
 }
@@ -2136,30 +2384,77 @@ function setBlockBase(state, blockSlotRaw, patch) {
  *  layout is identical on mobile / tablet / desktop. Sizes the user set are
  *  kept. Undoable like any other edit. */
 export function autoAlignBuilderPage(state, pageIndex) {
+  return arrangeBuilderPage(state, pageIndex, 'spread');
+}
+
+/**
+ * Arrange every element on a page into a clean, screen-relative layout.
+ * Positions are written as percentages (xPct/yPct), so the layout adapts to
+ * every screen size, and per-device overrides are cleared (one synced design).
+ *
+ * Full layouts (set both axes, reset rotation):
+ *   center → centred vertical cluster   ·  spread → evenly top→bottom
+ *   stack  → stacked from the top       ·  grid   → tidy grid
+ * Quick aligns (one axis, keep the rest):
+ *   left / hcenter / right  ·  top / vmiddle / bottom
+ */
+export function arrangeBuilderPage(state, pageIndex, mode = 'spread') {
   const n = normalizeBuilderState(state);
   const pi = Number.isFinite(Number(pageIndex)) ? Number(pageIndex) : 0;
   const page = n.pages[pi];
   if (!page) return n;
   const src = page.blocks || [];
   const count = src.length;
-  // Centre band: leave a comfortable margin top & bottom, spread the rest.
-  const TOP = 15;
-  const BOTTOM = 85;
-  const blocks = src.map((b, i) => {
-    const yPct = count <= 1
-      ? 50
-      : +(TOP + ((BOTTOM - TOP) * i) / (count - 1)).toFixed(3);
-    return {
-      ...b,
-      xPct: 50,
-      yPct,
-      x: '',
-      y: '',
-      anchor: 'center',
-      rotateDeg: 0,
-      responsive: null,
-    };
-  });
+  if (!count) return n;
+
+  const M = 12;                 // safe margin from each edge (%)
+  const span = 100 - 2 * M;     // usable band
+  const round = (v) => +Number(v).toFixed(2);
+  const base = (b) => ({ ...b, x: '', y: '', anchor: 'center', responsive: null });
+
+  let blocks;
+
+  const keepNum = (v, fb) => (Number.isFinite(Number(v)) && v !== '' ? Number(v) : fb);
+
+  // ── Quick single-axis aligns (keep the other axis) ──
+  if (mode === 'left' || mode === 'hcenter' || mode === 'right') {
+    const xPct = mode === 'left' ? M + 6 : mode === 'right' ? 100 - M - 6 : 50;
+    blocks = src.map((b) => ({ ...base(b), xPct, yPct: keepNum(b.yPct, 50), rotateDeg: b.rotateDeg }));
+  } else if (mode === 'top' || mode === 'vmiddle' || mode === 'bottom') {
+    const yPct = mode === 'top' ? M + 6 : mode === 'bottom' ? 100 - M - 6 : 50;
+    blocks = src.map((b) => ({ ...base(b), xPct: keepNum(b.xPct, 50), yPct, rotateDeg: b.rotateDeg }));
+
+  // ── Grid ──
+  } else if (mode === 'grid') {
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    blocks = src.map((b, i) => {
+      const r = Math.floor(i / cols);
+      const rowStart = r * cols;
+      const inRow = Math.min(cols, count - rowStart);
+      const c = i - rowStart;
+      const xPct = inRow === 1 ? 50 : round(M + (span * c) / (inRow - 1));
+      const yPct = rows === 1 ? 50 : round(M + (span * r) / (rows - 1));
+      return { ...base(b), xPct, yPct, rotateDeg: 0 };
+    });
+
+  // ── Vertical layouts: center / stack / spread ──
+  } else {
+    const gap = Math.min(15, span / Math.max(1, count));   // tight cluster gap (%)
+    let top = M;
+    let bottom = 100 - M;
+    if (mode === 'stack') { top = M; bottom = Math.min(100 - M, M + gap * (count - 1)); }
+    else if (mode === 'center') {
+      const half = (gap * (count - 1)) / 2;
+      top = Math.max(M, 50 - half);
+      bottom = Math.min(100 - M, 50 + half);
+    }
+    blocks = src.map((b, i) => {
+      const yPct = count <= 1 ? 50 : round(top + ((bottom - top) * i) / (count - 1));
+      return { ...base(b), xPct: 50, yPct, rotateDeg: 0 };
+    });
+  }
+
   const pages = [...n.pages];
   pages[pi] = { ...page, blocks };
   return { ...n, pages };
@@ -2176,6 +2471,28 @@ export function updateBuilderBlockPositionPctSynced(state, blockSlotRaw, xPctRaw
   const xPct = Number.isFinite(xp) ? +Math.max(0, Math.min(100, xp)).toFixed(3) : '';
   const yPct = Number.isFinite(yp) ? +Math.max(0, Math.min(100, yp)).toFixed(3) : '';
   return setBlockBase(state, blockSlotRaw, { xPct, yPct, x: '', y: '', anchor: 'center' });
+}
+
+/** Bring one block to the FRONT (end of its page's array = top of z-order).
+ *  Used so a freshly-moved element sits above whatever it was dragged over,
+ *  not behind it. Returns the new index of the block so the caller can keep
+ *  the selection on it. No-op for grouped blocks (groups keep their order). */
+export function bringBlockToFrontBySlot(state, blockSlotRaw) {
+  const n = normalizeBuilderState(state);
+  const m = /^p(\d+)_b(\d+)$/.exec(String(blockSlotRaw || '').trim());
+  if (!m) return n;
+  const pi = Number(m[1]) - 1;
+  const bi = Number(m[2]);
+  const page = n.pages[pi];
+  if (!page) return n;
+  const blocks = page.blocks || [];
+  if (bi < 0 || bi >= blocks.length) return n;
+  if (blocks[bi].groupId) return n;                 // don't tear a group apart
+  if (bi === blocks.length - 1) return n;           // already front-most
+  const next = [...blocks.slice(0, bi), ...blocks.slice(bi + 1), blocks[bi]];
+  const pages = [...n.pages];
+  pages[pi] = { ...page, blocks: next };
+  return { ...n, pages };
 }
 
 export function updateBuilderBlockPositionSynced(state, blockSlotRaw, xRaw, yRaw, dimsDevice) {

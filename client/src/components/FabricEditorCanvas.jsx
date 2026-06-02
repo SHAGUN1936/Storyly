@@ -31,8 +31,8 @@ const IS_TOUCH =
   window.matchMedia('(pointer: coarse)').matches;
 
 export default function FabricEditorCanvas({
-  previewRef, blocks, pageIndex, designW, designH, selectedIndex, enabled,
-  onSelect, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder,
+  previewRef, blocks, pageIndex, designW, designH, selectedIndex, selectedIndices, enabled,
+  onSelect, onSelectMany, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder,
   onCopy, onPaste, canPaste = false,
 }) {
   const canvasElRef = useRef(null);
@@ -56,7 +56,7 @@ export default function FabricEditorCanvas({
   const [gestureInfo, setGestureInfo] = useState('');
 
   const cb = useRef({});
-  cb.current = { onSelect, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder, onCopy, onPaste, designW, designH, pageIndex };
+  cb.current = { onSelect, onSelectMany, onMoveCommit, onResizeCommit, onRotateCommit, onDuplicate, onDelete, onReorder, onCopy, onPaste, designW, designH, pageIndex };
 
   const arrEq = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
   const setGuidesIfChanged = (vs, hs) => {
@@ -113,6 +113,7 @@ export default function FabricEditorCanvas({
         selIdxRef.current = idxs;
         setSelCount(idxs.length);
         cb.current.onSelect?.(idxs.length ? idxs[0] : null);
+        cb.current.onSelectMany?.(idxs);          // keep the Layers panel in sync
       };
       canvas.on('selection:created', emitSelect);
       canvas.on('selection:updated', emitSelect);
@@ -122,6 +123,7 @@ export default function FabricEditorCanvas({
         selIdxRef.current = [];
         setSelCount(0);
         cb.current.onSelect?.(null);
+        cb.current.onSelectMany?.([]);
       });
 
       // ── Smart snapping: multi-line edge/centre alignment + equal-spacing ──
@@ -226,9 +228,11 @@ export default function FabricEditorCanvas({
           const d = fabric.util.qrDecompose(t.calcTransformMatrix());
           const v = geometryToCommit({ centerX: d.translateX, centerY: d.translateY, scaledW: t.width * Math.abs(d.scaleX), scaledH: t.height * Math.abs(d.scaleY), angle: d.angle }, dims);
           const slot = slotFor(cb.current.pageIndex, t.blockIndex);
-          cb.current.onMoveCommit?.(slot, v.moveX, v.moveY, v.refW, v.refH);
+          // Resize/rotate first (they need the original slot); move LAST — it can
+          // bring the block to the front, which renumbers slots.
           if (/scal/i.test(action)) cb.current.onResizeCommit?.(slot, v.designW, v.designH);
           if (/rotat/i.test(action)) cb.current.onRotateCommit?.(slot, v.deg);
+          cb.current.onMoveCommit?.(slot, v.moveX, v.moveY, v.refW, v.refH);
         });
       });
 
@@ -324,17 +328,24 @@ export default function FabricEditorCanvas({
   }, [enabled]);
 
   /* ── Re-sync on block / page / selection / size change ── */
+  const selKey = Array.isArray(selectedIndices) ? selectedIndices.join(',') : '';
   useEffect(() => {
     if (!enabled) return undefined;
-    // Reconcile the internal multi-selection with the controlled prop:
-    // a genuinely new external selection resets to single; if the prop is
-    // already part of the current multi, keep the multi intact.
-    if (selectedIndex == null) selIdxRef.current = [];
-    else if (!selIdxRef.current.includes(selectedIndex)) selIdxRef.current = [selectedIndex];
+    /* Reconcile the internal multi-selection with the controlled props.
+       `selectedIndices` (from the Layers panel) wins when provided — it can
+       carry a multi-select / group. Otherwise fall back to the single
+       `selectedIndex`, preserving an existing on-canvas multi if it contains it. */
+    if (Array.isArray(selectedIndices) && selectedIndices.length) {
+      selIdxRef.current = selectedIndices.slice();
+    } else if (selectedIndex == null) {
+      selIdxRef.current = [];
+    } else if (!selIdxRef.current.includes(selectedIndex)) {
+      selIdxRef.current = [selectedIndex];
+    }
     const raf = requestAnimationFrame(() => resizeAndSync());
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, blocks, pageIndex, selectedIndex, designW, designH]);
+  }, [enabled, blocks, pageIndex, selectedIndex, selKey, designW, designH]);
 
   /* ── Multi-touch gesture layer (mobile-first; touch devices only) ──
      • one finger        → select + drag (handled by Fabric)
@@ -370,7 +381,7 @@ export default function FabricEditorCanvas({
       const host = previewRef.current; if (!host) return null;
       let hit = null;
       proxiesRef.current.forEach((o) => {
-        if (!o || o.blockIndex == null) return;
+        if (!o || o.blockIndex == null || o.locked) return; // locked layers ignore touch
         const el = host.querySelector(`[data-block-slot="${o.slot}"]`);
         if (!el) return;
         const r = el.getBoundingClientRect();
@@ -381,16 +392,20 @@ export default function FabricEditorCanvas({
       return hit;
     };
 
-    const commitObj = (o) => {
+    const commitObj = (o, scaled, rotated) => {
       const canvas = getC(); const fabric = getF();
       if (!canvas || !fabric || !o || o.blockIndex == null) return;
       const dims = { canvasW: canvas.getWidth(), canvasH: canvas.getHeight(), designW: cb.current.designW, designH: cb.current.designH };
       const d = fabric.util.qrDecompose(o.calcTransformMatrix());
       const v = geometryToCommit({ centerX: d.translateX, centerY: d.translateY, scaledW: o.width * Math.abs(d.scaleX), scaledH: o.height * Math.abs(d.scaleY), angle: d.angle }, dims);
       const slot = slotFor(cb.current.pageIndex, o.blockIndex);
+      /* Resize/rotate FIRST (they need the original slot); move LAST because it
+         may reorder the block to the front, which changes the slot. Only commit
+         resize/rotate when the gesture actually scaled/rotated — a pure
+         two-finger pan must NOT change the element's size (was the emoji bug). */
+      if (scaled) cb.current.onResizeCommit?.(slot, v.designW, v.designH);
+      if (rotated) cb.current.onRotateCommit?.(slot, v.deg);
       cb.current.onMoveCommit?.(slot, v.moveX, v.moveY, v.refW, v.refH);
-      cb.current.onResizeCommit?.(slot, v.designW, v.designH);
-      cb.current.onRotateCommit?.(slot, v.deg);
     };
 
     /* Focus a text block's editable node (shared by double-tap + context menu). */
@@ -461,6 +476,7 @@ export default function FabricEditorCanvas({
             baseSX: active.scaleX, baseSY: active.scaleY, baseAngle: active.angle,
             baseCenter: active.getCenterPoint(), baseSpan: span(t), baseTwist: twist(t),
             baseMid: { x: m.x - rect.left, y: m.y - rect.top }, zoom: canvas.getZoom() || 1,
+            didScale: false, didRotate: false,
           };
           canvas.requestRenderAll();
         } else {
@@ -478,14 +494,22 @@ export default function FabricEditorCanvas({
       if (engaged) { e.preventDefault(); e.stopPropagation(); }
       if (!g || t.length < 2 || !fabric) return;
       const rect = rectOf(); const m = mid(t);
-      const ratio = g.baseSpan > 0 ? span(t) / g.baseSpan : 1;
       const o = g.obj;
       try { canvas._currentTransform = null; } catch { /* ignore */ }
-      const sx = Math.max(0.05, Math.min(12, g.baseSX * ratio));
-      const sy = Math.max(0.05, Math.min(12, g.baseSY * ratio));
-      let deg = g.baseAngle + (twist(t) - g.baseTwist);
-      const snap = Math.round(deg / 15) * 15;
-      if (Math.abs(deg - snap) < 4) deg = snap;            // magnetise to 15°
+      /* Deadzones: ignore tiny pinch/twist so a two-finger MOVE doesn't
+         accidentally resize or rotate (the element keeps its size while panning). */
+      let ratio = g.baseSpan > 0 ? span(t) / g.baseSpan : 1;
+      if (Math.abs(ratio - 1) < 0.06 && !g.didScale) ratio = 1; else g.didScale = true;
+      const rawTwist = twist(t) - g.baseTwist;
+      if (Math.abs(rawTwist) < 3 && !g.didRotate) { /* hold angle */ } else g.didRotate = true;
+      const sx = g.didScale ? Math.max(0.05, Math.min(12, g.baseSX * ratio)) : g.baseSX;
+      const sy = g.didScale ? Math.max(0.05, Math.min(12, g.baseSY * ratio)) : g.baseSY;
+      let deg = g.baseAngle;
+      if (g.didRotate) {
+        deg = g.baseAngle + rawTwist;
+        const snap = Math.round(deg / 15) * 15;
+        if (Math.abs(deg - snap) < 4) deg = snap;          // magnetise to 15°
+      }
       deg = ((deg % 360) + 360) % 360;
       const dx = ((m.x - rect.left) - g.baseMid.x) / g.zoom;
       const dy = ((m.y - rect.top) - g.baseMid.y) / g.zoom;
@@ -501,7 +525,7 @@ export default function FabricEditorCanvas({
       const t = e.touches;
       if (engaged) { e.stopPropagation(); }
       if (g && t.length < 2) {
-        commitObj(g.obj);
+        commitObj(g.obj, g.didScale, g.didRotate);
         setLocks(g.obj, false);
         setGestureInfo('');
         g = null;
@@ -583,9 +607,17 @@ export default function FabricEditorCanvas({
         canvas.add(obj);
       }
       obj.set({ width: w, height: h, scaleX: 1, scaleY: 1, angle, left: centerX, top: centerY });
+      // Locked layers are visible but inert on the canvas — no select/move/resize/rotate.
+      const locked = block?.locked === true;
+      obj.set({
+        selectable: !locked, evented: !locked, hasControls: !locked, hasBorders: !locked,
+        lockMovementX: locked, lockMovementY: locked, lockScalingX: locked, lockScalingY: locked, lockRotation: locked,
+        hoverCursor: locked ? 'default' : 'move',
+      });
       obj.blockIndex = i;
       obj.slot = slot;
-      obj.editableText = TEXT_TYPES.has(block.type);
+      obj.locked = locked;
+      obj.editableText = TEXT_TYPES.has(block.type) && !locked;
       obj.setCoords();
       next[i] = obj;
     });

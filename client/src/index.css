@@ -162,6 +162,30 @@ body { overflow-x: hidden; overscroll-behavior: none; }
 }
 @keyframes mbgCloud { from { transform: translateX(0); } to { transform: translateX(190vw); } }
 
+/* ── Extra live wallpapers ── */
+.mbg-aurora { position:absolute; inset:-20%; background:linear-gradient(120deg, var(--c1), transparent 60%);
+  filter:blur(60px); opacity:.55; mix-blend-mode:screen;
+  animation-name:mbgAurora; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+.mbg-aurora-2 { background:linear-gradient(300deg, var(--c2), transparent 60%); animation-direction:reverse; }
+@keyframes mbgAurora { 0%,100% { transform:translate(-8%,0) rotate(0deg); } 50% { transform:translate(8%,6%) rotate(8deg); } }
+
+.mbg-raindrop { position:absolute; top:-10%; width:2px; opacity:.5; border-radius:2px;
+  animation-name:mbgRain; animation-timing-function:linear; animation-iteration-count:infinite; }
+@keyframes mbgRain { from { top:-10%; } to { top:110%; } }
+
+.mbg-bubble { position:absolute; bottom:-15%; border:2px solid; border-radius:50%; opacity:.5; background:transparent;
+  animation-name:mbgBubble; animation-timing-function:ease-in; animation-iteration-count:infinite; }
+@keyframes mbgBubble { 0% { bottom:-15%; opacity:0; } 12% { opacity:.5; } 100% { bottom:115%; opacity:0; } }
+
+.mbg-firefly { position:absolute; width:5px; height:5px; border-radius:50%; opacity:.8;
+  animation-name:mbgFirefly; animation-timing-function:ease-in-out; animation-iteration-count:infinite; }
+@keyframes mbgFirefly { 0%,100% { transform:translate(0,0); opacity:.2; } 25% { transform:translate(20px,-16px); opacity:1; }
+  50% { transform:translate(-12px,10px); opacity:.5; } 75% { transform:translate(10px,14px); opacity:.9; } }
+
+.mbg-snow { position:absolute; top:-8%; background:#fff; border-radius:50%; opacity:.85;
+  animation-name:mbgSnow; animation-timing-function:linear; animation-iteration-count:infinite; }
+@keyframes mbgSnow { 0% { top:-8%; transform:translateX(0); } 50% { transform:translateX(16px); } 100% { top:110%; transform:translateX(-10px); } }
+
 .mbg-stars {
   position: absolute; inset: 0;
   background-image:
@@ -2894,3 +2918,145 @@ html.light .feature-chip {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Interactive "fun" blocks — quiz, poll, games, spin & surprise.
+   Rendered by renderGame(); behaviour wired by useInteractiveGames.
+   Fully themeable per block via CSS variables (set inline by renderGame):
+     --g-accent  --g-accent2  --g-text  --g-card  --g-radius
+     --g-card-radius  --g-font   (+ optional bg / image on the wrapper)
+   Defaults live on .tpl-game, so inline overrides win and old games are
+   unchanged. Effect presets: .tpl-gfx-glow / glass / neon.
+   ════════════════════════════════════════════════════════════════ */
+.tpl-game { --g-accent:#8B5CF6; --g-accent2:#EC4899; --g-card:rgba(255,255,255,.08);
+  --g-radius:999px; --g-card-radius:14px;
+  display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
+  color:var(--g-text, inherit); font-family:var(--g-font, inherit); }
+.tpl-game-q { font-size:1.15em; font-weight:800; line-height:1.25; }
+.tpl-game-btn { cursor:pointer; border:0; border-radius:var(--g-radius); padding:10px 22px; font-weight:800; font-size:1em;
+  color:#fff; background:linear-gradient(120deg,var(--g-accent),var(--g-accent2)); box-shadow:0 8px 22px rgba(0,0,0,.25); transition:transform .15s, box-shadow .15s; }
+.tpl-game-btn:hover { transform:translateY(-2px); box-shadow:0 12px 28px rgba(0,0,0,.32); }
+.tpl-game-btn:active { transform:scale(.96); }
+.tpl-game-status, .tpl-quiz-feedback { font-weight:700; font-size:.95em; min-height:1.2em; }
+
+/* Trick Yes/No */
+.tpl-game-btns { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+.tpl-game-no { background:linear-gradient(120deg,#64748b,#475569); box-shadow:none; transition:transform .18s ease; will-change:transform; }
+.tpl-game-success { font-size:1.3em; font-weight:900; animation:tpl-pop .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes tpl-pop { 0%{transform:scale(.4);opacity:0} 100%{transform:scale(1);opacity:1} }
+
+/* Tap to reveal */
+.tpl-reveal { position:relative; min-width:200px; min-height:96px; display:grid; place-items:center; border-radius:16px; overflow:hidden; }
+.tpl-reveal-msg { padding:18px 22px; font-size:1.25em; font-weight:800; }
+.tpl-reveal-cover { position:absolute; inset:0; display:grid; place-items:center; cursor:pointer;
+  background:linear-gradient(135deg,var(--g-accent),var(--g-accent2)); color:#fff; font-weight:800; font-size:1.05em;
+  transition:opacity .5s, transform .5s; border-radius:16px; }
+.tpl-revealed .tpl-reveal-cover { opacity:0; transform:scale(1.15) rotate(3deg); pointer-events:none; }
+
+/* Quiz */
+.tpl-quiz-opts { display:flex; flex-direction:column; gap:8px; width:100%; max-width:340px; }
+.tpl-quiz-opt { cursor:pointer; border:2px solid rgba(255,255,255,.25); background:var(--g-card);
+  color:inherit; border-radius:var(--g-card-radius); padding:10px 14px; font-weight:700; font-size:.98em; transition:.15s; }
+.tpl-quiz-opt:hover:not(:disabled) { border-color:var(--g-accent); background:rgba(255,255,255,.16); }
+.tpl-quiz-opt:disabled { cursor:default; }
+.tpl-quiz-opt.is-correct { border-color:#22c55e; background:rgba(34,197,94,.22); }
+.tpl-quiz-opt.is-wrong { border-color:#ef4444; background:rgba(239,68,68,.22); }
+.tpl-quiz-feedback.ok { color:#22c55e; } .tpl-quiz-feedback.no { color:#fca5a5; }
+
+/* Poll */
+.tpl-poll { display:flex; flex-direction:column; gap:8px; width:100%; max-width:340px; }
+.tpl-poll-opt { position:relative; cursor:pointer; border:0; overflow:hidden; isolation:isolate;
+  background:var(--g-card); color:inherit; border-radius:var(--g-card-radius); padding:11px 14px; font-weight:700;
+  display:flex; align-items:center; gap:8px; }
+.tpl-poll-bar { position:absolute; inset:0 auto 0 0; width:0; background:linear-gradient(120deg,var(--g-accent),var(--g-accent2));
+  opacity:.5; transition:width .5s cubic-bezier(.4,0,.2,1); z-index:-1; }
+.tpl-poll-label { flex:1; text-align:left; } .tpl-poll-pct { font-variant-numeric:tabular-nums; opacity:0; transition:opacity .3s; }
+.tpl-poll-voted .tpl-poll-pct { opacity:1; }
+.tpl-poll-opt.is-picked { box-shadow:0 0 0 2px #fff inset; }
+
+/* Memory match */
+.tpl-memory { display:grid; gap:8px; }
+.tpl-mem-card { aspect-ratio:1; min-width:42px; cursor:pointer; border:0; border-radius:var(--g-card-radius); font-size:1.6em;
+  background:linear-gradient(135deg,var(--g-accent),var(--g-accent2)); display:grid; place-items:center; transition:transform .25s; }
+.tpl-mem-card:active { transform:scale(.94); }
+.tpl-mem-face { opacity:0; transform:scale(.4); transition:.2s; display:grid; place-items:center; width:100%; height:100%; }
+.tpl-mem-img { width:80%; height:80%; object-fit:cover; border-radius:8px; }
+.tpl-mem-card.is-up .tpl-mem-face, .tpl-mem-card.is-done .tpl-mem-face { opacity:1; transform:scale(1); }
+.tpl-mem-card.is-up { background:rgba(255,255,255,.16); }
+.tpl-mem-card.is-done { background:rgba(34,197,94,.28); cursor:default; }
+
+/* Spot the difference */
+.tpl-spot { display:grid; gap:6px; }
+.tpl-spot-cell { aspect-ratio:1; min-width:30px; cursor:pointer; border:0; background:transparent; font-size:1.5em; line-height:1; transition:transform .12s; }
+.tpl-spot-cell:hover { transform:scale(1.15); }
+.tpl-spot-cell.is-found { animation:tpl-pop .4s; filter:drop-shadow(0 0 8px #22c55e); }
+.tpl-spot-cell.is-shake { animation:tpl-shake .4s; }
+@keyframes tpl-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+/* Spin the wheel */
+.tpl-wheel-wrap { position:relative; width:200px; height:200px; }
+.tpl-wheel { width:100%; height:100%; border-radius:50%; position:relative; transform:rotate(0deg);
+  box-shadow:0 10px 30px rgba(0,0,0,.35), 0 0 0 6px rgba(255,255,255,.9), 0 0 0 9px rgba(0,0,0,.15); }
+.tpl-wheel-label { position:absolute; left:50%; top:50%; transform-origin:0 0; width:50%; height:1.4em;
+  margin-top:-.7em; display:flex; align-items:center; justify-content:flex-end; padding-right:10px;
+  color:#fff; font-weight:800; font-size:.62em; text-shadow:0 1px 2px rgba(0,0,0,.5); pointer-events:none; }
+.tpl-wheel-label > span { transform:rotate(180deg); white-space:nowrap; }
+.tpl-wheel-pin { position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+  border-left:11px solid transparent; border-right:11px solid transparent; border-top:20px solid var(--g-accent,#fff);
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.4)); z-index:2; }
+
+/* Gift box */
+.tpl-gift { cursor:pointer; border:0; background:transparent; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.tpl-gift-box { font-size:3.4em; line-height:1; display:inline-block; animation:tpl-gift-wiggle 1.8s ease-in-out infinite; }
+.tpl-gift-hint { font-size:.85em; font-weight:700; opacity:.8; }
+.tpl-gift-open .tpl-gift { pointer-events:none; }
+.tpl-gift-open .tpl-gift-box { animation:tpl-gift-burst .5s forwards; }
+.tpl-gift-open .tpl-gift-hint { display:none; }
+.tpl-gift-msg { font-size:1.3em; font-weight:900; animation:tpl-pop .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes tpl-gift-wiggle { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
+@keyframes tpl-gift-burst { 0%{transform:scale(1)} 40%{transform:scale(1.3) rotate(8deg)} 100%{transform:scale(0);opacity:0} }
+
+/* ── Effect presets ── */
+.tpl-gfx-glow .tpl-game-btn,
+.tpl-gfx-glow .tpl-mem-card,
+.tpl-gfx-glow .tpl-reveal-cover { box-shadow:0 0 18px var(--g-accent), 0 0 36px var(--g-accent2); }
+.tpl-gfx-glow .tpl-game-q { text-shadow:0 0 10px var(--g-accent); }
+.tpl-gfx-neon .tpl-game-q { text-shadow:0 0 6px var(--g-accent), 0 0 16px var(--g-accent2); }
+.tpl-gfx-neon .tpl-game-btn { background:transparent; border:2px solid var(--g-accent); box-shadow:0 0 12px var(--g-accent), inset 0 0 8px var(--g-accent); }
+.tpl-gfx-neon .tpl-quiz-opt, .tpl-gfx-neon .tpl-poll-opt { border:1.5px solid var(--g-accent); box-shadow:0 0 8px rgba(0,0,0,.4); }
+.tpl-gfx-glass .tpl-game-btn,
+.tpl-gfx-glass .tpl-quiz-opt,
+.tpl-gfx-glass .tpl-poll-opt,
+.tpl-gfx-glass .tpl-mem-card,
+.tpl-gfx-glass .tpl-reveal-cover { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.35);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:0 8px 24px rgba(0,0,0,.25); }
+
+/* Flip card */
+.tpl-flip { width:170px; height:110px; perspective:800px; cursor:pointer; }
+.tpl-flip-inner { position:relative; width:100%; height:100%; transition:transform .6s cubic-bezier(.34,1.2,.5,1); transform-style:preserve-3d; }
+.tpl-flip.is-flipped .tpl-flip-inner { transform:rotateY(180deg); }
+.tpl-flip-front, .tpl-flip-back { position:absolute; inset:0; display:grid; place-items:center; padding:14px; border-radius:18px;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden; font-weight:800; font-size:1.05em; text-align:center;
+  background:linear-gradient(135deg,var(--g-accent),var(--g-accent2)); color:#fff; box-shadow:0 10px 26px rgba(0,0,0,.28); }
+.tpl-flip-back { transform:rotateY(180deg); background:linear-gradient(135deg,var(--g-accent2),var(--g-accent)); }
+
+/* Slot machine */
+.tpl-slot { display:flex; gap:8px; padding:12px 14px; border-radius:16px; background:rgba(0,0,0,.35); box-shadow:inset 0 2px 8px rgba(0,0,0,.4); }
+.tpl-slot-reel { width:56px; height:64px; display:grid; place-items:center; font-size:2.1em; border-radius:12px;
+  background:#fff; color:#111; box-shadow:0 3px 8px rgba(0,0,0,.25); overflow:hidden; }
+
+/* Sliding puzzle */
+.tpl-puzzle { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; width:220px; height:220px; padding:5px;
+  background:rgba(0,0,0,.25); border-radius:14px; }
+.tpl-puz-cell { border:0; cursor:pointer; border-radius:9px; font-size:1.6em; font-weight:800; color:#fff;
+  background:linear-gradient(135deg,var(--g-accent),var(--g-accent2)); background-repeat:no-repeat; display:grid; place-items:center;
+  transition:transform .12s; }
+.tpl-puz-cell:active { transform:scale(.95); }
+.tpl-puz-cell.is-blank { background:transparent; box-shadow:none; cursor:default; pointer-events:none; }
+
+/* Rock · Paper · Scissors */
+.tpl-rps { display:flex; gap:12px; }
+.tpl-rps-btn { cursor:pointer; border:0; width:60px; height:60px; border-radius:50%; font-size:1.9em;
+  background:var(--g-card); box-shadow:0 6px 16px rgba(0,0,0,.25); transition:transform .15s; }
+.tpl-rps-btn:hover { transform:translateY(-3px) scale(1.05); }
+.tpl-rps-btn:active { transform:scale(.92); }

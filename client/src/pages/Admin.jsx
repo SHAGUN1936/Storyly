@@ -24,7 +24,9 @@ import {
   updateBuilderBlockPositionBySlot,
   updateBuilderBlockPositionSynced,
   updateBuilderBlockPositionPctSynced,
+  bringBlockToFrontBySlot,
   autoAlignBuilderPage,
+  arrangeBuilderPage,
   updateBuilderBlockSizeForDevice,
   updateBuilderBlockRotateSynced,
   defaultResponsiveConfig,
@@ -45,7 +47,11 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import DeviceSelect from '../components/DeviceSelect';
 import SlideshowBuilder from '../components/SlideshowBuilder';
 import FabricEditorCanvas from '../components/FabricEditorCanvas';
+import LayersPanel from '../components/LayersPanel';
 import TextStudioPanel from '../components/TextStudioPanel';
+import TypographyPresetsPanel from '../components/TypographyPresetsPanel';
+import GameStudioPanel, { GAME_TYPES } from '../components/GameStudioPanel';
+import ArrangeMenu from '../components/ArrangeMenu';
 import FontBar from '../components/FontBar';
 import ButtonStudioPanel from '../components/ButtonStudioPanel';
 import { MOTION_BG_PRESETS, normalizeMotionBg } from '../lib/motionBackgrounds';
@@ -69,6 +75,17 @@ const THEME_PRESETS = [
   { id: 'forest',    name: 'Forest',    bgMotion: false, gradientFrom: '#064e3b', gradientTo: '#0ea5e9', gradientAngle: 160, textColor: '#ecfdf5', headingColor: '#6ee7b7', buttonBackground: '#34d399', buttonText: '#064e3b', fontFamily: '"Inter", system-ui, sans-serif', pageAnimation: 'slideUp' },
   { id: 'peach',     name: 'Peach',     bgMotion: false, gradientFrom: '#ffedd5', gradientTo: '#fbcfe8', gradientAngle: 150, textColor: '#7c2d12', headingColor: '#be185d', buttonBackground: '#fb7185', buttonText: '#ffffff', fontFamily: '"Quicksand", system-ui, sans-serif', pageAnimation: 'fade' },
   { id: 'aurora',    name: 'Aurora',    bgMotion: true,  gradientFrom: '#22d3ee', gradientTo: '#d946ef', gradientAngle: 135, textColor: '#f0fdfa', headingColor: '#f5d0fe', buttonBackground: '#e879f9', buttonText: '#083344', fontFamily: '"Fredoka", system-ui, sans-serif', pageAnimation: 'drift' },
+  { id: 'rosegold',  name: 'Rose Gold',  bgMotion: true,  gradientFrom: '#fde2e4', gradientTo: '#e8b4bc', gradientAngle: 150, textColor: '#5c2a35', headingColor: '#a8324a', buttonBackground: '#d98a9a', buttonText: '#ffffff', fontFamily: '"Cormorant Garamond", serif', pageAnimation: 'fade' },
+  { id: 'mint',      name: 'Mint',       bgMotion: false, gradientFrom: '#d1fae5', gradientTo: '#99f6e4', gradientAngle: 155, textColor: '#064e3b', headingColor: '#0f766e', buttonBackground: '#10b981', buttonText: '#ffffff', fontFamily: '"Quicksand", system-ui, sans-serif', pageAnimation: 'slideUp' },
+  { id: 'galaxy',    name: 'Galaxy',     bgMotion: true,  gradientFrom: '#1e1b4b', gradientTo: '#be185d', gradientAngle: 160, textColor: '#ede9fe', headingColor: '#f0abfc', buttonBackground: '#a855f7', buttonText: '#ffffff', fontFamily: '"Space Grotesk", system-ui, sans-serif', pageAnimation: 'zoom' },
+  { id: 'cyberpunk', name: 'Cyberpunk',  bgMotion: true,  gradientFrom: '#05d9e8', gradientTo: '#ff2a6d', gradientAngle: 135, textColor: '#eafcff', headingColor: '#fee715', buttonBackground: '#ff2a6d', buttonText: '#0b0c10', fontFamily: '"Audiowide", cursive', pageAnimation: 'drift' },
+  { id: 'coffee',    name: 'Coffee',     bgMotion: false, gradientFrom: '#3e2723', gradientTo: '#a1887f', gradientAngle: 150, textColor: '#efebe9', headingColor: '#ffcc80', buttonBackground: '#bcaaa4', buttonText: '#3e2723', fontFamily: '"Merriweather", Georgia, serif', pageAnimation: 'fade' },
+  { id: 'sky',       name: 'Sky',        bgMotion: true,  gradientFrom: '#bae6fd', gradientTo: '#e0f2fe', gradientAngle: 165, textColor: '#0c4a6e', headingColor: '#0369a1', buttonBackground: '#0ea5e9', buttonText: '#ffffff', fontFamily: '"Nunito", system-ui, sans-serif', pageAnimation: 'slideUp' },
+  { id: 'cherry',    name: 'Cherry',     bgMotion: true,  gradientFrom: '#be123c', gradientTo: '#fb7185', gradientAngle: 145, textColor: '#fff1f2', headingColor: '#ffe4e6', buttonBackground: '#fda4af', buttonText: '#881337', fontFamily: '"Pacifico", cursive', pageAnimation: 'fade' },
+  { id: 'emerald',   name: 'Emerald',    bgMotion: false, gradientFrom: '#022c22', gradientTo: '#059669', gradientAngle: 155, textColor: '#d1fae5', headingColor: '#6ee7b7', buttonBackground: '#34d399', buttonText: '#022c22', fontFamily: '"Cinzel", serif', pageAnimation: 'zoom' },
+  { id: 'mono',      name: 'Mono',       bgMotion: false, gradientFrom: '#111827', gradientTo: '#374151', gradientAngle: 160, textColor: '#f9fafb', headingColor: '#ffffff', buttonBackground: '#f9fafb', buttonText: '#111827', fontFamily: '"Inter", system-ui, sans-serif', pageAnimation: 'fade' },
+  { id: 'bubblegum', name: 'Bubblegum',  bgMotion: true,  gradientFrom: '#f9a8d4', gradientTo: '#a5b4fc', gradientAngle: 150, textColor: '#4a044e', headingColor: '#9d174d', buttonBackground: '#ec4899', buttonText: '#ffffff', fontFamily: '"Bungee", cursive', pageAnimation: 'drift' },
+  { id: 'gold',      name: 'Gold Luxe',  bgMotion: true,  gradientFrom: '#1a1a1a', gradientTo: '#b8860b', gradientAngle: 150, textColor: '#fdf6e3', headingColor: '#f5d67a', buttonBackground: '#d4af37', buttonText: '#1a1a1a', fontFamily: '"Playfair Display", Georgia, serif', pageAnimation: 'fade' },
 ];
 
 function ShapePreview({ kind }) {
@@ -117,16 +134,20 @@ export default function Admin() {
   // Nothing is selected by default — an element only becomes active when the
   // user actually clicks it (so the contextual top bar stays hidden until then).
   const [selectedBlockIndex, setSelectedBlockIndex] = useState(null);
+  /* Layers panel multi-selection. `selectedBlockIndex` stays the PRIMARY
+     (drives the property panel + single canvas handles); this carries the
+     full multi-select / group for the Layers panel + Fabric ActiveSelection. */
+  const [selectedLayerIndices, setSelectedLayerIndices] = useState([]);
   const [dragMode, setDragMode] = useState(true);
   /** Fabric.js control layer (opt-in). When ON, a Fabric canvas overlays the
    *  HTML preview and provides the select/drag/resize/rotate handles; commits
    *  flow through the SAME builderState mutators as the legacy DOM editor, so
    *  the data + render path are unchanged. OFF = legacy editor, zero risk. */
-  /* Precision (multi-touch) editing auto-enables on finger devices so the
-     mobile editor is touch-ready out of the box; desktop stays opt-in. */
-  const [fabricMode, setFabricMode] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true
-  );
+  /* Precision is the edit ↔ preview switch. ON → full editing (select, move,
+     resize, rotate, properties). OFF → the canvas behaves like the live page
+     (games + buttons work, nothing editable) so you can test it. Defaults ON so
+     the editor opens ready to edit. */
+  const [fabricMode, setFabricMode] = useState(true);
   const editorArtboardRef = useRef(null);
   /* In-app clipboard for Copy/Paste of a block (survives across pages). */
   const blockClipboard = useRef(null);
@@ -408,6 +429,123 @@ export default function Admin() {
     return `p${activePage + 1}_b${selectedBlockIndex}`;
   }, [activePage, selectedBlockIndex]);
 
+  /* Keep the multi-selection in step with the primary selection: a brand-new
+     single selection resets the multi, but a multi that already contains the
+     primary is preserved (so Layers-panel multi-select isn't clobbered). */
+  useEffect(() => {
+    setSelectedLayerIndices((prev) => {
+      if (selectedBlockIndex == null) return prev.length ? [] : prev;
+      if (prev.includes(selectedBlockIndex)) return prev;
+      return [selectedBlockIndex];
+    });
+  }, [selectedBlockIndex]);
+
+  /* Clear the multi-selection when switching pages (indices are per-page). */
+  useEffect(() => { setSelectedLayerIndices([]); }, [activePage]);
+
+  /* Turning Precision OFF = preview/test mode: drop any selection so the
+     contextual bar + handles vanish and the canvas looks like the live page. */
+  useEffect(() => {
+    if (!fabricMode) { setSelectedBlockIndex(null); setSelectedLayerIndices([]); }
+  }, [fabricMode]);
+
+  const newGroupId = () => `g_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36)}`;
+
+  /* ── Layers panel operations (operate on the ACTIVE page) ──────── */
+  const selectLayers = (indices) => {
+    const arr = Array.isArray(indices) ? indices : [];
+    setSelectedLayerIndices(arr);
+    setSelectedBlockIndex(arr.length ? arr[arr.length - 1] : null);
+  };
+
+  const writeBlocks = (mutate, nextSelObjs) => {
+    const page = normalizedBuilder.pages[activePage];
+    if (!page) return;
+    const blocks = page.blocks || [];
+    const next = mutate(blocks);
+    if (!next) return;
+    setPageAt(activePage, { ...page, blocks: next });
+    // Remap selection by object identity so it survives reordering/edits.
+    if (nextSelObjs) {
+      const sel = nextSelObjs.map((o) => next.indexOf(o)).filter((i) => i >= 0).sort((a, b) => a - b);
+      setSelectedLayerIndices(sel);
+      setSelectedBlockIndex(sel.length ? sel[sel.length - 1] : null);
+    }
+  };
+
+  const reorderLayerRows = (descriptors) => {
+    const page = normalizedBuilder.pages[activePage];
+    if (!page) return;
+    const blocks = page.blocks || [];
+    const selObjs = selectedLayerIndices.map((i) => blocks[i]).filter(Boolean);
+    const bottomToTop = [...descriptors].reverse();   // descriptors are top→bottom
+    const used = new Set();
+    const next = [];
+    bottomToTop.forEach((d) => (d.indices || []).forEach((i) => {
+      if (blocks[i] && !used.has(i)) { used.add(i); next.push(blocks[i]); }
+    }));
+    blocks.forEach((b, i) => { if (!used.has(i)) next.push(b); }); // safety
+    writeBlocks(() => next, selObjs);
+  };
+
+  const setLayerName = (index, name) =>
+    writeBlocks((blocks) => blocks.map((b, i) => (i === index ? { ...b, name: String(name).slice(0, 60) } : b)));
+
+  const toggleLayersField = (indices, field) => {
+    const set = new Set(indices);
+    writeBlocks((blocks) => {
+      const allOn = indices.every((i) => blocks[i] && blocks[i][field]);
+      return blocks.map((b, i) => (set.has(i) ? { ...b, [field]: !allOn } : b));
+    });
+  };
+
+  const duplicateLayers = (indices) => {
+    const idxs = [...new Set(indices)].sort((a, b) => a - b);
+    if (!idxs.length) return;
+    const page = normalizedBuilder.pages[activePage];
+    const blocks = page?.blocks || [];
+    const gidMap = {};
+    const copies = idxs.map((i) => {
+      const c = JSON.parse(JSON.stringify(blocks[i]));
+      if (c.groupId) { gidMap[c.groupId] = gidMap[c.groupId] || newGroupId(); c.groupId = gidMap[c.groupId]; }
+      if (Number.isFinite(Number(c.xPct))) c.xPct = Math.min(96, Number(c.xPct) + 4);
+      if (Number.isFinite(Number(c.yPct))) c.yPct = Math.min(96, Number(c.yPct) + 4);
+      if (Number.isFinite(Number(c.x))) c.x = Number(c.x) + 24;
+      if (Number.isFinite(Number(c.y))) c.y = Number(c.y) + 24;
+      return c;
+    });
+    const at = Math.max(...idxs) + 1;
+    writeBlocks((bl) => [...bl.slice(0, at), ...copies, ...bl.slice(at)], copies);
+  };
+
+  const deleteLayers = (indices) => {
+    const set = new Set(indices);
+    writeBlocks((blocks) => blocks.filter((_, i) => !set.has(i)));
+    setSelectedLayerIndices([]);
+    setSelectedBlockIndex(null);
+  };
+
+  const groupLayers = (indices) => {
+    const idxs = [...new Set(indices)].filter((i) => normalizedBuilder.pages[activePage]?.blocks?.[i]).sort((a, b) => a - b);
+    if (idxs.length < 2) return;
+    const gid = newGroupId();
+    const page = normalizedBuilder.pages[activePage];
+    const blocks = page.blocks;
+    const members = idxs.map((i) => ({ ...blocks[i], groupId: gid }));
+    const rest = blocks.filter((_, i) => !idxs.includes(i));
+    // Insert the contiguous group where its front-most member was.
+    const maxIdx = idxs[idxs.length - 1];
+    let at = 0;
+    blocks.forEach((_, i) => { if (i <= maxIdx && !idxs.includes(i)) at++; });
+    const next = [...rest.slice(0, at), ...members, ...rest.slice(at)];
+    writeBlocks(() => next, members);
+  };
+
+  const ungroupLayers = (groupId) => {
+    if (!groupId) return;
+    writeBlocks((blocks) => blocks.map((b) => (b.groupId === groupId ? { ...b, groupId: '' } : b)));
+  };
+
   const setGlobalMusic = (url) => {
     setBuilderState((prev) => {
       const n = normalizeBuilderState(prev);
@@ -432,6 +570,18 @@ export default function Admin() {
       pages[activePage] = { ...pages[activePage], ...patch };
       return { ...n, pages };
     });
+  /* Upload a photo for use inside a game (e.g. Memory cards). Returns the URL. */
+  const uploadGameImage = async (file) => {
+    if (!file) return null;
+    try {
+      const { url } = await videosAPI.uploadMedia(file);
+      return url;
+    } catch (err) {
+      toast.error(err.message || 'Upload failed');
+      return null;
+    }
+  };
+
   const uploadPageBg = async (file, kind) => {
     if (!file) return;
     setBgUploading(true);
@@ -692,6 +842,21 @@ export default function Admin() {
       const target = Number(targetRaw);
       block = { type: 'button', label: 'Tap', navPage: Number.isFinite(target) && target > 0 ? target : 1, buttonStyle: 'stable' };
     }
+    const GAME_DEFAULTS = {
+      trickyn: { type: 'trickyn', question: 'Do you love me? 💕', yesText: 'Yes 🥰', noText: 'No', successText: "Yay! I knew it! 💖", loopAnimation: 'none' },
+      reveal: { type: 'reveal', coverText: 'Tap to reveal 🎁', message: 'Surprise! 🎉', loopAnimation: 'none' },
+      quiz: { type: 'quiz', question: 'Which one is correct?', options: ['Paris', 'London', 'Rome'], correctIndex: 0, loopAnimation: 'none' },
+      poll: { type: 'poll', question: 'What do you think?', options: ['Yes', 'No', 'Maybe'], loopAnimation: 'none' },
+      memory: { type: 'memory', emojis: ['🍎', '⭐', '🎈', '🌸', '🐱', '🍩'], loopAnimation: 'none' },
+      spot: { type: 'spot', emoji: '😀', odd: '😈', count: 20, loopAnimation: 'none' },
+      wheel: { type: 'wheel', segments: ['Prize 🎁', 'Again', 'Win! 🏆', 'Oops', 'Lucky ⭐', 'Try'], loopAnimation: 'none' },
+      giftbox: { type: 'giftbox', message: "🎉 You're invited!", boxEmoji: '🎁', loopAnimation: 'none' },
+      flip: { type: 'flip', front: 'Tap me 👆', back: 'Surprise! 🎉', loopAnimation: 'none' },
+      slot: { type: 'slot', symbols: ['🍒', '🍋', '🔔', '⭐', '7️⃣', '🍀'], loopAnimation: 'none' },
+      puzzle: { type: 'puzzle', puzzleImageUrl: '', loopAnimation: 'none' },
+      rps: { type: 'rps', question: 'Rock · Paper · Scissors', loopAnimation: 'none' },
+    };
+    if (GAME_DEFAULTS[kind]) block = GAME_DEFAULTS[kind];
     // New elements gently float by default (dragging freezes motion live, so
     // it stays easy to grab). Turn it off per element from the More panel.
     block = { loopAnimation: 'float', ...block };
@@ -1445,20 +1610,24 @@ export default function Admin() {
                           else setBuilderState((prev) => ({ ...prev, viewport: v }));
                         }}
                       />
-                      {/* Precision handles (Fabric) — the ONLY way to move /
-                          resize / rotate elements now. Touch-friendly. Replaces
-                          the old "Drag" (legacy DOM drag is disabled) and the
-                          inline delete (use Del / the Layers panel instead). */}
+                      {/* Precision = the edit ↔ preview switch.
+                          ON  → select / move / resize / rotate / edit properties.
+                          OFF → the canvas behaves like the LIVE page (games &
+                                buttons work, nothing editable) so you can test it. */}
                       <button
                         type="button"
                         onClick={() => setFabricMode((v) => !v)}
                         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
-                          fabricMode ? 'bg-brand-500 text-white' : 'bg-white/5 hover:bg-white/15 text-slate-200'
+                          fabricMode ? 'bg-brand-500 text-white' : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
                         }`}
-                        data-tooltip="Precision editing. Desktop: drag, resize, rotate, multi-select, align, snap, Del/Ctrl+D. Touch: one-finger drag, two-finger pinch-resize + rotate, pinch the canvas to zoom/pan, double-tap to zoom, long-press for menu."
+                        data-tooltip={fabricMode
+                          ? 'Editing ON — select, move, resize, rotate & edit properties. Click to PREVIEW (play games / tap buttons like a real visitor).'
+                          : 'Preview / Test mode — the page behaves like the live site. Click to turn Editing back ON.'}
                         data-tooltip-pos="bottom"
                         aria-pressed={fabricMode}
-                      ><MousePointer2 size={14} strokeWidth={2.2} /> Precision</button>
+                      >{fabricMode
+                        ? <><MousePointer2 size={14} strokeWidth={2.2} /> Precision</>
+                        : <><span aria-hidden>👁</span> Preview</>}</button>
 
                       <div className="w-px h-6 bg-white/10 mx-1" />
 
@@ -1518,19 +1687,17 @@ export default function Admin() {
                       );
                     })}
                     <div className="shrink-0 w-px h-6 bg-white/10 mx-1" />
-                    {/* Auto-align — one tap snaps every element on this page into a
-                        clean, centered layout (clears scattered positions). Undoable. */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBuilderState((prev) => autoAlignBuilderPage(prev, activePage));
+                    {/* Arrange — screen-relative layouts (center/spread/stack/grid)
+                        + quick aligns. Positions are %, so they fit every screen.
+                        Undoable. */}
+                    <ArrangeMenu
+                      onArrange={(mode) => {
+                        setBuilderState((prev) => arrangeBuilderPage(prev, activePage, mode));
                         setSelectedBlockIndex(null);
-                        toast.success('Aligned into a clean layout ✨', { position: 'bottom-center', duration: 1000 });
+                        setSelectedLayerIndices([]);
+                        toast.success('Arranged to fit the screen ✨', { position: 'bottom-center', duration: 1000 });
                       }}
-                      className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-500/90 to-pink-500/90 px-2.5 py-2 text-xs font-bold text-white hover:opacity-95 active:scale-95 transition"
-                      data-tooltip="Auto-align — tidy every element into a clean layout"
-                      data-tooltip-pos="bottom"
-                    ><Wand2 size={14} strokeWidth={2.4} /> Auto-align</button>
+                    />
                     <div className="shrink-0 w-px h-6 bg-white/10 mx-1" />
                     <button
                       type="button"
@@ -1956,6 +2123,34 @@ export default function Admin() {
                             ⏱ Countdown
                           </button>
                         </div>
+
+                        {/* ── Interactive & games ── */}
+                        <p className="mt-4 mb-2 text-[10px] font-bold uppercase tracking-widest text-brand-200">🎮 Interactive & games</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { label: '💘 Yes / No', kind: 'trickyn' },
+                            { label: '🎁 Tap reveal', kind: 'reveal' },
+                            { label: '❓ Quiz', kind: 'quiz' },
+                            { label: '📊 Poll', kind: 'poll' },
+                            { label: '🧠 Memory', kind: 'memory' },
+                            { label: '🔍 Spot it', kind: 'spot' },
+                            { label: '🎡 Spin wheel', kind: 'wheel' },
+                            { label: '🎀 Gift box', kind: 'giftbox' },
+                            { label: '🧩 Puzzle', kind: 'puzzle' },
+                            { label: '🎰 Slot machine', kind: 'slot' },
+                            { label: '🔄 Flip card', kind: 'flip' },
+                            { label: '✊ Rock Paper', kind: 'rps' },
+                          ].map(({ label, kind }) => (
+                            <button
+                              key={kind}
+                              type="button"
+                              onClick={() => addBlockQuick(kind)}
+                              className="rounded-lg border border-white/10 bg-slate-900 px-2 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:border-brand-400 transition"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                       )}
 
@@ -2053,6 +2248,40 @@ export default function Admin() {
                           <h5 className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-brand-200 font-extrabold">
                             <span className="text-sm">🌈</span> Background
                           </h5>
+
+                          {/* ── Solid color — a plain background for this page
+                              (overrides the theme gradient). Clears any photo /
+                              video so one background medium wins. */}
+                          {(() => {
+                            const pb = normalizedBuilder.pages[activePage]?.pageBackground || '';
+                            const isSolid = /^(#|rgb)/i.test(pb) && !pb.includes('gradient');
+                            const setSolid = (c) => patchActivePage({ pageBackground: c, pageImageUrl: '', pageVideoUrl: '' });
+                            const SWATCHES = ['#0f172a', '#111827', '#1a1a2e', '#ffffff', '#fde2e4', '#0ea5e9', '#7c3aed', '#ec4899', '#10b981', '#f59e0b'];
+                            return (
+                              <div className="rounded-xl bg-white/[0.03] border border-white/10 p-2.5">
+                                <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">🎨 Solid color <span className="text-slate-500 normal-case font-normal">(this page)</span></label>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {SWATCHES.map((c) => (
+                                    <button
+                                      key={c}
+                                      type="button"
+                                      onClick={() => setSolid(c)}
+                                      aria-pressed={isSolid && pb.toLowerCase() === c}
+                                      className={`h-7 w-7 rounded-lg border transition ${isSolid && pb.toLowerCase() === c ? 'border-brand-400 ring-2 ring-brand-400/50' : 'border-white/15 hover:border-white/40'}`}
+                                      style={{ background: c }}
+                                    />
+                                  ))}
+                                  <label className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-lg border border-white/15" data-tooltip="Custom color" data-tooltip-pos="top">
+                                    <span className="absolute inset-0 grid place-items-center text-[12px]">🎨</span>
+                                    <input type="color" value={isSolid ? pb : '#111827'} onChange={(e) => setSolid(e.target.value)} className="absolute inset-0 -m-2 h-[160%] w-[160%] cursor-pointer opacity-0" />
+                                  </label>
+                                  {pb && (
+                                    <button type="button" onClick={() => patchActivePage({ pageBackground: '' })} className="rounded-md bg-white/10 px-2 py-1 text-[10px] text-slate-300 hover:bg-white/20">clear</button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* ── Motion Backgrounds library ──
                               Animated background behind the whole design
@@ -2213,75 +2442,19 @@ export default function Admin() {
                       )}
 
                       {/* Layers / Blocks List */}
-                      {leftPanel === 'layers' && (normalizedBuilder.pages[activePage]?.blocks || []).length > 0 && (
-                        <div>
-                          <div className="space-y-1.5">
-                            {normalizedBuilder.pages[activePage].blocks.map((b, i) => {
-                              const total = normalizedBuilder.pages[activePage].blocks.length;
-                              const active = selectedBlockIndex === i;
-                              return (
-                                <div
-                                  key={`${b.type}-${i}`}
-                                  className={`group rounded-lg transition ${active ? 'bg-brand-500/20 ring-1 ring-brand-400' : 'bg-slate-800/40 hover:bg-slate-800/70'}`}
-                                >
-                                  <div className="flex items-center gap-1 px-2 py-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedBlockIndex(i)}
-                                      className={`flex-1 text-left text-[11px] font-semibold transition ${active ? 'text-white' : 'text-slate-300'} ${b.hidden ? 'opacity-40' : ''}`}
-                                    >
-                                      <span className="inline-block w-3 mr-1">{b.locked ? '🔒' : ''}</span>
-                                      <span className="capitalize">{b.type}</span> {i + 1}
-                                      {b.type === 'sticker' && b.emoji && <span className="ml-1">{b.emoji}</span>}
-                                      {b.type === 'text' && b.text && <span className="ml-1 text-slate-400">"{b.text.slice(0, 14)}"</span>}
-                                    </button>
-                                    <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition">
-                                      <button
-                                        type="button"
-                                        title="Move up"
-                                        disabled={i === 0}
-                                        onClick={() => reorderBlock(activePage, i, i - 1)}
-                                        className="w-5 h-5 rounded text-[10px] hover:bg-white/15 text-slate-300 disabled:opacity-20"
-                                      >▲</button>
-                                      <button
-                                        type="button"
-                                        title="Move down"
-                                        disabled={i === total - 1}
-                                        onClick={() => reorderBlock(activePage, i, i + 1)}
-                                        className="w-5 h-5 rounded text-[10px] hover:bg-white/15 text-slate-300 disabled:opacity-20"
-                                      >▼</button>
-                                      <button
-                                        type="button"
-                                        title={b.hidden ? 'Show' : 'Hide'}
-                                        onClick={() => toggleBlockField(activePage, i, 'hidden')}
-                                        className="w-5 h-5 rounded text-[10px] hover:bg-white/15 text-slate-300"
-                                      >{b.hidden ? '🙈' : '👁'}</button>
-                                      <button
-                                        type="button"
-                                        title={b.locked ? 'Unlock' : 'Lock'}
-                                        onClick={() => toggleBlockField(activePage, i, 'locked')}
-                                        className="w-5 h-5 rounded text-[10px] hover:bg-white/15 text-slate-300"
-                                      >{b.locked ? '🔓' : '🔒'}</button>
-                                      <button
-                                        type="button"
-                                        title="Duplicate"
-                                        onClick={() => duplicateBlockAt(activePage, i)}
-                                        className="w-5 h-5 rounded text-[10px] hover:bg-white/15 text-slate-300"
-                                      >📋</button>
-                                      <button
-                                        type="button"
-                                        data-tooltip="Delete"
-                                        data-tooltip-pos="top"
-                                        onClick={() => deleteBlockAt(activePage, i)}
-                                        className="w-5 h-5 rounded text-[10px] hover:bg-red-500/40 text-rose-300"
-                                      >×</button>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                      {leftPanel === 'layers' && (
+                        <LayersPanel
+                          blocks={normalizedBuilder.pages[activePage]?.blocks || []}
+                          selectedIndices={selectedLayerIndices}
+                          onSelectIndices={selectLayers}
+                          onReorderRows={reorderLayerRows}
+                          onRename={setLayerName}
+                          onToggleField={toggleLayersField}
+                          onDuplicate={duplicateLayers}
+                          onDelete={deleteLayers}
+                          onGroup={groupLayers}
+                          onUngroup={ungroupLayers}
+                        />
                       )}
                       </div>
                     )}
@@ -2341,12 +2514,16 @@ export default function Admin() {
                                 <SlideshowBuilder
                                   structure={previewStructure}
                                   fills={{}}
-                                  editable
-                                  /* Legacy DOM drag-to-move is OFF here: moving /
+                                  /* Precision = the edit/preview switch. ON →
+                                     editable (select, move, resize, rotate,
+                                     properties). OFF → the design behaves EXACTLY
+                                     like the published page (games playable,
+                                     buttons navigate, nothing selectable) so you
+                                     can test that everything works. */
+                                  editable={fabricMode}
+                                  /* Legacy DOM drag-to-move stays OFF: moving /
                                      resizing / rotating happens only via the
-                                     Precision (Fabric) layer, which is accurate
-                                     and touch-friendly. Clicking still selects and
-                                     double-click still edits text. */
+                                     Precision (Fabric) layer. */
                                   dragMode={false}
                                   previewBreakpoint={activeBp}
                                   activeIndex={activePage}
@@ -2391,11 +2568,27 @@ export default function Admin() {
                                   designW={vp.width}
                                   designH={vp.height}
                                   selectedIndex={selectedBlockIndex}
+                                  selectedIndices={selectedLayerIndices}
                                   onSelect={setSelectedBlockIndex}
+                                  onSelectMany={setSelectedLayerIndices}
                                   onMoveCommit={(slot, x, y, refW, refH) => {
                                     const xPct = refW > 0 ? (x / refW) * 100 : null;
                                     const yPct = refH > 0 ? (y / refH) * 100 : null;
-                                    setBuilderState((prev) => updateBuilderBlockPositionPctSynced(prev, slot, xPct, yPct));
+                                    const m = /_b(\d+)$/.exec(slot);
+                                    const bi = m ? Number(m[1]) : -1;
+                                    // A single, ungrouped block jumps to the front when moved, so it
+                                    // sits ABOVE whatever it was dragged over (not behind it).
+                                    const toFront =
+                                      selectedLayerIndices.length <= 1 &&
+                                      !normalizedBuilder.pages[activePage]?.blocks?.[bi]?.groupId;
+                                    setBuilderState((prev) => {
+                                      const moved = updateBuilderBlockPositionPctSynced(prev, slot, xPct, yPct);
+                                      return toFront ? bringBlockToFrontBySlot(moved, slot) : moved;
+                                    });
+                                    if (toFront) {
+                                      const len = normalizedBuilder.pages[activePage]?.blocks?.length || 1;
+                                      setSelectedBlockIndex(len - 1);   // follow it to the top of the stack
+                                    }
                                   }}
                                   onResizeCommit={(slot, w, h) =>
                                     setBuilderState((prev) => updateBuilderBlockSizeForDevice(prev, slot, w, h, activeBp))
@@ -2551,6 +2744,12 @@ export default function Admin() {
                           sticker: { icon: '😎', label: 'Sticker' }, shape: { icon: '⬢', label: 'Shape' },
                           countdown: { icon: '⏱', label: 'Countdown' }, gallery: { icon: '🖼️', label: 'Gallery' },
                           button: { icon: '🔘', label: 'Button' }, buttons: { icon: '🔘', label: 'Buttons' },
+                          trickyn: { icon: '💘', label: 'Yes / No' }, reveal: { icon: '🎁', label: 'Tap Reveal' },
+                          quiz: { icon: '❓', label: 'Quiz' }, poll: { icon: '📊', label: 'Poll' },
+                          memory: { icon: '🧠', label: 'Memory Game' }, spot: { icon: '🔍', label: 'Spot It' },
+                          wheel: { icon: '🎡', label: 'Spin Wheel' }, giftbox: { icon: '🎀', label: 'Gift Box' },
+                          flip: { icon: '🔄', label: 'Flip Card' }, slot: { icon: '🎰', label: 'Slot Machine' },
+                          puzzle: { icon: '🧩', label: 'Puzzle' }, rps: { icon: '✊', label: 'Rock Paper Scissors' },
                         };
                         const meta = TYPE_META[selType] || { icon: '⬚', label: 'Element' };
                         return (
@@ -2577,6 +2776,9 @@ export default function Admin() {
                                 block={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]}
                                 onChange={updateSelectedBlock}
                               />
+                            )}
+                            {'text' in (normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex] || {}) && (
+                              <TypographyPresetsPanel onApply={updateSelectedBlock} />
                             )}
                             {'label' in (normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex] || {}) && (
                               <div>
@@ -2607,6 +2809,14 @@ export default function Admin() {
                               <ButtonStudioPanel
                                 block={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]}
                                 onChange={updateSelectedBlock}
+                              />
+                            )}
+                            {/* Interactive / game settings */}
+                            {GAME_TYPES.includes(normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type) && (
+                              <GameStudioPanel
+                                block={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]}
+                                onChange={updateSelectedBlock}
+                                onUploadImage={uploadGameImage}
                               />
                             )}
                             {normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type === 'gallery' && (

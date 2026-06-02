@@ -3,6 +3,7 @@ import { applySlotFillsToHtml, countSlidesInHtml } from '../lib/htmlTemplate';
 import HtmlSlideDeck from './HtmlSlideDeck';
 import { useDodgeButtons } from '../hooks/useDodgeButtons';
 import { useResponsiveBreakpoint } from '../hooks/useResponsiveBreakpoint';
+import { useInteractiveGames } from '../hooks/useInteractiveGames';
 
 export default function HtmlTemplateRenderer({
   html,
@@ -34,6 +35,9 @@ export default function HtmlTemplateRenderer({
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
   const singlePageRef = useRef(null);
   useDodgeButtons(singlePageRef, [markup]);
+  // Single-page (non-deck) path: games are live on the published page and in
+  // the editor's Preview mode (editable === false); inert while editing.
+  useInteractiveGames(singlePageRef, markup, !editable);
   // Single-page templates: drive data-bp here (the deck path does its own).
   useResponsiveBreakpoint(singlePageRef, markup, previewBreakpoint);
   useEffect(() => {

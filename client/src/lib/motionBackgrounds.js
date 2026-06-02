@@ -16,6 +16,11 @@ export const MOTION_BG_PRESETS = [
   { id: 'smoke',     label: 'Smoke',     icon: '💨' },
   { id: 'clouds',    label: 'Clouds',    icon: '☁' },
   { id: 'light',     label: 'Light',     icon: '🔦' },
+  { id: 'aurora',    label: 'Aurora',    icon: '🌈' },
+  { id: 'rain',      label: 'Rain',      icon: '🌧' },
+  { id: 'bubbles',   label: 'Bubbles',   icon: '🫧' },
+  { id: 'fireflies', label: 'Fireflies', icon: '🟡' },
+  { id: 'snowfall',  label: 'Snowfall',  icon: '❄' },
 ];
 
 const TYPES = new Set(MOTION_BG_PRESETS.map((p) => p.id));

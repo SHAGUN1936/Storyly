@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, useEffect, useLayoutEffect, useCallback } fr
 import { applySlotFillsToHtml, countSlidesInHtml } from '../lib/htmlTemplate';
 import { useDodgeButtons } from '../hooks/useDodgeButtons';
 import { useResponsiveBreakpoint } from '../hooks/useResponsiveBreakpoint';
+import { useInteractiveGames } from '../hooks/useInteractiveGames';
 
 /**
  * Carousel: .slide / [data-page] — optional timer.
@@ -93,6 +94,9 @@ export default function HtmlSlideDeck({
   }, [html, countedSlides]);
 
   useDodgeButtons(containerRef, [markup]);
+  // Bring quizzes / polls / mini-games to life on the published deck only —
+  // in the editor they stay inert so blocks remain selectable & movable.
+  useInteractiveGames(containerRef, markup, !editable);
 
   useEffect(() => {
     const root = containerRef.current;

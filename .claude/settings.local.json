@@ -11,7 +11,16 @@
       "Bash(powershell -Command \"\\(Get-Content src\\\\pages\\\\TemplateDetail.jsx | Measure-Object -Line\\).Lines\")",
       "Bash(npm uninstall *)",
       "Bash(npm view *)",
-      "Bash(node ./node_modules/vite/bin/vite.js build)"
+      "Bash(node ./node_modules/vite/bin/vite.js build)",
+      "Bash(awk -F: '$1>=1114 && $1<=1320')",
+      "Bash(grep -nE \"const addBlock|kind === 'gallery'|kind === 'sticker'|kind === 'shape'|kind === 'countdown'|block = \\\\{|label: '.*', kind:\" src/pages/Admin.jsx)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(node shotgame.cjs)",
+      "Bash(rm -f game-test.html game-test.png gamegen.mjs shotgame.cjs)",
+      "Bash(grep -nE \"editable$|editable\\\\b|dragMode=\\\\{false\\\\}|previewBreakpoint=\\\\{activeBp\\\\}|<SlideshowBuilder\" src/pages/Admin.jsx)",
+      "Bash(awk 'NR>=1790 && NR<=1830 && /particles|return wrap\\\\\\(dots\\\\\\)|^  return .;|^}/{print NR\": \"$0}' src/lib/visualTemplateBuilder.js)",
+      "Bash(node shotgame2.cjs)",
+      "Bash(rm -f game-test.html game-test.png gamegen2.mjs shotgame2.cjs)"
     ]
   }
 }
