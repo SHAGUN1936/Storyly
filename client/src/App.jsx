@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import TemplateDetail from './pages/TemplateDetail';
 import TemplatePreview from './pages/TemplatePreview';
+import BuilderLivePreview from './pages/BuilderLivePreview';
 import TemplateCustomizeWizard from './pages/TemplateCustomizeWizard';
 import MyVideos from './pages/MyVideos';
 import Account from './pages/Account';
@@ -109,6 +110,10 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/watch/:slug" element={<Watch />} />
+          {/* Full-browser live preview of the editor's current design (data
+              handed over via localStorage). No Layout chrome — looks like the
+              real shared website. */}
+          <Route path="/live-preview" element={<BuilderLivePreview />} />
 
           {/* Page-by-page customization wizard — rendered OUTSIDE the
               Layout shell so the navbar is hidden and the user only sees

@@ -4,6 +4,7 @@ import HtmlSlideDeck from './HtmlSlideDeck';
 import { useDodgeButtons } from '../hooks/useDodgeButtons';
 import { useResponsiveBreakpoint } from '../hooks/useResponsiveBreakpoint';
 import { useInteractiveGames } from '../hooks/useInteractiveGames';
+import { useStoryMusic } from '../hooks/useStoryMusic';
 
 export default function HtmlTemplateRenderer({
   html,
@@ -30,6 +31,7 @@ export default function HtmlTemplateRenderer({
   /* When a Motion Background is active, the deck's own opaque backdrop must
      drop to transparent so the animated layer behind it shows through. */
   transparentBg = false,
+  chromeless = false,
 }) {
   const slideCount = useMemo(() => countSlidesInHtml(html), [html]);
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
@@ -38,6 +40,7 @@ export default function HtmlTemplateRenderer({
   // Single-page (non-deck) path: games are live on the published page and in
   // the editor's Preview mode (editable === false); inert while editing.
   useInteractiveGames(singlePageRef, markup, !editable);
+  useStoryMusic(singlePageRef, markup, !editable);
   // Single-page templates: drive data-bp here (the deck path does its own).
   useResponsiveBreakpoint(singlePageRef, markup, previewBreakpoint);
   useEffect(() => {
@@ -89,6 +92,7 @@ export default function HtmlTemplateRenderer({
         embedded={embedded}
         previewBreakpoint={previewBreakpoint}
         transparentBg={transparentBg}
+        chromeless={chromeless}
       />
     );
   }

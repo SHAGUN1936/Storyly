@@ -45,6 +45,13 @@ export const authAPI = {
   changePassword: (body) => request('/auth/password', { method: 'POST', body: JSON.stringify(body) }),
 };
 
+export const musicAPI = {
+  // source 'itunes' → any song (30s preview) · 'archive' → full royalty-free.
+  search: (q, source = 'itunes') => request(`/music/search?q=${encodeURIComponent(q)}&source=${source}`),
+  // Resolve an Internet Archive item to a playable file URL.
+  resolve: (id) => request(`/music/resolve?id=${encodeURIComponent(id)}`),
+};
+
 export const templatesAPI = {
   /**
    * Browse Templates list — combines admin templates AND builder

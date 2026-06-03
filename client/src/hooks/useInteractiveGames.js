@@ -209,45 +209,113 @@ const INITS = {
   },
 
   puzzle(el) {
-    const grid = el.querySelector('.tpl-puzzle');
+    // Jigsaw drag-and-drop: drag each scattered piece onto its matching slot.
+    const root = el.querySelector('.tpl-jig');
     const status = el.querySelector('[data-status]');
-    if (!grid) return undefined;
-    const url = el.dataset.image || '';
-    const cells = [...grid.querySelectorAll('.tpl-puz-cell')];
-    const N = 3;
-    const setCell = (cell, val) => {
-      cell.dataset.val = String(val);
-      cell.classList.toggle('is-blank', val === 8);
-      if (val === 8) { cell.textContent = ''; cell.style.backgroundImage = ''; return; }
-      if (url) {
-        cell.textContent = '';
-        cell.style.backgroundImage = `url("${url}")`;
-        cell.style.backgroundSize = '300%';
-        cell.style.backgroundPosition = `${(val % N) * 50}% ${Math.floor(val / N) * 50}%`;
-      } else { cell.textContent = String(val + 1); }
+    if (!root) return undefined;
+    const slots = [...root.querySelectorAll('.tpl-jig-slot')];
+    const pieces = [...root.querySelectorAll('.tpl-jig-piece')];
+    const total = pieces.length;
+    let placed = 0;
+    let drag = null;
+
+    const onDown = (e) => {
+      const piece = e.currentTarget;
+      if (piece.classList.contains('is-placed')) return;
+      try { piece.setPointerCapture(e.pointerId); } catch { /* */ }
+      drag = { piece, sx: e.clientX, sy: e.clientY };
+      piece.classList.add('is-drag');
+      e.preventDefault();
     };
-    const adj = (a, b) => Math.abs(Math.floor(a / N) - Math.floor(b / N)) + Math.abs((a % N) - (b % N)) === 1;
-    const vals = cells.map((_, i) => i);
-    const render = () => cells.forEach((c, i) => setCell(c, vals[i]));
-    let blank = 8;
-    for (let k = 0; k < 80; k++) {
-      const nb = [];
-      for (let i = 0; i < 9; i++) if (adj(i, blank)) nb.push(i);
-      const pick = nb[Math.floor(Math.random() * nb.length)];
-      [vals[pick], vals[blank]] = [vals[blank], vals[pick]];
-      blank = pick;
+    const onMove = (e) => {
+      if (!drag) return;
+      drag.piece.style.transform = `translate(${e.clientX - drag.sx}px, ${e.clientY - drag.sy}px) scale(1.08)`;
+    };
+    const onUp = (e) => {
+      if (!drag) return;
+      const piece = drag.piece;
+      drag = null;
+      piece.classList.remove('is-drag');
+      const slot = slots[Number(piece.dataset.piece)];
+      const r = slot.getBoundingClientRect();
+      const hit = !slot.childElementCount &&
+        e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      piece.style.transform = '';
+      if (hit) {
+        slot.appendChild(piece);
+        piece.classList.add('is-placed');
+        placed += 1;
+        if (placed === total) { root.classList.add('is-solved'); if (status) status.textContent = '🎉 Solved!'; }
+      }
+    };
+
+    pieces.forEach((p) => p.addEventListener('pointerdown', onDown));
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      pieces.forEach((p) => p.removeEventListener('pointerdown', onDown));
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  },
+
+  tapsong(el) {
+    const btn = el.querySelector('[data-tapplay]');
+    // YouTube song → IFrame player, toggled by the tap button.
+    const yt = el.querySelector('[data-tapyt]');
+    if (btn && yt) {
+      let ctl = null;
+      const toggle = () => {
+        if (!ctl) {
+          const d = yt.dataset;
+          // mountYouTubeAudio is loaded lazily to avoid bundling for every page.
+          import('../lib/youtubeAudio').then(({ mountYouTubeAudio }) => {
+            ctl = mountYouTubeAudio(yt, {
+              videoId: d.tapyt, start: Number(d.start) || 0, end: Number(d.end) || 0,
+              fadeIn: Number(d.fadein) || 0, fadeOut: Number(d.fadeout) || 0,
+              loop: d.loop === '1', volume: Number(d.volume) || 1, autostart: true,
+            });
+            el.classList.add('is-playing');
+          });
+        } else { ctl.toggle(); el.classList.toggle('is-playing'); }
+      };
+      btn.addEventListener('click', toggle);
+      return () => { btn.removeEventListener('click', toggle); try { ctl && ctl.destroy(); } catch { /* */ } };
     }
-    render();
-    const onClick = (e) => {
-      const i = cells.indexOf(e.currentTarget);
-      const b = vals.indexOf(8);
-      if (!adj(i, b)) return;
-      [vals[i], vals[b]] = [vals[b], vals[i]];
-      render();
-      if (vals.every((v, j) => v === j) && status) status.textContent = 'Solved! 🏆';
+    const audio = el.querySelector('[data-tapaudio]');
+    if (!btn || !audio) return undefined;
+    const d = audio.dataset;
+    const start = Math.max(0, Number(d.start) || 0);
+    const endRaw = Number(d.end) || 0;
+    const fadeIn = Math.max(0, Number(d.fadein) || 0);
+    const fadeOut = Math.max(0, Number(d.fadeout) || 0);
+    const loop = d.loop !== '0';
+    const vol = Math.max(0, Math.min(1, Number(d.volume) || 1));
+    let raf = 0;
+    const endTime = () => (endRaw > 0 ? endRaw : (audio.duration || Infinity));
+    const tick = () => {
+      const e = endTime();
+      const t = audio.currentTime;
+      if (t >= e - 0.03) {
+        if (loop) { try { audio.currentTime = start; } catch { /* */ } }
+        else { audio.pause(); el.classList.remove('is-playing'); cancelAnimationFrame(raf); return; }
+      }
+      let v = vol;
+      if (fadeIn > 0 && t < start + fadeIn) v = vol * Math.max(0, (t - start) / fadeIn);
+      if (fadeOut > 0 && e !== Infinity && t > e - fadeOut) v = Math.min(v, vol * Math.max(0, (e - t) / fadeOut));
+      audio.volume = Math.max(0, Math.min(1, v));
+      raf = requestAnimationFrame(tick);
     };
-    cells.forEach((c) => c.addEventListener('click', onClick));
-    return () => cells.forEach((c) => c.removeEventListener('click', onClick));
+    const play = () => {
+      audio.volume = fadeIn > 0 ? 0 : vol;
+      try { audio.currentTime = start; } catch { /* */ }
+      audio.play().then(() => { el.classList.add('is-playing'); cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); }).catch(() => {});
+    };
+    const toggle = () => { if (audio.paused) play(); else { audio.pause(); el.classList.remove('is-playing'); cancelAnimationFrame(raf); } };
+    const onEnd = () => { el.classList.remove('is-playing'); cancelAnimationFrame(raf); };
+    btn.addEventListener('click', toggle);
+    audio.addEventListener('ended', onEnd);
+    return () => { btn.removeEventListener('click', toggle); audio.removeEventListener('ended', onEnd); cancelAnimationFrame(raf); try { audio.pause(); } catch { /* */ } };
   },
 
   rps(el) {

@@ -3,6 +3,7 @@ import { applySlotFillsToHtml, countSlidesInHtml } from '../lib/htmlTemplate';
 import { useDodgeButtons } from '../hooks/useDodgeButtons';
 import { useResponsiveBreakpoint } from '../hooks/useResponsiveBreakpoint';
 import { useInteractiveGames } from '../hooks/useInteractiveGames';
+import { useStoryMusic } from '../hooks/useStoryMusic';
 
 /**
  * Carousel: .slide / [data-page] — optional timer.
@@ -59,6 +60,9 @@ export default function HtmlSlideDeck({
   previewBreakpoint = null,
   /* Drop the deck's dark backdrop so a Motion Background behind it shows. */
   transparentBg = false,
+  /* Hide the Prev/Next/Restart nav bar — used by the full-screen live preview
+     so ONLY the website shows (navigation happens via on-page buttons/timers). */
+  chromeless = false,
 }) {
   const markup = useMemo(() => applySlotFillsToHtml(html, fills), [html, fills]);
   const containerRef = useRef(null);
@@ -97,6 +101,9 @@ export default function HtmlSlideDeck({
   // Bring quizzes / polls / mini-games to life on the published deck only —
   // in the editor they stay inert so blocks remain selectable & movable.
   useInteractiveGames(containerRef, markup, !editable);
+  // Background music (trim / fade / loop) — plays in preview + on the published
+  // page, silent while editing (just like the games).
+  useStoryMusic(containerRef, markup, !editable);
 
   useEffect(() => {
     const root = containerRef.current;
@@ -721,7 +728,7 @@ export default function HtmlSlideDeck({
           >↕</button>
         </div>
       )}
-      {slideCount > 1 && !editable && (
+      {slideCount > 1 && !editable && !chromeless && (
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
           <button
             type="button"

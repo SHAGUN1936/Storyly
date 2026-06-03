@@ -8,7 +8,7 @@ const EMOJI_PALETTE = ['🍎', '⭐', '🎈', '🌸', '🐱', '🍩', '🎁', '�
  * content + a full 🎨 style section (theme, colors, font, shape, effect,
  * background, image). `onChange(patch)` is the shared updateSelectedBlock.
  */
-export const GAME_TYPES = ['trickyn', 'reveal', 'quiz', 'poll', 'memory', 'spot', 'wheel', 'giftbox', 'flip', 'slot', 'puzzle', 'rps'];
+export const GAME_TYPES = ['trickyn', 'reveal', 'quiz', 'poll', 'memory', 'spot', 'wheel', 'giftbox', 'flip', 'slot', 'puzzle', 'rps', 'tapsong'];
 
 const INPUT = 'w-full rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-brand-400';
 
@@ -127,7 +127,7 @@ function MemoryItemsEditor({ items, onChange, onUploadImage }) {
   );
 }
 
-export default function GameStudioPanel({ block, onChange, onUploadImage }) {
+export default function GameStudioPanel({ block, onChange, onUploadImage, onOpenMusicEditor }) {
   const [busy, setBusy] = useState(false);
   if (!block || !GAME_TYPES.includes(block.type)) return null;
   const t = block.type;
@@ -219,6 +219,35 @@ export default function GameStudioPanel({ block, onChange, onUploadImage }) {
       {t === 'rps' && (
         <Field label="Title" value={block.question} onChange={(v) => onChange({ question: v })} />
       )}
+
+      {t === 'tapsong' && (<>
+        <Field label="Icon (emoji)" value={block.icon} onChange={(v) => onChange({ icon: v })} />
+        <Field label="Label (optional)" value={block.label} onChange={(v) => onChange({ label: v })} />
+        <div className="space-y-1">
+          <span className="block text-[11px] text-slate-400">Photo <span className="text-slate-600">(optional — shown instead of the icon)</span></span>
+          <div className="flex items-center gap-2">
+            {block.tapImage && <img src={block.tapImage} alt="" className="h-10 w-10 rounded-full object-cover" />}
+            <label className="cursor-pointer rounded-lg border border-dashed border-white/20 px-3 py-1.5 text-[11px] font-semibold text-slate-200 hover:border-brand-400 hover:bg-white/5">🖼️ Upload
+              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f && onUploadImage) { setBusy(true); const u = await onUploadImage(f); setBusy(false); if (u) onChange({ tapImage: u }); } }} /></label>
+            {block.tapImage && <button type="button" onClick={() => onChange({ tapImage: '' })} className="text-[11px] text-rose-300 hover:text-rose-200">remove</button>}
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <span className="block text-[11px] text-slate-400">Song <span className="text-slate-600">(plays when this button is tapped)</span></span>
+          {(block.music?.url || block.songUrl) && (
+            <p className="truncate rounded-lg bg-white/5 px-2 py-1 text-[11px] text-slate-200">🎵 {block.music?.title || 'Selected track'}</p>
+          )}
+          <button type="button" onClick={() => onOpenMusicEditor?.()}
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-500 to-pink-500 px-3 py-2 text-[12px] font-bold text-white hover:opacity-95">
+            🎵 {block.music?.url || block.songUrl ? 'Edit song (search · trim · fade)' : 'Choose a song'}
+          </button>
+          <div className="flex gap-2">
+            <input value={block.songUrl || ''} onChange={(e) => onChange({ songUrl: e.target.value, music: undefined })} placeholder="…or paste a URL" className={`${INPUT} flex-1`} />
+            <label className="flex cursor-pointer items-center rounded-lg border border-dashed border-white/20 px-3 py-2 text-[11px] font-semibold text-slate-200 hover:border-brand-400 hover:bg-white/5">{busy ? '⏳' : '⬆'}
+              <input type="file" accept="audio/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f && onUploadImage) { setBusy(true); const u = await onUploadImage(f); setBusy(false); if (u) onChange({ songUrl: u, music: undefined }); } }} /></label>
+          </div>
+        </div>
+      </>)}
 
       {/* ── 🎨 Style ── */}
       <div className="mt-1 border-t border-white/10 pt-2">

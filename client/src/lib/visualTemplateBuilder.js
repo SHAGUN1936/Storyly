@@ -213,9 +213,9 @@ export const SHAPE_PRESETS = [
 
 /** Curated, royalty-free or CC-0 friendly samples (small clips). */
 export const MUSIC_LIBRARY = [
-  { id: 'sample-a', name: 'Lo-fi Chill',  mood: 'chill',  url: 'https://cdn.pixabay.com/audio/2022/03/15/audio_d1718ab41b.mp3' },
-  { id: 'sample-b', name: 'Happy Pop',    mood: 'happy',  url: 'https://cdn.pixabay.com/audio/2022/03/19/audio_270f49b83a.mp3' },
-  { id: 'sample-c', name: 'Cinematic',    mood: 'epic',   url: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff1eee.mp3' },
+  { id: 'sample-a', name: 'Lo-fi Chill',   mood: 'chill',    url: 'https://cdn.pixabay.com/audio/2022/03/15/audio_d1718ab41b.mp3' },
+  { id: 'sample-b', name: 'Happy Pop',     mood: 'happy',    url: 'https://cdn.pixabay.com/audio/2022/03/19/audio_270f49b83a.mp3' },
+  { id: 'sample-c', name: 'Cinematic',     mood: 'epic',     url: 'https://cdn.pixabay.com/audio/2022/01/18/audio_d0c6ff1eee.mp3' },
   { id: 'sample-d', name: 'Acoustic Love', mood: 'romantic', url: 'https://cdn.pixabay.com/audio/2022/10/25/audio_3bce5d65a5.mp3' },
 ];
 
@@ -875,6 +875,36 @@ function migrateBlock(b) {
   return migrateLayerStyle(b);
 }
 
+/** Extract an 11-char YouTube video id from any common URL form (or '' ). */
+export function parseYouTubeId(url) {
+  if (typeof url !== 'string') return '';
+  const s = url.trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  const m = s.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/|v\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : '';
+}
+
+/** Story music config — stored at theme.music. trimEnd 0 = play to end.
+ *  Migrates legacy `theme.audioUrl` into music.url when music is unset.
+ *  `youtubeId` (when set) means the track plays via the YouTube IFrame player. */
+export function normalizeMusic(raw, fallbackUrl) {
+  const m = raw && typeof raw === 'object' ? raw : {};
+  const num = (v, def, min, max) => { const n = Number(v); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : def; };
+  const url = typeof m.url === 'string' && m.url ? m.url : (typeof fallbackUrl === 'string' ? fallbackUrl : '');
+  const youtubeId = (typeof m.youtubeId === 'string' && /^[\w-]{11}$/.test(m.youtubeId)) ? m.youtubeId : parseYouTubeId(url);
+  return {
+    url,
+    youtubeId,
+    title: typeof m.title === 'string' ? m.title.slice(0, 120) : '',
+    trimStart: num(m.trimStart, 0, 0, 86400),
+    trimEnd: num(m.trimEnd, 0, 0, 86400),
+    fadeIn: num(m.fadeIn, 0, 0, 30),
+    fadeOut: num(m.fadeOut, 0, 0, 30),
+    loop: m.loop !== false,
+    volume: num(m.volume, 0.8, 0, 1),
+  };
+}
+
 function normalizeScheduledReveal(sr) {
   const d = defaultScheduledReveal();
   if (!sr || typeof sr !== 'object') return d;
@@ -905,6 +935,8 @@ export function normalizeBuilderState(raw) {
       theme[k] = baseDef[k];
     }
   });
+  // Background music engine config (migrates legacy audioUrl → music.url).
+  theme.music = normalizeMusic(rawTheme.music, theme.audioUrl);
   const scheduledReveal = normalizeScheduledReveal(raw.scheduledReveal);
   let pages = raw.pages;
   /* Persist + normalize the viewport (defaults to 'desktop' for legacy
@@ -1273,6 +1305,7 @@ ${single}
     case 'slot':
     case 'puzzle':
     case 'rps':
+    case 'tapsong':
       return renderGame(block, bslot, eA);
     default:
       return '';
@@ -1284,7 +1317,7 @@ ${single}
  *  useInteractiveGames in the published deck (NOT in the editor, where blocks
  *  must stay selectable). Each renders sensible content from its config so it
  *  also previews correctly in the editor. */
-const GAME_LABEL = { trickyn: 'Question', reveal: 'Reveal', quiz: 'Quiz', poll: 'Poll', memory: 'Memory', spot: 'Spot', wheel: 'Wheel', giftbox: 'Gift', flip: 'Flip Card', slot: 'Slot', puzzle: 'Puzzle', rps: 'RPS' };
+const GAME_LABEL = { trickyn: 'Question', reveal: 'Reveal', quiz: 'Quiz', poll: 'Poll', memory: 'Memory', spot: 'Spot', wheel: 'Wheel', giftbox: 'Gift', flip: 'Flip Card', slot: 'Slot', puzzle: 'Puzzle', rps: 'RPS', tapsong: 'Tap to Play' };
 const GAME_FX_SET = new Set(['glow', 'glass', 'neon']);
 /** Per-block theme → CSS variables + optional surface background/image. */
 function gameThemeCss(block) {
@@ -1407,16 +1440,25 @@ function renderGame(block, bslot, eA) {
       ` data-symbols="${escapeHtml(JSON.stringify(syms))}"`);
   }
   if (t === 'puzzle') {
+    // Jigsaw: pieces scattered in a tray → drag each into the matching frame slot.
+    const cols = 3;
+    const tot = cols * cols;
     const img = escapeCssUrl(block.puzzleImageUrl);
-    const cells = Array.from({ length: 9 }, (_, v) => {
-      if (v === 8) return '<button type="button" class="tpl-puz-cell is-blank" data-val="8"></button>';
-      const style = img ? `background-image:url(${JSON.stringify(img)});background-size:300%;background-position:${(v % 3) * 50}% ${Math.floor(v / 3) * 50}%;` : '';
-      return `<button type="button" class="tpl-puz-cell" data-val="${v}" style="${style}">${img ? '' : v + 1}</button>`;
-    }).join('');
+    const pieceStyle = (i) => (img
+      ? `background-image:url(${JSON.stringify(img)});background-size:${cols * 100}%;background-position:${(i % cols) * 50}% ${Math.floor(i / cols) * 50}%;`
+      : '');
+    // Deterministic scatter for the tray order + a little tilt on each piece.
+    const order = [...Array(tot).keys()];
+    for (let i = order.length - 1; i > 0; i--) { const j = (i * 7 + 3) % (i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+    const slots = Array.from({ length: tot }, (_, i) => `<div class="tpl-jig-slot" data-slot="${i}"></div>`).join('');
+    const pieces = order.map((i) => `<div class="tpl-jig-piece" data-piece="${i}" style="${pieceStyle(i)}--rot:${((i * 37) % 11) - 5}deg">${img ? '' : i + 1}</div>`).join('');
+    const guide = img ? `<div class="tpl-jig-guide" style="background-image:url(${JSON.stringify(img)})"></div>` : '';
     return gameWrap(t, bslot, eA, block,
-      `<div class="tpl-puzzle">${cells}</div>
-       <div class="tpl-game-status" data-status>Slide the tiles to solve!</div>`,
-      img ? ` data-image="${escapeHtml(block.puzzleImageUrl)}"` : '');
+      `<div class="tpl-jig" data-cols="${cols}">
+         <div class="tpl-jig-board">${guide}<div class="tpl-jig-grid">${slots}</div></div>
+         <div class="tpl-jig-tray">${pieces}</div>
+       </div>
+       <div class="tpl-game-status" data-status>🧩 Drag the pieces into the frame!</div>`);
   }
   if (t === 'rps') {
     const q = escapeHtml(block.question || 'Rock · Paper · Scissors');
@@ -1425,6 +1467,28 @@ function renderGame(block, bslot, eA) {
       `<div class="tpl-game-q">${q}</div>
        <div class="tpl-rps">${moves.map(([k, e]) => `<button type="button" class="tpl-rps-btn" data-rps="${k}">${e}</button>`).join('')}</div>
        <div class="tpl-game-status" data-result>Choose your move!</div>`);
+  }
+  if (t === 'tapsong') {
+    const label = block.label ? `<span class="tpl-tap-label">${escapeHtml(block.label)}</span>` : '';
+    const inner = escapeCssUrl(block.tapImage)
+      ? `<img class="tpl-tap-img" src="${escapeHtml(block.tapImage)}" alt="" />`
+      : `<span class="tpl-tap-emoji">${escapeHtml(block.icon || '🎵')}</span>`;
+    // Per-button song: a trimmed/faded music config (block.music) or a plain url.
+    const m = block.music && (block.music.youtubeId || escapeCssUrl(block.music.url))
+      ? block.music
+      : (escapeCssUrl(block.songUrl) ? { url: block.songUrl, trimStart: 0, trimEnd: 0, fadeIn: 0, fadeOut: 0, loop: true, volume: 1 } : null);
+    const mAttrs = m ? `data-start="${m.trimStart || 0}" data-end="${m.trimEnd || 0}" data-fadein="${m.fadeIn || 0}" data-fadeout="${m.fadeOut || 0}" data-loop="${m.loop !== false ? 1 : 0}" data-volume="${m.volume == null ? 1 : m.volume}"` : '';
+    const audioEl = !m
+      ? ''
+      : (m.youtubeId
+        ? `<div data-tapyt="${escapeHtml(m.youtubeId)}" ${mAttrs} style="position:fixed;left:-9999px;top:0;width:200px;height:120px;opacity:0;pointer-events:none;overflow:hidden"></div>`
+        : `<audio data-tapaudio src="${escapeHtml(m.url)}" ${mAttrs} preload="none"></audio>`);
+    return gameWrap(t, bslot, eA, block,
+      `<button type="button" class="tpl-tap" data-tapplay>
+         <span class="tpl-tap-icon">${inner}<span class="tpl-tap-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></span>
+         ${label}
+       </button>
+       ${audioEl}`);
   }
   return '';
 }
@@ -1707,26 +1771,32 @@ function buildThemeCss(theme) {
 .visual-template-root .page.active .tpl-enter-pop        { animation-name: tpl-en-pop; animation-duration: 0.55s; animation-timing-function: cubic-bezier(.34,1.56,.64,1); }
 .visual-template-root .page.active .tpl-enter-bounce     { animation-name: tpl-en-bounce; animation-duration: 0.9s; }
 .visual-template-root .page.active .tpl-enter-tilt       { animation-name: tpl-en-tilt; animation-duration: 0.7s; }
+/* Entrance keyframes animate the INDIVIDUAL translate / scale / rotate
+   properties (not the transform shorthand) so they COMPOSE with each block's
+   own inline transform (translate(-50%,-50%) centre-anchor + tilt) instead of
+   replacing it. Using the transform shorthand here + animation-fill-mode:both
+   used to wipe the centring and leave the element shifted by half its size
+   once the entrance had played (visible the moment editing was turned off). */
 @keyframes tpl-en-fade      { from { opacity:0 } to { opacity:1 } }
-@keyframes tpl-en-slideUp   { from { opacity:0; transform: translateY(28px) } to { opacity:1; transform: translateY(0) } }
-@keyframes tpl-en-slideDown { from { opacity:0; transform: translateY(-28px) } to { opacity:1; transform: translateY(0) } }
-@keyframes tpl-en-slideLeft { from { opacity:0; transform: translateX(28px) } to { opacity:1; transform: translateX(0) } }
-@keyframes tpl-en-slideRight{ from { opacity:0; transform: translateX(-28px) } to { opacity:1; transform: translateX(0) } }
-@keyframes tpl-en-zoom      { from { opacity:0; transform: scale(0.86) } to { opacity:1; transform: scale(1) } }
+@keyframes tpl-en-slideUp   { from { opacity:0; translate: 0 28px } to { opacity:1; translate: 0 0 } }
+@keyframes tpl-en-slideDown { from { opacity:0; translate: 0 -28px } to { opacity:1; translate: 0 0 } }
+@keyframes tpl-en-slideLeft { from { opacity:0; translate: 28px 0 } to { opacity:1; translate: 0 0 } }
+@keyframes tpl-en-slideRight{ from { opacity:0; translate: -28px 0 } to { opacity:1; translate: 0 0 } }
+@keyframes tpl-en-zoom      { from { opacity:0; scale: 0.86 } to { opacity:1; scale: 1 } }
 @keyframes tpl-en-pop {
-  0%   { opacity:0; transform: scale(0.7); }
-  60%  { opacity:1; transform: scale(1.08); }
-  100% { opacity:1; transform: scale(1); }
+  0%   { opacity:0; scale: 0.7; }
+  60%  { opacity:1; scale: 1.08; }
+  100% { opacity:1; scale: 1; }
 }
 @keyframes tpl-en-bounce {
-  0%   { opacity:0; transform: translateY(-30px); }
-  50%  { opacity:1; transform: translateY(8px); }
-  70%  { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
+  0%   { opacity:0; translate: 0 -30px; }
+  50%  { opacity:1; translate: 0 8px; }
+  70%  { translate: 0 -4px; }
+  100% { translate: 0 0; }
 }
 @keyframes tpl-en-tilt {
-  0%   { opacity:0; transform: rotate(-12deg) scale(0.9); }
-  100% { opacity:1; transform: rotate(0) scale(1); }
+  0%   { opacity:0; rotate: -12deg; scale: 0.9; }
+  100% { opacity:1; rotate: 0deg; scale: 1; }
 }
 
 /* Per-block LOOP animations. These animate the individual translate /
@@ -2077,9 +2147,18 @@ export function visualBuilderToHtml(state) {
       ? `<div class="tpl-root-video"><video src="${escapeHtml(theme.backgroundVideoUrl)}" autoplay muted loop playsinline></video></div>`
       : '';
 
-  const rootAudio = escapeCssUrl(theme.audioUrl)
-    ? `<audio src="${escapeHtml(theme.audioUrl)}" autoplay loop playsinline style="display:none"></audio>`
-    : '';
+  /* Background music — a controlled element driven by useStoryMusic (trim /
+     fade / loop / volume). No `autoplay`/`loop` attrs: the runtime starts it
+     (on load or first interaction) and handles the trim window + fades. */
+  const mus = theme.music && (theme.music.youtubeId || escapeCssUrl(theme.music.url)) ? theme.music : null;
+  const musAttrs = mus ? `data-start="${mus.trimStart}" data-end="${mus.trimEnd}" data-fadein="${mus.fadeIn}" data-fadeout="${mus.fadeOut}" data-loop="${mus.loop ? 1 : 0}" data-volume="${mus.volume}"` : '';
+  let rootAudio = '';
+  if (mus && mus.youtubeId) {
+    // Hidden, off-screen host — useStoryMusic mounts the YouTube IFrame player here.
+    rootAudio = `<div data-story-music data-yt="${escapeHtml(mus.youtubeId)}" ${musAttrs} style="position:fixed;left:-9999px;top:0;width:200px;height:120px;opacity:0;pointer-events:none;overflow:hidden"></div>`;
+  } else if (mus) {
+    rootAudio = `<audio data-story-music src="${escapeHtml(mus.url)}" ${musAttrs} preload="auto" playsinline style="display:none"></audio>`;
+  }
 
   const bodyInner = pages.map((page, pi) => renderPageHtml(page, pi, theme)).join('\n');
 

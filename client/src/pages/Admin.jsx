@@ -52,6 +52,8 @@ import TextStudioPanel from '../components/TextStudioPanel';
 import TypographyPresetsPanel from '../components/TypographyPresetsPanel';
 import GameStudioPanel, { GAME_TYPES } from '../components/GameStudioPanel';
 import ArrangeMenu from '../components/ArrangeMenu';
+import MusicEngine from '../components/MusicEngine';
+import ViewLiveMenu from '../components/ViewLiveMenu';
 import FontBar from '../components/FontBar';
 import ButtonStudioPanel from '../components/ButtonStudioPanel';
 import { MOTION_BG_PRESETS, normalizeMotionBg } from '../lib/motionBackgrounds';
@@ -152,6 +154,8 @@ export default function Admin() {
   /* In-app clipboard for Copy/Paste of a block (survives across pages). */
   const blockClipboard = useRef(null);
   const [hasClipboard, setHasClipboard] = useState(false);
+  const [musicOpen, setMusicOpen] = useState(false);
+  const [musicTarget, setMusicTarget] = useState('theme'); // 'theme' | 'block'
   /** Instagram-style bottom font bar (quick font picker for the selected text). */
   const [fontBarOpen, setFontBarOpen] = useState(false);
   /** Responsive engine: which device the canvas previews ('mobile' |
@@ -555,6 +559,22 @@ export default function Admin() {
   };
   const clearGlobalMusic = () => setGlobalMusic('');
 
+  /* Music Engine — saves the trimmed/faded track to theme.music (and mirrors
+     the url into the legacy audioUrl field for back-compat). */
+  /* Open the working website full-screen in a NEW browser tab (real desktop
+     view, not the editor card). Hands the current design over via localStorage. */
+  const openLivePreview = (device = 'desktop') => {
+    try { localStorage.setItem('storyly:livePreview', JSON.stringify(previewStructure)); } catch { /* quota */ }
+    window.open(`/live-preview?d=${device}`, '_blank', 'noopener');
+  };
+
+  const saveStoryMusic = (musicObj) => {
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      return { ...n, theme: { ...n.theme, music: musicObj, audioUrl: musicObj?.url || '' } };
+    });
+  };
+
   /* Background helpers — patch the whole-design theme (animated gradient) and
      the CURRENT page's background media / live effect overlay. */
   const patchTheme = (patch) =>
@@ -809,18 +829,64 @@ export default function Admin() {
   };
 
   const addPageQuick = () => {
-    const pages = [...normalizedBuilder.pages];
-    const nextPageIndex = pages.length;
-    pages.push({
-      id: `p_${Date.now()}`,
-      pageTitle: `Page ${nextPageIndex + 1}`,
-      pageDurationMs: '',
-      pageBackground: '',
-      blocks: [{ type: 'text', text: 'New page' }],
+    let nextIndex = 0;
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      nextIndex = n.pages.length;
+      const pages = [...n.pages, {
+        id: `p_${Date.now()}`,
+        pageTitle: `Page ${nextIndex + 1}`,
+        pageDurationMs: '',
+        pageBackground: '',
+        blocks: [{ type: 'heading', text: 'New page', xPct: 50, yPct: 28, anchor: 'center' }],
+      }];
+      return { ...n, pages };
     });
-    setBuilderState({ ...normalizedBuilder, pages });
-    setActivePage(nextPageIndex);
+    setActivePage(nextIndex);
     setSelectedBlockIndex(null);
+    setSelectedLayerIndices([]);
+  };
+
+  const deletePageAt = (idx) => {
+    if (normalizedBuilder.pages.length <= 1) { toast.error('A story needs at least one page.'); return; }
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      if (n.pages.length <= 1) return n;
+      return { ...n, pages: n.pages.filter((_, i) => i !== idx) };
+    });
+    // Shift the active page back if we removed it or one before it.
+    setActivePage((cur) => (cur > idx ? cur - 1 : cur));
+    setSelectedBlockIndex(null);
+    setSelectedLayerIndices([]);
+  };
+
+  const duplicatePageAt = (idx) => {
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      const src = n.pages[idx];
+      if (!src) return n;
+      const copy = JSON.parse(JSON.stringify(src));
+      copy.id = `p_${Date.now()}`;
+      copy.pageTitle = `${src.pageTitle || 'Page'} copy`;
+      const pages = [...n.pages.slice(0, idx + 1), copy, ...n.pages.slice(idx + 1)];
+      return { ...n, pages };
+    });
+    setActivePage(idx + 1);
+    setSelectedBlockIndex(null);
+    setSelectedLayerIndices([]);
+  };
+
+  const movePage = (idx, dir) => {
+    const to = idx + dir;
+    setBuilderState((prev) => {
+      const n = normalizeBuilderState(prev);
+      if (to < 0 || to >= n.pages.length) return n;
+      const pages = [...n.pages];
+      const [m] = pages.splice(idx, 1);
+      pages.splice(to, 0, m);
+      return { ...n, pages };
+    });
+    setActivePage((cur) => (cur === idx ? to : cur === to ? idx : cur));
   };
 
   const addBlockQuick = (kind) => {
@@ -855,6 +921,7 @@ export default function Admin() {
       slot: { type: 'slot', symbols: ['🍒', '🍋', '🔔', '⭐', '7️⃣', '🍀'], loopAnimation: 'none' },
       puzzle: { type: 'puzzle', puzzleImageUrl: '', loopAnimation: 'none' },
       rps: { type: 'rps', question: 'Rock · Paper · Scissors', loopAnimation: 'none' },
+      tapsong: { type: 'tapsong', icon: '🎵', label: 'Tap to play', songUrl: '', tapImage: '', loopAnimation: 'none' },
     };
     if (GAME_DEFAULTS[kind]) block = GAME_DEFAULTS[kind];
     // New elements gently float by default (dragging freezes motion live, so
@@ -1629,6 +1696,10 @@ export default function Admin() {
                         ? <><MousePointer2 size={14} strokeWidth={2.2} /> Precision</>
                         : <><span aria-hidden>👁</span> Preview</>}</button>
 
+                      {/* Full-screen "view as visitor" — pick a screen, then the
+                          whole working website opens scroll-free in a new tab. */}
+                      <ViewLiveMenu onPick={openLivePreview} />
+
                       <div className="w-px h-6 bg-white/10 mx-1" />
 
                       {/* Save draft — ONLY for a brand-new, never-saved
@@ -1711,11 +1782,11 @@ export default function Admin() {
                     ><ShapesIcon size={14} strokeWidth={2.2} /> Shapes</button>
                     <button
                       type="button"
-                      onClick={() => setPicker(picker === 'music' ? null : 'music')}
-                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${picker === 'music' ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
-                      data-tooltip={normalizedBuilder.theme?.audioUrl ? 'Background music: ON' : 'Background music: off'}
+                      onClick={() => { setMusicTarget('theme'); setMusicOpen(true); }}
+                      className={`shrink-0 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${normalizedBuilder.theme?.music?.url ? 'bg-brand-500 text-slate-950' : 'bg-white/5 hover:bg-white/15 text-slate-200'}`}
+                      data-tooltip="Music Engine — search / upload, trim, fade, loop & AI segment"
                       data-tooltip-pos="bottom"
-                    ><Music size={14} strokeWidth={2.2} /> {normalizedBuilder.theme?.audioUrl ? 'Music ✓' : 'Music'}</button>
+                    ><Music size={14} strokeWidth={2.2} /> {normalizedBuilder.theme?.music?.url ? 'Music ✓' : 'Music'}</button>
                     <button
                       type="button"
                       onClick={() => setRightPanel((cur) => (cur ? null : 'properties'))}
@@ -1856,10 +1927,12 @@ export default function Admin() {
                       const blocks = normalizedBuilder.pages[activePage]?.blocks || [];
                       const sb = blocks[selectedBlockIndex];
                       if (!sb) return null;
-                      const isText = sb.type === 'text' || sb.type === 'heading' || sb.type === 'button' || 'text' in sb;
+                      // Quick-bar controls are matched to the element type so only
+                      // properties that ACTUALLY apply to it are shown.
+                      const isText = ['text', 'heading', 'subheading', 'paragraph'].includes(sb.type);
+                      const isButton = sb.type === 'button' || sb.type === 'buttonSlot';
                       const isMedia = sb.type === 'image' || sb.type === 'gif' || sb.type === 'video';
-                      const colorKey = sb.type === 'shape' ? 'fillColor' : 'color';
-                      const colorVal = (sb.type === 'shape' ? sb.fillColor : sb.color) || '#ffffff';
+                      const isShape = sb.type === 'shape';
                       const TYPE_ICON = { text: '📝', heading: '📌', button: '🔘', gallery: '🖼️', gif: '🎬', image: '🖼️', video: '🎞️', sticker: '✨', shape: '⬛', countdown: '⏱️' };
                       return (
                         <div className="pointer-events-none absolute inset-x-0 top-2 z-30 flex justify-center px-3">
@@ -1870,29 +1943,25 @@ export default function Admin() {
                             </span>
                             <span className="shrink-0 w-px h-6 bg-white/10" />
 
+                            {/* Font — text + buttons both support a custom font */}
+                            {(isText || isButton) && (
+                              <button
+                                type="button"
+                                onClick={() => setFontBarOpen((v) => !v)}
+                                data-tooltip="Fonts" data-tooltip-pos="bottom"
+                                aria-pressed={fontBarOpen}
+                                style={{ fontFamily: sb.fontFamily || undefined }}
+                                className={`shrink-0 rounded-lg border px-3 py-1.5 text-sm leading-none transition ${fontBarOpen ? 'bg-brand-500 text-white border-brand-400' : 'bg-slate-900 text-white border-white/10 hover:bg-slate-800'}`}
+                              >Aa</button>
+                            )}
+                            {/* Text colour · align · effect — text elements only */}
                             {isText && (
                               <>
-                                <button
-                                  type="button"
-                                  onClick={() => setFontBarOpen((v) => !v)}
-                                  data-tooltip="Fonts" data-tooltip-pos="bottom"
-                                  aria-pressed={fontBarOpen}
-                                  style={{ fontFamily: sb.fontFamily || undefined }}
-                                  className={`shrink-0 rounded-lg border px-3 py-1.5 text-sm leading-none transition ${fontBarOpen ? 'bg-brand-500 text-white border-brand-400' : 'bg-slate-900 text-white border-white/10 hover:bg-slate-800'}`}
-                                >Aa</button>
                                 <label className="shrink-0 relative w-8 h-8 rounded-lg border border-white/10 overflow-hidden cursor-pointer" data-tooltip="Text / effect color" data-tooltip-pos="bottom">
                                   <input
                                     type="color"
-                                    value={colorVal}
-                                    onChange={(e) => {
-                                      const v = e.target.value;
-                                      // Drive BOTH the plain text color AND the effect's
-                                      // primary color (gradient/neon/glow/outline read
-                                      // textGradientFrom) so this picker works whatever
-                                      // effect is on. The 2nd gradient color is in the panel.
-                                      if (sb.type === 'shape') updateSelectedBlock({ fillColor: v });
-                                      else updateSelectedBlock({ color: v, textGradientFrom: v });
-                                    }}
+                                    value={sb.color || '#ffffff'}
+                                    onChange={(e) => updateSelectedBlock({ color: e.target.value, textGradientFrom: e.target.value })}
                                     className="absolute inset-0 w-[150%] h-[150%] -m-1 cursor-pointer"
                                   />
                                 </label>
@@ -1920,6 +1989,20 @@ export default function Admin() {
                                     <option key={p.value} value={p.value}>{p.label}</option>
                                   ))}
                                 </select>
+                                <span className="shrink-0 w-px h-6 bg-white/10" />
+                              </>
+                            )}
+                            {/* Fill colour — shapes */}
+                            {isShape && (
+                              <>
+                                <label className="shrink-0 relative w-8 h-8 rounded-lg border border-white/10 overflow-hidden cursor-pointer" data-tooltip="Fill color" data-tooltip-pos="bottom">
+                                  <input
+                                    type="color"
+                                    value={sb.fillColor || '#d946ef'}
+                                    onChange={(e) => updateSelectedBlock({ fillColor: e.target.value })}
+                                    className="absolute inset-0 w-[150%] h-[150%] -m-1 cursor-pointer"
+                                  />
+                                </label>
                                 <span className="shrink-0 w-px h-6 bg-white/10" />
                               </>
                             )}
@@ -2140,6 +2223,7 @@ export default function Admin() {
                             { label: '🎰 Slot machine', kind: 'slot' },
                             { label: '🔄 Flip card', kind: 'flip' },
                             { label: '✊ Rock Paper', kind: 'rps' },
+                            { label: '🎵 Tap to play', kind: 'tapsong' },
                           ].map(({ label, kind }) => (
                             <button
                               key={kind}
@@ -2416,28 +2500,44 @@ export default function Admin() {
 
                       {/* Pages/Layers */}
                       {leftPanel === 'pages' && (
-                      <div>
-                        <div className="flex flex-wrap gap-2">
-                          {normalizedBuilder.pages.map((p, i) => (
-                            <button
+                      <div className="space-y-1.5">
+                        {normalizedBuilder.pages.map((p, i) => {
+                          const total = normalizedBuilder.pages.length;
+                          const active = activePage === i;
+                          return (
+                            <div
                               key={p.id || i}
-                              type="button"
-                              onClick={() => setActivePage(i)}
-                              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                                activePage === i ? 'bg-brand-500 text-slate-950' : 'bg-slate-800/80 text-slate-200 hover:bg-slate-800'
-                              }`}
+                              className={`group flex items-center gap-1 rounded-lg px-1.5 py-1.5 transition ${active ? 'bg-brand-500/20 ring-1 ring-brand-400' : 'bg-slate-800/40 hover:bg-slate-800/70'}`}
                             >
-                              {i + 1}
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={addPageQuick}
-                            className="rounded-lg bg-brand-500/10 px-3 py-2 text-xs font-semibold text-brand-200 hover:bg-brand-500/20"
-                          >
-                            + Page
-                          </button>
-                        </div>
+                              <div className="-my-1 flex flex-col">
+                                <button type="button" title="Move up" disabled={i === 0} onClick={() => movePage(i, -1)}
+                                  className="h-3.5 w-4 text-[9px] leading-none text-slate-400 transition hover:text-white disabled:opacity-20">▲</button>
+                                <button type="button" title="Move down" disabled={i === total - 1} onClick={() => movePage(i, 1)}
+                                  className="h-3.5 w-4 text-[9px] leading-none text-slate-400 transition hover:text-white disabled:opacity-20">▼</button>
+                              </div>
+                              <button type="button" onClick={() => setActivePage(i)} className="flex flex-1 items-center gap-2 text-left">
+                                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-[11px] font-bold ${active ? 'bg-brand-500 text-slate-950' : 'bg-slate-700 text-slate-200'}`}>{i + 1}</span>
+                                <span className="min-w-0 flex-1">
+                                  <span className={`block truncate text-[11px] font-semibold ${active ? 'text-white' : 'text-slate-300'}`}>{p.pageTitle || `Page ${i + 1}`}</span>
+                                  <span className="block text-[9px] text-slate-500">{(p.blocks || []).length} layer{(p.blocks || []).length === 1 ? '' : 's'}</span>
+                                </span>
+                              </button>
+                              <div className="flex items-center gap-0.5 opacity-70 transition group-hover:opacity-100">
+                                <button type="button" title="Duplicate page" onClick={() => duplicatePageAt(i)}
+                                  className="flex h-6 w-6 items-center justify-center rounded text-[11px] text-slate-300 hover:bg-white/15">⧉</button>
+                                <button type="button" title="Delete page" disabled={total <= 1} onClick={() => deletePageAt(i)}
+                                  className="flex h-6 w-6 items-center justify-center rounded text-[11px] text-rose-300 transition hover:bg-rose-500/30 disabled:opacity-25">🗑</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={addPageQuick}
+                          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-brand-400/40 bg-brand-500/10 px-3 py-2 text-xs font-bold text-brand-200 transition hover:border-brand-400 hover:bg-brand-500/20"
+                        >
+                          ＋ Add page
+                        </button>
                       </div>
                       )}
 
@@ -2629,6 +2729,25 @@ export default function Admin() {
                           );
                         })()}
                       </div>
+                      {musicOpen && (() => {
+                        const selBlk = normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex];
+                        const forBlock = musicTarget === 'block' && selBlk?.type === 'tapsong';
+                        const initial = forBlock
+                          ? (selBlk.music?.url ? selBlk.music : (selBlk.songUrl ? { url: selBlk.songUrl } : null))
+                          : normalizedBuilder.theme?.music;
+                        return (
+                          <MusicEngine
+                            music={initial}
+                            pages={normalizedBuilder.pages}
+                            onSave={forBlock
+                              ? (m) => updateSelectedBlock({ music: m, songUrl: m?.url || '' })
+                              : saveStoryMusic}
+                            onUpload={uploadGameImage}
+                            onClose={() => setMusicOpen(false)}
+                          />
+                        );
+                      })()}
+
                       <p className="text-center text-xs text-slate-500">
                         Click any block to select • Drag corners to resize • Top handle to rotate (hold Shift for 15°) •{' '}
                         <span className="text-pink-300/80 font-semibold capitalize">
@@ -2750,6 +2869,7 @@ export default function Admin() {
                           wheel: { icon: '🎡', label: 'Spin Wheel' }, giftbox: { icon: '🎀', label: 'Gift Box' },
                           flip: { icon: '🔄', label: 'Flip Card' }, slot: { icon: '🎰', label: 'Slot Machine' },
                           puzzle: { icon: '🧩', label: 'Puzzle' }, rps: { icon: '✊', label: 'Rock Paper Scissors' },
+                          tapsong: { icon: '🎵', label: 'Tap to Play' },
                         };
                         const meta = TYPE_META[selType] || { icon: '⬚', label: 'Element' };
                         return (
@@ -2817,6 +2937,7 @@ export default function Admin() {
                                 block={normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]}
                                 onChange={updateSelectedBlock}
                                 onUploadImage={uploadGameImage}
+                                onOpenMusicEditor={() => { setMusicTarget('block'); setMusicOpen(true); }}
                               />
                             )}
                             {normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type === 'gallery' && (
@@ -3091,8 +3212,8 @@ export default function Admin() {
                               </div>
                             )}
 
-                            {/* Text effects (text/heading/subheading) */}
-                            {['text','heading','subheading'].includes(normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type) && (
+                            {/* Text typography + effects (text elements only) */}
+                            {['text','heading','subheading','paragraph'].includes(normalizedBuilder.pages[activePage]?.blocks?.[selectedBlockIndex]?.type) && (
                               <div className="border-t border-white/5 pt-3 space-y-2">
                                 <label className="block text-xs text-slate-400 mb-1">🅰 Text effect</label>
                                 <select

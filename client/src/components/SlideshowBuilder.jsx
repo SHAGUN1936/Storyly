@@ -34,6 +34,7 @@ export default function SlideshowBuilder({
      (mobile|tablet|desktop). Omit on published pages so the breakpoint is
      chosen automatically from the available width. */
   previewBreakpoint = null,
+  chromeless = false,
 }) {
   const html = useMemo(
     () => resolveSlideshowHtml(structure, themeOverrides),
@@ -71,6 +72,7 @@ export default function SlideshowBuilder({
             canSelect={canSelect}
             embedded={embedded}
             previewBreakpoint={previewBreakpoint}
+            chromeless={chromeless}
           />
         )}
         {revealGate.hideStory && (
