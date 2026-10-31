@@ -37,7 +37,7 @@ export function AdminSidebar() {
   return (
     <aside
       className={cn(
-        "lg:sticky lg:top-24 lg:shrink-0 lg:self-start lg:overflow-hidden",
+        "hidden lg:sticky lg:top-24 lg:block lg:shrink-0 lg:self-start lg:overflow-hidden",
         animate && "lg:transition-[width] lg:duration-300 lg:ease-[cubic-bezier(.2,.7,.2,1)]",
         collapsed ? "lg:w-11" : "lg:w-52",
       )}
@@ -48,7 +48,7 @@ export function AdminSidebar() {
         title={label}
         aria-label={label}
         aria-expanded={!collapsed}
-        className="mb-4 hidden h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-3.5 text-sm font-medium whitespace-nowrap text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 lg:flex"
+        className="mb-4 flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-3.5 text-sm font-medium whitespace-nowrap text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
       >
         <PanelLeftClose
           size={16}

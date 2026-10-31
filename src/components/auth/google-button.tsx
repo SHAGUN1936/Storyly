@@ -37,7 +37,8 @@ export function GoogleButton({ onCredential }: { onCredential: (credential: stri
     google.accounts.id.renderButton(container.current, {
       theme: "outline",
       size: "large",
-      width: 384,
+      // Fit the column on any screen (Google allows 200–400px)
+      width: Math.max(200, Math.min(400, Math.floor(container.current.clientWidth || 320))),
       type: "standard",
       shape: "rectangular",
       text: "continue_with",

@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { AdminMobileMenu } from "@/components/admin/admin-mobile-menu";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { StorylyLogo } from "@/components/brand/logo";
 import { buttonClasses } from "@/components/ui/button-styles";
@@ -16,14 +17,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-zinc-50">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-zinc-950 text-white">
-        <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/admin" className="flex items-center gap-3">
-            <StorylyLogo inverted />
-            <span className="rounded-md border border-white/20 px-1.5 py-0.5 text-xs font-medium text-zinc-300">
-              Admin
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
+        <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <AdminMobileMenu email={admin.email} />
+            <Link href="/admin" className="flex items-center gap-3">
+              <StorylyLogo inverted />
+              <span className="rounded-md border border-white/20 px-1.5 py-0.5 text-xs font-medium text-zinc-300">
+                Admin
+              </span>
+            </Link>
+          </div>
+          <div className="hidden items-center gap-2 lg:flex">
             <Link
               href="/"
               target="_blank"
@@ -35,7 +39,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             >
               View website <ExternalLink size={14} aria-hidden />
             </Link>
-            <span className="hidden text-sm text-zinc-400 sm:inline">{admin.email}</span>
+            <span className="text-sm text-zinc-400">{admin.email}</span>
             <SignOutButton className={buttonClasses({ variant: "inverted", size: "sm" })} />
           </div>
         </div>

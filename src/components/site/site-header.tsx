@@ -4,8 +4,8 @@
 // While a dark hero (any element with data-dark-hero, e.g. the home hero or <PageHeader>) is under it,
 // the bar is dark; once the page scrolls past the hero it turns white.
 
-import { Menu, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { ChevronRight, Menu } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { HomeLink } from "@/components/home-link";
 import { usePathname } from "next/navigation";
@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { StorylyLogo } from "@/components/brand/logo";
 import { buttonClasses } from "@/components/ui/button-styles";
+import { Drawer } from "@/components/ui/drawer";
 import { Container } from "@/components/ui/section";
 import { isActive, mainNav } from "@/config/nav";
 import { cn } from "@/lib/utils";
@@ -38,10 +39,14 @@ export function SiteHeader() {
 
   // Visitors only meet sign-up when they choose to start; the sign-up screen links to sign-in.
   // On the dark bar the button is white; inside the white phone menu it is always black.
-  const action = (onDark: boolean) => (
+  const action = (onDark: boolean, inMenu = false) => (
     <Link
       href={user ? "/studio" : "/signup"}
-      className={buttonClasses({ size: "sm", variant: onDark ? "inverted" : "primary" })}
+      className={buttonClasses({
+        size: inMenu ? "lg" : "sm",
+        variant: onDark ? "inverted" : "primary",
+        className: inMenu ? "w-full" : undefined,
+      })}
     >
       {user ? "Open studio" : "Get started"}
     </Link>
@@ -87,54 +92,38 @@ export function SiteHeader() {
             "-mr-2 rounded-md p-2 md:hidden",
             dark ? "text-white hover:bg-white/10" : "text-zinc-700 hover:bg-zinc-100",
           )}
-          aria-label={open ? "Close menu" : "Open menu"}
+          aria-label="Open menu"
           aria-expanded={open}
         >
-          <motion.span
-            key={open ? "x" : "menu"}
-            initial={{ rotate: -90, opacity: 0 }}
-            animate={{ rotate: 0, opacity: 1 }}
-            className="block"
-          >
-            {open ? <X size={22} /> : <Menu size={22} />}
-          </motion.span>
+          <Menu size={22} />
         </button>
       </Container>
 
-      {/* Phone menu: slides open, links arrive one after another */}
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            key="menu"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
-            className="overflow-hidden border-t border-zinc-200 bg-white text-zinc-900 md:hidden"
-          >
-            <Container className="py-4">
-              <nav className="grid gap-1" aria-label="Main">
-                {mainNav.map((item, i) => (
-                  <motion.div
-                    key={item.href}
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.05 + i * 0.04 }}
-                  >
-                    <Link
-                      href={item.href}
-                      className="block rounded-md px-3 py-2.5 text-base font-medium text-zinc-800 hover:bg-zinc-50"
-                    >
-                      {item.label}
-                    </Link>
-                  </motion.div>
-                ))}
-              </nav>
-              <div className="mt-4 flex flex-col gap-2 border-t border-zinc-200 pt-4 [&>a]:w-full">{action(false)}</div>
-            </Container>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Phone menu: a side drawer; links arrive one after another */}
+      <Drawer open={open} onClose={() => setOpen(false)} title={<StorylyLogo />} footer={action(false, true)}>
+        <nav className="grid gap-1" aria-label="Main">
+          {mainNav.map((item, i) => (
+            <motion.div
+              key={item.href}
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.35, delay: 0.08 + i * 0.05 }}
+            >
+              <Link
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex items-center justify-between rounded-xl px-4 py-3.5 text-base font-medium transition-colors",
+                  isActive(pathname, item.href) ? "bg-zinc-900 text-white" : "text-zinc-800 hover:bg-zinc-100",
+                )}
+              >
+                {item.label}
+                <ChevronRight size={18} className="opacity-40" aria-hidden />
+              </Link>
+            </motion.div>
+          ))}
+        </nav>
+      </Drawer>
     </header>
   );
 }
