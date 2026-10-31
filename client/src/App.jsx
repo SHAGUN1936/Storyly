@@ -10,10 +10,9 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import TemplateDetail from './pages/TemplateDetail';
+import UserStudio from './pages/UserStudio';
 import TemplatePreview from './pages/TemplatePreview';
 import BuilderLivePreview from './pages/BuilderLivePreview';
-import TemplateCustomizeWizard from './pages/TemplateCustomizeWizard';
 import MyVideos from './pages/MyVideos';
 import Account from './pages/Account';
 import Receipts from './pages/Receipts';
@@ -115,12 +114,18 @@ export default function App() {
               real shared website. */}
           <Route path="/live-preview" element={<BuilderLivePreview />} />
 
-          {/* Page-by-page customization wizard — rendered OUTSIDE the
-              Layout shell so the navbar is hidden and the user only sees
-              the wizard chrome. ProtectedRoute still gates it. */}
+          {/* User Studio — the full admin-style visual editor for users.
+              Rendered OUTSIDE the Layout shell so it owns the whole screen
+              (its own dark editor chrome). ProtectedRoute still gates it. */}
           <Route
             path="/template/:id/customize"
-            element={<ProtectedRoute><TemplateCustomizeWizard /></ProtectedRoute>}
+            element={<ProtectedRoute><UserStudio /></ProtectedRoute>}
+          />
+          {/* Full editor at /edit — also full-screen (outside Layout) so the
+              dark studio chrome owns the viewport, matching /customize. */}
+          <Route
+            path="/template/:id/edit"
+            element={<ProtectedRoute><UserStudio /></ProtectedRoute>}
           />
 
           {/* Marketplace + Builder (the new earning model) */}
@@ -147,7 +152,6 @@ export default function App() {
                 preview. The full editor stays available at /edit for
                 builders/power users + draft resumption. */}
             <Route path="/template/:id"      element={<ProtectedRoute><TemplatePreview /></ProtectedRoute>} />
-            <Route path="/template/:id/edit" element={<ProtectedRoute><TemplateDetail /></ProtectedRoute>} />
             <Route path="/my-videos"     element={<ProtectedRoute><MyVideos /></ProtectedRoute>} />
             <Route path="/account"       element={<ProtectedRoute><Account /></ProtectedRoute>} />
             <Route path="/receipts"      element={<ProtectedRoute><Receipts /></ProtectedRoute>} />

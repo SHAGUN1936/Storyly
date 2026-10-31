@@ -1621,7 +1621,7 @@ export default function Admin() {
               )}
 
               {(editing || createStep === 2) && (
-                <div data-lenis-prevent className="tpl-editor-shell relative isolate flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
+                <div data-lenis-prevent className="tpl-editor-shell relative isolate flex flex-1 min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white">
                   <div className="pointer-events-none absolute inset-0" style={{ zIndex: -1 }}>
                     <FloatingDecor density="subtle" opacity={0.08} size={36} />
                   </div>
@@ -1631,7 +1631,7 @@ export default function Admin() {
                        RIGHT: viewport + drag + delete + Cancel/Save draft/Save
                        Save is the primary action, gradient-styled, with
                        a `⌘S` chip and a Ctrl/Cmd+S shortcut. */}
-                  <div className="flex items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 py-3 gap-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 gap-3">
                     {/* ── Left: identity + history ──────────────────── */}
                     <div className="flex items-center gap-3 min-w-0 shrink-0">
                       <div className="min-w-0">

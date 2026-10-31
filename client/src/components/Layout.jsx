@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Home, LayoutGrid, Sparkles, Shield, LogOut, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { StorylyMark } from './StorylyLogo';
-import ThemeToggle from './ThemeToggle';
 import Footer from './Footer';
 import FeedbackModal from './FeedbackModal';
 import ConfirmDialog from './ConfirmDialog';
@@ -186,7 +185,6 @@ export default function Layout() {
 
             {/* Profile cluster */}
             <div className="flex items-center gap-2">
-              <ThemeToggle className="!w-9 !h-9" />
               <Link
                 to={location.pathname === '/studio' ? '/studio' : '/studio?scroll=templates'}
                 onClick={(e) => {

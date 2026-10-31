@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../api/api';
 import { APP_INPUT_BIG } from '../lib/uiClasses';
 import { StorylyMark } from '../components/StorylyLogo';
-import ThemeToggle from '../components/ThemeToggle';
 import AuroraBackground from '../ui/AuroraBackground';
 import ParticleField from '../ui/ParticleField';
 import GlassCard from '../ui/GlassCard';
@@ -87,10 +86,6 @@ export default function Login() {
       <AuroraBackground variant="cosmic" intensity={0.85} />
       <ParticleField count={48} color="#8B5CF6" />
       <FloatingDecor density="normal" opacity={0.14} size={44} />
-
-      <div className="absolute top-4 right-4 z-30">
-        <ThemeToggle />
-      </div>
 
       <div className="relative flex min-h-screen flex-col lg:flex-row">
         {/* Left hero */}

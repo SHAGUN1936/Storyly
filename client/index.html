@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light" style="color-scheme: light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/storyly.svg" />
-    <meta name="theme-color" content="#06070C" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Storyly — Cinematic invitations &amp; story pages</title>
     <meta name="description" content="Storyly — design cinematic invitations, wedding pages, birthdays, and story pages in minutes. Animated, shareable, premium." />
@@ -13,15 +13,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <script>
-      // Boot theme before paint — defaults to DARK.
+      // The site is LIGHT-ONLY — force the light theme before paint and clear
+      // any stale theme preference from older builds (dark mode was removed).
       (function () {
         try {
-          var saved = localStorage.getItem('storyly-theme');
-          var dark = saved ? saved !== 'light' : true; // dark by default
-          document.documentElement.classList.toggle('light', !dark);
-        } catch (e) {
-          // Default to dark if storage blocked
-        }
+          document.documentElement.classList.add('light');
+          localStorage.removeItem('storyly-theme');
+        } catch (e) { /* storage blocked — class is already set above */ }
       })();
     </script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>

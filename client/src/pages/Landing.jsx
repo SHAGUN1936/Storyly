@@ -4,7 +4,6 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import gsap from 'gsap';
 import { useAuth } from '../context/AuthContext';
 import { StorylyMark } from '../components/StorylyLogo';
-import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import AuroraBackground from '../ui/AuroraBackground';
 import ParticleField from '../ui/ParticleField';
@@ -148,7 +147,6 @@ export default function Landing() {
               <Link to="/about" className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/5 transition">About</Link>
             </nav>
             <div className="flex items-center gap-2">
-              <ThemeToggle className="!w-9 !h-9" />
               {user ? (
                 <Link to="/studio" className="btn-glow !py-2 !px-4 !text-xs">Open studio</Link>
               ) : (

@@ -2,7 +2,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { StorylyMark } from './StorylyLogo';
-import ThemeToggle from './ThemeToggle';
 import Footer from './Footer';
 import FloatingDecor from '../ui/FloatingDecor';
 import CursorHalo from '../ui/CursorHalo';
@@ -60,7 +59,6 @@ export default function PublicShell({ children }) {
               })}
             </nav>
             <div className="flex items-center gap-2">
-              <ThemeToggle className="!w-9 !h-9" />
               {user ? (
                 <Link to="/studio" className="btn-glow !py-2 !px-4 !text-xs">Open studio</Link>
               ) : (

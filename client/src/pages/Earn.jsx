@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { StorylyMark } from '../components/StorylyLogo';
-import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import AuroraBackground from '../ui/AuroraBackground';
 import ParticleField from '../ui/ParticleField';
@@ -168,7 +167,6 @@ export default function Earn() {
               <a href="#pricing" className="px-3 py-1.5 rounded-full hover:text-white hover:bg-white/5 transition">Pricing</a>
             </nav>
             <div className="flex items-center gap-2">
-              <ThemeToggle className="!w-9 !h-9" />
               {user ? (
                 <Link to="/studio" className="btn-glow !py-2 !px-4 !text-xs">Open studio</Link>
               ) : (

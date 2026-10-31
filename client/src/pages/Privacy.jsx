@@ -89,7 +89,6 @@ const CONFIG = {
           <h3>Essential</h3>
           <ul>
             <li><strong>storyly-session</strong> — auth token, expires in 30 days. Required to stay logged in.</li>
-            <li><strong>storyly-theme</strong> — your light/dark preference. Local-only, never sent to the server.</li>
             <li><strong>storyly-csrf</strong> — short-lived form-protection token.</li>
           </ul>
           <h3>Optional (analytics)</h3>
