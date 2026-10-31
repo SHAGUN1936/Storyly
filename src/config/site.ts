@@ -8,8 +8,12 @@ export const siteConfig = {
   supportEmail: "agrawalvishal617@gmail.com",
 };
 
-/** Public address of the site, used in share links and QR codes. Falls back to the request's own origin. */
-export function siteUrl(requestOrigin?: string) {
+/** Live address of the site. QR codes and share links always point here, even when running locally. */
+const PUBLIC_SITE_URL = "https://storyly-rosy.vercel.app";
+
+/** Public address of the site, used in share links and QR codes. NEXT_PUBLIC_SITE_URL overrides it. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function siteUrl(_requestOrigin?: string) {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  return (fromEnv || requestOrigin || "http://localhost:3001").replace(/\/+$/, "");
+  return (fromEnv || PUBLIC_SITE_URL).replace(/\/+$/, "");
 }
