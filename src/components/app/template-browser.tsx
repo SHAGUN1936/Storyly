@@ -4,7 +4,7 @@
 // so switching category or typing is instant. The chosen category is kept in the URL.
 
 import { LayoutTemplate, Search } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/form-controls";
 import type { TemplateCardData } from "@/lib/template-card";
@@ -14,7 +14,6 @@ import { EmptyState } from "./empty-state";
 import { TemplateCard } from "./template-card";
 
 export function TemplateBrowser({ templates }: { templates: TemplateCardData[] }) {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [query, setQuery] = useState("");
@@ -26,7 +25,8 @@ export function TemplateBrowser({ templates }: { templates: TemplateCardData[] }
     const search = new URLSearchParams(params);
     if (next === "All") search.delete("category");
     else search.set("category", next);
-    router.replace(`${pathname}${search.size ? `?${search}` : ""}`, { scroll: false });
+    // Filtering happens here in the browser; only the address bar changes (no server request)
+    window.history.replaceState(null, "", `${pathname}${search.size ? `?${search}` : ""}`);
   }
 
   const visible = useMemo(() => {

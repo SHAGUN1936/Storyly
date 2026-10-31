@@ -5,7 +5,7 @@
 
 import { FileText, Heart, ImageOff, Search, Share2, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { deleteMyPage } from "@/app/(app)/(user)/_actions/pages";
@@ -47,7 +47,6 @@ const STATUS_LABEL: Record<MyPageItem["status"], string> = {
 };
 
 export function MyPagesView({ items }: { items: MyPageItem[] }) {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const { liked } = useLikedTemplates();
@@ -56,8 +55,9 @@ export function MyPagesView({ items }: { items: MyPageItem[] }) {
 
   const filter: Filter = FILTERS.some((f) => f.id === params.get("filter")) ? (params.get("filter") as Filter) : "all";
 
+  // Everything is already loaded, so switching is instant: only the address bar changes (no server request)
   function pickFilter(next: Filter) {
-    router.replace(next === "all" ? pathname : `${pathname}?filter=${next}`, { scroll: false });
+    window.history.replaceState(null, "", next === "all" ? pathname : `${pathname}?filter=${next}`);
   }
 
   const counts = {
