@@ -1,5 +1,3 @@
-legacy/
-src/styles/legacy-editor.css
 .next/
 .next-build/
 node_modules/
