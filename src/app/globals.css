@@ -5,8 +5,7 @@
    Monochrome and professional, matching the black-and-white logo: white surfaces,
    zinc greys and near-black accents. Inter for everything.
    Only status colours (red for errors) step outside the greys.
-   Use the Tailwind classes these create: bg-brand-600, text-brand-700, font-display …
-   The old candy stylesheet lives in src/styles/legacy-editor.css (editor only). */
+   Use the Tailwind classes these create: bg-brand-600, text-brand-700, font-display … */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   /* Headlines use Inter too, just tighter and heavier (see .font-display below) */

@@ -2,13 +2,7 @@
 
 One Next.js app (website + API together). Users pick a template, personalise it (photos, text, music), and share it as a page with a link and QR code.
 
-> **Migration status:** being moved from the old Vite + Express app (now in `legacy/`) to Next.js in phases.
->
-> - **Phase 1 (done):** project setup, database, all API routes, login/signup/Google, landing and public pages.
-> - **Phase 2:** studio (dashboard), my pages, account, receipts, share page `/watch/[slug]`.
-> - **Phase 3:** template editor (Fabric canvas, music engine), admin panel, builder tools.
->
-> Screens not moved yet show a "being moved" card. The old app still runs from `legacy/` if needed.
+Everything (website, API, admin panel and template editor) runs from this one app, with one `.env`.
 
 ## Run it
 
@@ -17,7 +11,7 @@ npm install      # first time only
 npm run dev      # then open http://localhost:3001
 ```
 
-Copy `.env.example` to `.env` and fill it in first (the database URL is the same MongoDB the old app used).
+Copy `.env.example` to `.env` and fill it in first. To deploy, add the same keys in the host's settings (e.g. Vercel → Environment Variables).
 
 | Command                              | What it does                                                                  |
 | ------------------------------------ | ----------------------------------------------------------------------------- |
@@ -25,7 +19,6 @@ Copy `.env.example` to `.env` and fill it in first (the database URL is the same
 | `npm run build` then `npm start`     | Production mode                                                               |
 | `npm run typecheck` / `npm run lint` | Check for type / code-style errors                                            |
 | `npm run db:studio`                  | Browse the database in the browser                                            |
-| `npm run db:seed`                    | Create/update the admin login from `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` |
 
 ## Tech
 
@@ -38,15 +31,14 @@ Sign in with an admin account and open **/admin**:
 - **Website → FAQs, Testimonials, Numbers**: edit the home page content (add, edit, reorder, hide, delete).
   Until something is saved, the site shows built-in starting content; "Copy starting …" loads it for editing.
 - **Settings**: support email, phone, address and social links (only filled-in links appear in the footer).
-- **Templates**: the visual builder arrives in phase 3.
+- **Templates**: create one (starter, pasted HTML or uploaded website) and design it in the full-screen editor at `/editor/<id>`: pages, popups, click actions, blocks, animations, phone layout.
 
-Create or reset the admin login: set `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD` in `.env`, then `npm run db:seed`.
+Admins are users whose `role` is `admin` in the database.
 
 ## Where things are
 
 ```
 prisma/schema.prisma        Database collections (names match the existing MongoDB data, don't rename)
-prisma/seed.ts              Admin login
 src/config/                 Brand details (site.ts) and menus (nav.ts)        ← edit these first
 src/lib/
   constants.ts              Categories, upload limits
@@ -69,7 +61,6 @@ src/components/
   auth/                     Login/signup screen, Google button, useAuth()
   brand/                    Logo
 src/middleware.ts           Sends logged-out visitors on signed-in pages to /login
-legacy/                     The old Vite client + Express server (reference until migration ends)
 ```
 
 ## API

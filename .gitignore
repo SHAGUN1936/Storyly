@@ -27,10 +27,6 @@ Thumbs.db
 # vercel
 .vercel
 
-# old app: build output and local uploads
-legacy/client/dist/
-legacy/server/uploads/
-
 # misc scratch files
 tmp_*
 replace-*.js

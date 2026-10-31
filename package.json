@@ -10,7 +10,6 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "db:studio": "prisma studio",
-    "db:seed": "prisma db seed",
     "postinstall": "prisma generate",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
