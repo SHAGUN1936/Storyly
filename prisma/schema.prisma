@@ -1,0 +1,207 @@
+// All database tables (MongoDB collections).
+//
+// The collection and field names match the data the old Express + Mongoose
+// server wrote, so the existing database works as-is. Do NOT rename a field
+// here without moving the data too.
+//
+// After changing this file: `npx prisma generate` (done for you by `npm run dev`).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+/// user: customer · admin: publishes official templates · builder: publishes own templates
+enum Role {
+  user
+  admin
+  builder
+}
+
+/// A user's page: draft while editing, completed once published and shareable.
+enum PageStatus {
+  draft
+  pending
+  processing
+  completed
+  failed
+}
+
+/// Which collection a page's source template lives in.
+enum TemplateSource {
+  Template
+  BuilderTemplate
+}
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  email     String    @unique
+  /// bcrypt hash. Empty for Google-only accounts.
+  password  String?
+  name      String
+  avatar    String?
+  googleId  String?
+  role      Role      @default(user)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  templates        Template[]
+  builderTemplates BuilderTemplate[]
+  pages            Page[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// Official templates published by admins.
+model Template {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  category        String
+  description     String?
+  previewVideoUrl String?
+  thumbnailUrl    String?
+  /// Pure JSON: { type: "slideshow", mode: "json", builderState, slots, pages }. Never raw HTML.
+  structure       Json?
+  duration        Float?
+  published       Boolean   @default(false)
+  createdById     String?   @map("createdBy") @db.ObjectId
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+
+  @@index([category, published])
+  @@index([createdAt])
+  @@map("templates")
+}
+
+/// Templates published by users with role "builder". Same shape as Template plus the owner.
+model BuilderTemplate {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  builderId       String    @db.ObjectId
+  builder         User      @relation(fields: [builderId], references: [id])
+  name            String
+  category        String
+  description     String?
+  previewVideoUrl String?
+  thumbnailUrl    String?
+  structure       Json?
+  duration        Float?
+  published       Boolean   @default(false)
+  /// Admins can hide a builder template from Browse without deleting it.
+  approved        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime? @updatedAt
+
+  @@index([category, published, approved])
+  @@index([builderId, createdAt])
+  @@index([createdAt])
+  @@map("buildertemplates")
+}
+
+/// A user's own copy of a template with all their edits ("My pages").
+/// The collection keeps its old name (generatedvideos) from when every page was a rendered video.
+model Page {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String         @db.ObjectId
+  user           User           @relation(fields: [userId], references: [id])
+  /// Points into `templates` or `buildertemplates`, depending on sourceType.
+  templateId     String         @db.ObjectId
+  sourceType     TemplateSource @default(Template)
+  /// Who the page was made for ("For Ananya & Rohan").
+  recipientName  String?
+  videoUrl       String?
+  thumbnailUrl   String?
+  shareSlug      String?        @unique
+  status         PageStatus     @default(pending)
+  /// Everything the user changed: text, slots, mediaUrls, themeOverrides, structureSnapshot…
+  customizations Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime?      @updatedAt
+
+  @@index([userId, createdAt])
+  @@map("generatedvideos")
+}
+
+// ---------- Website content (edited in Admin → Website) ----------
+
+/// A question + answer in the FAQ on the home page.
+model Faq {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  question  String
+  answer    String
+  /// Lower numbers show first.
+  order     Int       @default(0)
+  published Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("site_faqs")
+}
+
+/// A customer quote on the home page.
+model Testimonial {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  /// What they made, e.g. "Wedding invitation".
+  role      String    @default("")
+  quote     String
+  order     Int       @default(0)
+  published Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("site_testimonials")
+}
+
+/// A headline number in the band under the home page hero ("12,480+ pages published").
+model SiteStat {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  label     String
+  value     Int
+  /// Shown after the number: "+", "%", " sec".
+  suffix    String    @default("")
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@map("site_stats")
+}
+
+/// Business details shown in the footer and on the Contact page. There is only one row.
+model SiteSettings {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  supportEmail String    @default("")
+  phone        String    @default("")
+  address      String    @default("")
+  instagram    String    @default("")
+  twitter      String    @default("")
+  youtube      String    @default("")
+  linkedin     String    @default("")
+  updatedAt    DateTime? @updatedAt
+
+  @@map("site_settings")
+}
+
+/// A story or feedback sent from the website's "Share your story" form. Read in Admin → Feedback.
+model Feedback {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  /// story | bug | feature | general
+  kind      String
+  name      String   @default("")
+  email     String   @default("")
+  title     String   @default("")
+  message   String
+  /// 0 = not rated, else 1–5
+  rating    Int      @default(0)
+  /// Where the form was opened from
+  context   String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("site_feedback")
+}

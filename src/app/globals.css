@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Storyly design system.
+   Monochrome and professional, matching the black-and-white logo: white surfaces,
+   zinc greys and near-black accents. Inter for everything.
+   Only status colours (red for errors) step outside the greys.
+   Use the Tailwind classes these create: bg-brand-600, text-brand-700, font-display …
+   The old candy stylesheet lives in src/styles/legacy-editor.css (editor only). */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Headlines use Inter too, just tighter and heavier (see .font-display below) */
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand accent: monochrome (light greys to near-black), same as the logo */
+  --color-brand-50: #fafafa;
+  --color-brand-100: #f4f4f5;
+  --color-brand-200: #e4e4e7;
+  --color-brand-300: #d4d4d8;
+  --color-brand-400: #a1a1aa;
+  --color-brand-500: #52525b;
+  --color-brand-600: #18181b;
+  --color-brand-700: #18181b;
+  --color-brand-800: #09090b;
+  --color-brand-900: #09090b;
+  --color-brand-950: #09090b;
+
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  /* Loaders (components/ui/loader.tsx, skeleton.tsx) */
+  --animate-bookmark: bookmark 1.4s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  /* Home page: the editor demo (cursor clicks the heading, it gets selected, a setting changes) */
+  --animate-demo-cursor: demo-cursor 7s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+  --animate-demo-select: demo-select 7s ease infinite;
+  --animate-demo-slider: demo-slider 7s ease-in-out infinite;
+  /* Home page: music waveform */
+  --animate-wave: wave 1.2s ease-in-out infinite alternate;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  /* The bookmark slides down into the page, rests, and starts again */
+  @keyframes bookmark {
+    0% {
+      transform: translateY(-9px);
+      opacity: 0;
+    }
+    35%,
+    80% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 0;
+    }
+  }
+  @keyframes shimmer {
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes demo-cursor {
+    0%,
+    8% {
+      transform: translate(140px, 150px);
+      opacity: 0;
+    }
+    12% {
+      opacity: 1;
+    }
+    32% {
+      transform: translate(0, 0) scale(1);
+    }
+    35% {
+      transform: translate(0, 0) scale(0.8);
+    }
+    38%,
+    80% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+    90%,
+    100% {
+      transform: translate(30px, 40px);
+      opacity: 0;
+    }
+  }
+  @keyframes demo-select {
+    0%,
+    34% {
+      opacity: 0;
+      transform: scale(1.04);
+    }
+    38%,
+    86% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    94%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes demo-slider {
+    0%,
+    45% {
+      width: 20%;
+    }
+    65%,
+    88% {
+      width: 70%;
+    }
+    100% {
+      width: 20%;
+    }
+  }
+  @keyframes wave {
+    from {
+      transform: scaleY(0.35);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-bookmark,
+  .animate-shimmer,
+  .animate-demo-cursor,
+  .animate-demo-select,
+  .animate-demo-slider,
+  .animate-wave {
+    animation: none;
+  }
+}
+
+@layer base {
+  html {
+    /* No visible page scrollbar; the page still scrolls with wheel, keyboard and touch */
+    scrollbar-width: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    @apply bg-white font-sans text-zinc-900 antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select,
+  label[for],
+  input[type="file"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    cursor: pointer;
+  }
+
+  :root {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+      content-visibility 0.35s allow-discrete;
+  }
+  details[open]::details-content {
+    height: auto;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    details::details-content {
+      transition: none;
+    }
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-brand-950;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+}
+
+@layer components {
+  /* Big headlines: tight letter spacing reads crisper at large sizes */
+  .font-display {
+    letter-spacing: -0.025em;
+  }
+}

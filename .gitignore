@@ -1,39 +1,36 @@
-# Dependencies — NEVER commit these, hosts re-install on deploy and the
-# Windows-committed copies break exec bits on Linux build agents.
+# dependencies
 node_modules/
 
-# Build artifacts
-dist/
-build/
-.next/
-.cache/
+# next.js
+/.next/
+/.next-build/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
 
-# Logs
+# env files (only the example is committed)
+.env*
+!.env.example
+
+# logs
 *.log
 npm-debug.log*
 
-# Env files (each host gets their own)
-.env
-.env.local
-.env.*.local
-.env.production
-.env.development
-
-# OS junk
+# OS / editor
 .DS_Store
 Thumbs.db
-
-# Editor
 .idea/
 .vscode/
 *.swp
 
-# Test + coverage
-coverage/
+# vercel
+.vercel
 
-# Uploaded user content (kept locally only)
-server/uploads/
+# old app: build output and local uploads
+legacy/client/dist/
+legacy/server/uploads/
 
-# Misc
+# misc scratch files
 tmp_*
 replace-*.js
